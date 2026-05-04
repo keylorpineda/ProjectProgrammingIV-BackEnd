@@ -1,4 +1,5 @@
 # Build stage
+# Cache buster: 2026-05-04T01:43:00
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -15,7 +16,7 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Verify build output (debug)
+# Verify build output in builder stage
 RUN ls -la dist/
 
 # Production stage
@@ -27,19 +28,21 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-# Copy built application from builder
-# Ensure proper ownership for the non-root user
-COPY --from=builder /app/dist ./dist
+# Copy built application from builder stage using absolute paths
+COPY --from=builder /app/dist /app/dist
 
-# Create non-root user
+# Create non-root user and fix permissions
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001 && \
     chown -R nestjs:nodejs /app
 
+# Final image structure check (debug)
+RUN ls -R /app/dist | head -n 20
+
 USER nestjs
 
-# Expose port
+# Expose port (Render defaults to 10000 or uses $PORT)
 EXPOSE 3000
 
-# Start the application
-CMD ["node", "dist/main.js"]
+# Start the application using absolute path
+CMD ["node", "/app/dist/main.js"]
