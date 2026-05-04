@@ -140,5 +140,3 @@ export class CampsService {
     return { message: `Campamento "${camp.name}" desactivado correctamente` };
   }
 }
-//Falta Middleware de contexto de campamento (requiere auth funcionando)
-//M�tricas de personas en findOne

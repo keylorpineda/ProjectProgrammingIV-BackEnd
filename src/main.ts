@@ -32,7 +32,8 @@ async function bootstrap() {
     credentials: false,
   });
 
-  app.setGlobalPrefix("api");
+  // API versionada v1 — requerimiento no funcional del enunciado
+  app.setGlobalPrefix("api/v1");
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -43,25 +44,25 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle("Gesti�n del Fin API")
+    .setTitle("Gestión del Fin API")
     .setDescription(
-      "API del sistema de gesti�n de campamentos - Apocalipsis Zombie",
+      "API del sistema de gestión de campamentos - Apocalipsis Zombie",
     )
     .setVersion("1.0")
     .addBearerAuth()
     .build();
   SwaggerModule.setup(
-    "api/docs",
+    "api/v1/docs",
     app,
     SwaggerModule.createDocument(app, config),
   );
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port, "0.0.0.0");
-  
+
   const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${port}`;
-  
-  console.log(`🚀 API corriendo en: ${baseUrl}/api`);
-  console.log(`📄 Swagger docs:     ${baseUrl}/api/docs`);
+
+  console.log(`API corriendo en: ${baseUrl}/api/v1`);
+  console.log(`Swagger docs:     ${baseUrl}/api/v1/docs`);
 }
 bootstrap();

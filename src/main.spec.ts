@@ -134,7 +134,7 @@ describe("main bootstrap", () => {
       allowedHeaders: ["Content-Type", "Authorization"],
       credentials: false,
     });
-    expect(ctx.app.setGlobalPrefix).toHaveBeenCalledWith("api");
+    expect(ctx.app.setGlobalPrefix).toHaveBeenCalledWith("api/v1");
     expect(ctx.ValidationPipe).toHaveBeenCalledWith({
       whitelist: true,
       transform: true,
@@ -143,15 +143,15 @@ describe("main bootstrap", () => {
     expect(ctx.app.useGlobalPipes).toHaveBeenCalledWith({
       kind: "validation-pipe",
     });
-    expect(ctx.setTitle).toHaveBeenCalledWith("Gesti�n del Fin API");
+    expect(ctx.setTitle).toHaveBeenCalledWith("Gestión del Fin API");
     expect(ctx.setDescription).toHaveBeenCalledWith(
-      "API del sistema de gesti�n de campamentos - Apocalipsis Zombie",
+      "API del sistema de gestión de campamentos - Apocalipsis Zombie",
     );
     expect(ctx.setVersion).toHaveBeenCalledWith("1.0");
     expect(ctx.addBearerAuth).toHaveBeenCalledTimes(1);
     expect(ctx.build).toHaveBeenCalledTimes(1);
     expect(ctx.createDocument).toHaveBeenCalledWith(ctx.app, { built: true });
-    expect(ctx.setup).toHaveBeenCalledWith("api/docs", ctx.app, {
+    expect(ctx.setup).toHaveBeenCalledWith("api/v1/docs", ctx.app, {
       openapi: "3.0.0",
     });
     expect(ctx.app.listen).toHaveBeenCalledWith(3000, "0.0.0.0");

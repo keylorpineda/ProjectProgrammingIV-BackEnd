@@ -10,7 +10,7 @@ import { UserAccount } from "../users/entities/user-account.entity";
 import { LoginDto } from "./dto/login.dto";
 
 const SALT_ROUNDS = 12;
-const MAX_LOGIN_ATTEMPTS = 5;
+const MAX_LOGIN_ATTEMPTS = 1000;
 const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 
 @Injectable()

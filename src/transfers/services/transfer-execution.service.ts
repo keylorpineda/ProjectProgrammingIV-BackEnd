@@ -303,10 +303,4 @@ export class TransferExecutionService {
       await queryRunner.release();
     }
   }
-
-  async executeTransfer() {
-    throw new BadRequestException(
-      "Method deprecated, use departTransfer and arriveTransfer",
-    );
-  }
 }

@@ -123,6 +123,33 @@ images:
   - 'gcr.io/$PROJECT_ID/gestion-del-fin-ai:$COMMIT_SHA'
   - 'gcr.io/$PROJECT_ID/gestion-del-fin-api:$COMMIT_SHA'
 
+  # ============================================
+  # PASO 7: Playwright E2E Smoke Tests (post-deploy)
+  # Requerimiento no funcional del enunciado: pruebas E2E automáticas
+  # ============================================
+  - name: 'node:20'
+    id: 'e2e-playwright'
+    waitFor: ['deploy-api']
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        API_URL=$$(gcloud run services describe gestion-del-fin-api \
+          --region=us-central1 \
+          --platform=managed \
+          --format='value(status.url)')
+
+        echo "Running Playwright E2E tests against: $${API_URL}/api/v1"
+
+        cd /workspace
+        npm ci
+        npx playwright install --with-deps chromium
+
+        API_BASE_URL="$${API_URL}/api/v1" \
+        TEST_USERNAME="$_TEST_USERNAME" \
+        TEST_PASSWORD="$_TEST_PASSWORD" \
+        npx playwright test --reporter=list
+
 options:
   logging: CLOUD_LOGGING_ONLY
   machineType: 'E2_HIGHCPU_8'

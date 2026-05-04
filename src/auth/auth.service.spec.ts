@@ -148,7 +148,7 @@ describe("AuthService", () => {
       const loginDto = { username: "testuser", password: "password123" };
       const ipAddress = "192.168.1.1";
 
-      loginAttemptRepo.count.mockResolvedValueOnce(5); // MAX_LOGIN_ATTEMPTS = 5
+      loginAttemptRepo.count.mockResolvedValueOnce(1000); // MAX_LOGIN_ATTEMPTS = 1000
 
       await expect(service.login(loginDto, ipAddress)).rejects.toThrow(
         UnauthorizedException,

@@ -87,7 +87,9 @@ describe("TransferExecutionService", () => {
     await expect(
       service.departTransfer({ status: "pending" } as any, 7),
     ).rejects.toThrow(
-      new BadRequestException("La solicitud debe estar aprobada para poder salir"),
+      new BadRequestException(
+        "La solicitud debe estar aprobada para poder salir",
+      ),
     );
   });
 
@@ -229,7 +231,9 @@ describe("TransferExecutionService", () => {
     });
 
     await expect(service.departTransfer(request, 7)).rejects.toThrow(
-      new BadRequestException("Recurso insuficiente en origen para recurso ID 30"),
+      new BadRequestException(
+        "Recurso insuficiente en origen para recurso ID 30",
+      ),
     );
     expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
     expect(queryRunner.release).toHaveBeenCalled();
@@ -245,26 +249,28 @@ describe("TransferExecutionService", () => {
       personDetails: [{ person_id: 40, transfer_status: "pending" }],
     } as any;
 
-    queryRunner.manager.findOne.mockImplementation(async (entity: unknown, options: any) => {
-      if (entity === Person) {
-        return { id: 40, status: "active" };
-      }
-      if (entity === Resource && options.where.category === "food") {
-        return { id: 101, category: "food" };
-      }
-      if (entity === Resource && options.where.category === "water") {
+    queryRunner.manager.findOne.mockImplementation(
+      async (entity: unknown, options: any) => {
+        if (entity === Person) {
+          return { id: 40, status: "active" };
+        }
+        if (entity === Resource && options.where.category === "food") {
+          return { id: 101, category: "food" };
+        }
+        if (entity === Resource && options.where.category === "water") {
+          return null;
+        }
+        if (entity === Inventory && options.where.resource_id === 101) {
+          return {
+            camp_id: 10,
+            resource_id: 101,
+            current_quantity: 1,
+            minimum_stock_required: 1,
+          };
+        }
         return null;
-      }
-      if (entity === Inventory && options.where.resource_id === 101) {
-        return {
-          camp_id: 10,
-          resource_id: 101,
-          current_quantity: 1,
-          minimum_stock_required: 1,
-        };
-      }
-      return null;
-    });
+      },
+    );
 
     await expect(service.departTransfer(request, 7)).rejects.toThrow(
       new BadRequestException("No hay suficiente comida para el viaje"),
@@ -282,34 +288,36 @@ describe("TransferExecutionService", () => {
       personDetails: [{ person_id: 40, transfer_status: "pending" }],
     } as any;
 
-    queryRunner.manager.findOne.mockImplementation(async (entity: unknown, options: any) => {
-      if (entity === Person) {
-        return { id: 40, status: "active" };
-      }
-      if (entity === Resource && options.where.category === "food") {
-        return { id: 101, category: "food" };
-      }
-      if (entity === Resource && options.where.category === "water") {
-        return { id: 102, category: "water" };
-      }
-      if (entity === Inventory && options.where.resource_id === 101) {
-        return {
-          camp_id: 10,
-          resource_id: 101,
-          current_quantity: 20,
-          minimum_stock_required: 1,
-        };
-      }
-      if (entity === Inventory && options.where.resource_id === 102) {
-        return {
-          camp_id: 10,
-          resource_id: 102,
-          current_quantity: 1,
-          minimum_stock_required: 1,
-        };
-      }
-      return null;
-    });
+    queryRunner.manager.findOne.mockImplementation(
+      async (entity: unknown, options: any) => {
+        if (entity === Person) {
+          return { id: 40, status: "active" };
+        }
+        if (entity === Resource && options.where.category === "food") {
+          return { id: 101, category: "food" };
+        }
+        if (entity === Resource && options.where.category === "water") {
+          return { id: 102, category: "water" };
+        }
+        if (entity === Inventory && options.where.resource_id === 101) {
+          return {
+            camp_id: 10,
+            resource_id: 101,
+            current_quantity: 20,
+            minimum_stock_required: 1,
+          };
+        }
+        if (entity === Inventory && options.where.resource_id === 102) {
+          return {
+            camp_id: 10,
+            resource_id: 102,
+            current_quantity: 1,
+            minimum_stock_required: 1,
+          };
+        }
+        return null;
+      },
+    );
 
     await expect(service.departTransfer(request, 7)).rejects.toThrow(
       new BadRequestException("No hay suficiente agua para el viaje"),
@@ -338,20 +346,22 @@ describe("TransferExecutionService", () => {
       personDetails: [{ person_id: 40, transfer_status: "in_transit" }],
     } as any;
 
-    queryRunner.manager.findOne.mockImplementation(async (entity: unknown, options: any) => {
-      if (entity === Inventory) {
+    queryRunner.manager.findOne.mockImplementation(
+      async (entity: unknown, options: any) => {
+        if (entity === Inventory) {
+          return null;
+        }
+        if (entity === Person) {
+          return {
+            id: 40,
+            experience_level: 5,
+            status: PersonStatus.TRAVELING,
+            userAccount: { id: 2, camp_id: 10 },
+          };
+        }
         return null;
-      }
-      if (entity === Person) {
-        return {
-          id: 40,
-          experience_level: 5,
-          status: PersonStatus.TRAVELING,
-          userAccount: { id: 2, camp_id: 10 },
-        };
-      }
-      return null;
-    });
+      },
+    );
 
     await service.arriveTransfer(request, 7);
 
@@ -515,9 +525,7 @@ describe("TransferExecutionService", () => {
       minimum_stock_required: 0,
       alert_active: false,
     });
-    queryRunner.manager.save.mockRejectedValueOnce(
-      new Error("save failed"),
-    );
+    queryRunner.manager.save.mockRejectedValueOnce(new Error("save failed"));
 
     await expect(service.arriveTransfer(request, 9)).rejects.toThrow(
       "save failed",
@@ -526,11 +534,5 @@ describe("TransferExecutionService", () => {
     expect(queryRunner.release).toHaveBeenCalled();
   });
 
-  it("should throw deprecated error when executeTransfer is used", async () => {
-    await expect(service.executeTransfer()).rejects.toThrow(
-      new BadRequestException(
-        "Method deprecated, use departTransfer and arriveTransfer",
-      ),
-    );
-  });
+
 });
