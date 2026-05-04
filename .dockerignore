@@ -17,3 +17,4 @@ test
 .prettierrc
 .eslintrc.js
 ai-microservice
+*.tsbuildinfo
