@@ -15,6 +15,9 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Verify build output (debug)
+RUN ls -la dist/
+
 # Production stage
 FROM node:20-alpine
 
@@ -25,16 +28,18 @@ COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
 # Copy built application from builder
+# Ensure proper ownership for the non-root user
 COPY --from=builder /app/dist ./dist
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001
+    adduser -S nestjs -u 1001 && \
+    chown -R nestjs:nodejs /app
 
 USER nestjs
 
-# Expose port (Cloud Run uses PORT env variable)
-EXPOSE 8080
+# Expose port
+EXPOSE 3000
 
 # Start the application
 CMD ["node", "dist/main.js"]
