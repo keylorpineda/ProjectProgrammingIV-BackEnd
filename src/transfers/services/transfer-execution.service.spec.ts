@@ -346,22 +346,20 @@ describe("TransferExecutionService", () => {
       personDetails: [{ person_id: 40, transfer_status: "in_transit" }],
     } as any;
 
-    queryRunner.manager.findOne.mockImplementation(
-      async (entity: unknown, options: any) => {
-        if (entity === Inventory) {
-          return null;
-        }
-        if (entity === Person) {
-          return {
-            id: 40,
-            experience_level: 5,
-            status: PersonStatus.TRAVELING,
-            userAccount: { id: 2, camp_id: 10 },
-          };
-        }
+    queryRunner.manager.findOne.mockImplementation(async (entity: unknown) => {
+      if (entity === Inventory) {
         return null;
-      },
-    );
+      }
+      if (entity === Person) {
+        return {
+          id: 40,
+          experience_level: 5,
+          status: PersonStatus.TRAVELING,
+          userAccount: { id: 2, camp_id: 10 },
+        };
+      }
+      return null;
+    });
 
     await service.arriveTransfer(request, 7);
 
@@ -533,6 +531,4 @@ describe("TransferExecutionService", () => {
     expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
     expect(queryRunner.release).toHaveBeenCalled();
   });
-
-
 });

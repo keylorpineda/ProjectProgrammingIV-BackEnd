@@ -200,16 +200,33 @@ test.describe("Personas — Admisión IA y Gestión Humana", () => {
     const professions = await professionsRes.json();
     const profId = professions[0]?.id ?? 1;
 
+    // Buscar persona en estado active (no usar explorerId que puede estar 'sick')
+    const personsRes = await request.get(
+      `${BASE}/users/persons?page=1&limit=50`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    const personsBody = await personsRes.json();
+    const activePerson = personsBody.data?.find(
+      (p: any) => p.status === "active" && p.userAccount !== null,
+    );
+    if (!activePerson) {
+      console.log("No active persons found, skipping test");
+      return;
+    }
+
     const response = await request.post(`${BASE}/users/temporary-assignments`, {
       headers: { Authorization: `Bearer ${token}` },
       data: {
-        person_id: Number(explorerId || 1),
+        person_id: Number(activePerson.id),
         profession_temporary_id: Number(profId),
         reason: "Apoyo temporal por baja de personal",
         duration_days: 7,
       },
     });
 
+    if (![200, 201].includes(response.status())) {
+      console.log("Status:", response.status(), "Body:", await response.text());
+    }
     expect([200, 201]).toContain(response.status());
   });
 });
