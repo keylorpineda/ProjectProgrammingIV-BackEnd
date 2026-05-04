@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Patch,
   Get,
   Body,
   HttpCode,
@@ -12,6 +13,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
+import { SwitchCampDto } from "./dto/switch-camp.dto";
 import { Public } from "./decorators/public.decorator";
 import { CurrentUser } from "./decorators/current-user.decorator";
 
@@ -59,5 +61,15 @@ export class AuthController {
   })
   async checkSessionStatus(@CurrentUser() user: any) {
     return this.authService.checkSessionStatus(user.userId);
+  }
+
+  @Patch("switch-camp")
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Cambiar campamento activo del usuario autenticado",
+  })
+  async switchCamp(@CurrentUser() user: any, @Body() dto: SwitchCampDto) {
+    return this.authService.switchCamp(user.userId, dto.camp_id);
   }
 }

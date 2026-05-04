@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -7,6 +11,7 @@ import * as bcrypt from "bcrypt";
 import { LoginAttempt } from "./entities/login-attempt.entity";
 import { Session } from "./entities/session.entity";
 import { UserAccount } from "../users/entities/user-account.entity";
+import { Camp } from "../camps/entities/camp.entity";
 import { LoginDto } from "./dto/login.dto";
 
 const SALT_ROUNDS = 12;
@@ -24,6 +29,8 @@ export class AuthService {
     private readonly sessionRepo: Repository<Session>,
     @InjectRepository(UserAccount)
     private readonly userRepo: Repository<UserAccount>,
+    @InjectRepository(Camp)
+    private readonly campRepo: Repository<Camp>,
   ) {}
 
   async login(
@@ -235,6 +242,85 @@ export class AuthService {
     return {
       access_token: newAccessToken,
       refresh_token: newRefreshToken,
+    };
+  }
+
+  async switchCamp(
+    userId: number,
+    campId: number,
+  ): Promise<{
+    access_token: string;
+    refresh_token: string;
+    user: {
+      id: number;
+      username: string;
+      email: string;
+      role: string;
+      camp_id: number;
+    };
+  }> {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ["role", "camp", "person"],
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("Usuario no encontrado");
+    }
+
+    const camp = await this.campRepo.findOne({
+      where: { id: campId, active: true },
+    });
+
+    if (!camp) {
+      throw new NotFoundException(`Campamento con ID ${campId} no encontrado`);
+    }
+
+    user.camp_id = campId;
+    user.last_access = new Date();
+    await this.userRepo.save(user);
+
+    const payload = {
+      sub: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role?.name,
+      campId,
+    };
+
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: this.configService.get<string>("JWT_REFRESH_EXPIRES_IN", "7d"),
+    });
+
+    const tokenHash = await this.hashPassword(refreshToken);
+
+    await this.sessionRepo.update(
+      { user_id: userId, is_active: true },
+      { is_active: false, auto_logout: false },
+    );
+
+    await this.sessionRepo.save(
+      this.sessionRepo.create({
+        user_id: userId,
+        token_hash: tokenHash,
+        last_activity: new Date(),
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        auto_logout: false,
+      }),
+    );
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      user: {
+        id: Number(user.id),
+        username: user.username,
+        email: user.email,
+        role: user.role?.name ?? "unknown",
+        camp_id: Number(campId),
+      },
     };
   }
 

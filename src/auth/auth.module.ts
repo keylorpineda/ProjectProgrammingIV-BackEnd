@@ -8,6 +8,7 @@ import { AuthService } from "./auth.service";
 import { Session } from "./entities/session.entity";
 import { LoginAttempt } from "./entities/login-attempt.entity";
 import { UserAccount } from "../users/entities/user-account.entity";
+import { Camp } from "../camps/entities/camp.entity";
 import { UsersModule } from "../users/users.module";
 import { JwtStrategy } from "./strategies/jwt.strategy";
 import { SessionActivityInterceptor } from "./interceptors/session-activity.interceptor";
@@ -15,7 +16,7 @@ import { SessionInactivityGuard } from "./guards/session-inactivity.guard";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Session, LoginAttempt, UserAccount]),
+    TypeOrmModule.forFeature([Session, LoginAttempt, UserAccount, Camp]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

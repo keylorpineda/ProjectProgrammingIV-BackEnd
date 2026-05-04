@@ -218,6 +218,7 @@ export class RequestsService {
   async findRequestsByCamp(
     campId: number,
     role?: "origin" | "destination",
+    status?: string,
   ): Promise<IntercampRequest[]> {
     const queryBuilder = this.requestRepo
       .createQueryBuilder("req")
@@ -239,6 +240,21 @@ export class RequestsService {
         "(req.camp_origin_id = :campId OR req.camp_destination_id = :campId)",
         { campId },
       );
+    }
+
+    if (status) {
+      const allowed = [
+        "pending",
+        "approved",
+        "in_transit",
+        "completed",
+        "rejected",
+        "cancelled",
+      ];
+      if (!allowed.includes(status)) {
+        throw new BadRequestException("Estado de solicitud inválido");
+      }
+      queryBuilder.andWhere("req.status = :status", { status });
     }
 
     return queryBuilder.orderBy("req.request_date", "DESC").getMany();

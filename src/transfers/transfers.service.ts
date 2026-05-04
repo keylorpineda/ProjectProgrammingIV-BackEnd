@@ -33,8 +33,9 @@ export class TransfersService {
   async findRequestsByCamp(
     campId: number,
     role?: "origin" | "destination",
+    status?: string,
   ): Promise<IntercampRequest[]> {
-    return this.requestsService.findRequestsByCamp(campId, role);
+    return this.requestsService.findRequestsByCamp(campId, role, status);
   }
 
   async findPendingRequestsByCamp(campId: number): Promise<IntercampRequest[]> {

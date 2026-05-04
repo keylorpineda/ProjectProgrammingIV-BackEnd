@@ -8,6 +8,7 @@ import { AuthService } from "./auth.service";
 import { LoginAttempt } from "./entities/login-attempt.entity";
 import { Session } from "./entities/session.entity";
 import { UserAccount } from "../users/entities/user-account.entity";
+import { Camp } from "../camps/entities/camp.entity";
 
 jest.mock("bcrypt");
 
@@ -80,6 +81,12 @@ describe("AuthService", () => {
           useValue: {
             findOne: jest.fn(),
             save: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(Camp),
+          useValue: {
+            findOne: jest.fn(),
           },
         },
       ],

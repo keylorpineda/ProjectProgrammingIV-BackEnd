@@ -41,6 +41,7 @@ describe("AuthController", () => {
             logout: jest.fn(),
             refresh: jest.fn(),
             checkSessionStatus: jest.fn(),
+            switchCamp: jest.fn(),
           },
         },
       ],
@@ -241,6 +242,26 @@ describe("AuthController", () => {
       const result = await controller.checkSessionStatus(mockUser);
 
       expect(result.isActive).toBe(false);
+    });
+  });
+
+  describe("switchCamp", () => {
+    it("should switch camp and return tokens + user", async () => {
+      const mockUser = { userId: 1 } as any;
+      const dto = { camp_id: 2 } as any;
+
+      const mockResponse = {
+        access_token: "access_token_value",
+        refresh_token: "refresh_token_value",
+        user: { id: 1, username: "testuser", camp_id: 2 },
+      };
+
+      authService.switchCamp.mockResolvedValueOnce(mockResponse as any);
+
+      const result = await controller.switchCamp(mockUser, dto);
+
+      expect(result).toEqual(mockResponse);
+      expect(authService.switchCamp).toHaveBeenCalledWith(1, 2);
     });
   });
 });

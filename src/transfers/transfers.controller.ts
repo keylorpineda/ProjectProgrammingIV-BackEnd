@@ -54,11 +54,18 @@ export class TransfersController {
     enum: ["origin", "destination"],
     description: "Filtrar por rol del campamento",
   })
+  @ApiQuery({
+    name: "status",
+    required: false,
+    enum: ["pending", "approved", "in_transit", "completed", "rejected", "cancelled"],
+    description: "Filtrar por estado de la solicitud",
+  })
   async getRequestsByCamp(
     @Param("campId", ParseIntPipe) campId: number,
     @Query("role") role?: "origin" | "destination",
+    @Query("status") status?: string,
   ) {
-    return this.transfersService.findRequestsByCamp(campId, role);
+    return this.transfersService.findRequestsByCamp(campId, role, status);
   }
 
   @Get("requests/camp/:campId/pending")

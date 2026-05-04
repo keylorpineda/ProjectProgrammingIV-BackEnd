@@ -74,7 +74,11 @@ describe("TransfersController", () => {
     const result = await controller.getRequestsByCamp(10, "origin");
 
     expect(result).toEqual([mockRequest]);
-    expect(service.findRequestsByCamp).toHaveBeenCalledWith(10, "origin");
+    expect(service.findRequestsByCamp).toHaveBeenCalledWith(
+      10,
+      "origin",
+      undefined,
+    );
   });
 
   it("should get pending requests by camp", async () => {
