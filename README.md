@@ -33,14 +33,14 @@ To ensure technical transparency and compliance with design requirements, the fo
 ### 🧩 System Architecture
 Visual representation of the data flow between the Client (React), the Server (NestJS), and External Services (AI, Cloudinary, Database).
 
-![System Architecture](docs/architecture.png)
+![System Architecture](docs/archdiagram.png)
 
 ### 📊 Data Design (ERD)
 The data model is normalized and designed to support multi-camp environments, resource traceability, and health status tracking.
 
 - **Interactive Diagram:** [dbdiagram.io - Doomsday System](https://dbdiagram.io/d/6893dfbedd90d17865cbf822)
 
-![Database Diagram](docs/erd.png)
+![Database Diagram](docs/bddiagram.png)
 *(Click the link above to view live detailed relationships)*
 
 ---
