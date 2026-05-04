@@ -39,7 +39,6 @@ pip-wheel-metadata/
 
 # Coverage
 /coverage
-test-results/
 /.jest-cache
 /src/.jest-cache
 /.tmp
