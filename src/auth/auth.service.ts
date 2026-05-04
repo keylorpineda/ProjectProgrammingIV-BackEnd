@@ -71,6 +71,18 @@ export class AuthService {
       throw new UnauthorizedException("Credenciales inv�lidas");
     }
 
+    if (!user.is_active) {
+      await this.logLoginAttempt({
+        username: dto.username,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        success: false,
+        failure_reason: "Inactive user",
+        user_id: Number(user.id),
+      });
+      throw new UnauthorizedException("Usuario inactivo");
+    }
+
     const isPasswordValid = await this.verifyPassword(
       dto.password,
       user.password_hash,

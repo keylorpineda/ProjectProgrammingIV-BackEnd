@@ -37,6 +37,9 @@ export class UserAccount {
   @Column({ type: "text" })
   password_hash: string;
 
+  @Column({ type: "boolean", default: true })
+  is_active: boolean;
+
   @Column({ type: "timestamptz", nullable: true })
   last_access: Date;
 

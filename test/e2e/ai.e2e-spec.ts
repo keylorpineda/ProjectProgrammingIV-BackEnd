@@ -7,10 +7,13 @@ import { UserAccount } from "../../src/users/entities/user-account.entity";
 import { Session } from "../../src/auth/entities/session.entity";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
+import { AiAdmission } from "../../src/ai/entities/ai-admission.entity";
+import { Camp } from "../../src/camps/entities/camp.entity";
+import { Role } from "../../src/users/entities/role.entity";
+import { Profession } from "../../src/users/entities/profession.entity";
 import { AiModule } from "../../src/ai/ai.module";
 import { AuthModule } from "../../src/auth/auth.module";
 import { UsersModule } from "../../src/users/users.module";
-import { DatabaseModule } from "../../src/database/database.module";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { JwtAuthGuard } from "../../src/auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../../src/auth/guards/roles.guard";
@@ -24,6 +27,14 @@ describe("AI E2E Tests", () => {
   let app: INestApplication;
   let userRepository: any;
   let sessionRepository: any;
+  let roleRepository: any;
+  let campRepository: any;
+  let professionRepository: any;
+  let adminRoleId: number;
+  let gestorRoleId: number;
+  let workerRoleId: number;
+  let campId: number;
+  let professionId: number;
   let adminToken: string;
   let gestorToken: string;
   let admissionId: number;
@@ -50,10 +61,10 @@ describe("AI E2E Tests", () => {
           password: process.env.DB_PASS || "postgres",
           database: process.env.DB_NAME_TEST || "gestion_test",
           autoLoadEntities: true,
+          entities: [AiAdmission, Camp],
           synchronize: true,
           logging: false,
         }),
-        DatabaseModule,
         AuthModule,
         UsersModule,
         AiModule,
@@ -74,18 +85,56 @@ describe("AI E2E Tests", () => {
 
     userRepository = moduleFixture.get(getRepositoryToken(UserAccount));
     sessionRepository = moduleFixture.get(getRepositoryToken(Session));
+    roleRepository = moduleFixture.get(getRepositoryToken(Role));
+    campRepository = moduleFixture.get(getRepositoryToken(Camp));
+    professionRepository = moduleFixture.get(getRepositoryToken(Profession));
+
+    const adminRole =
+      (await roleRepository.findOne({ where: { name: "admin" } })) ||
+      (await roleRepository.save({ name: "admin" }));
+    const gestorRole =
+      (await roleRepository.findOne({ where: { name: "gestor_recursos" } })) ||
+      (await roleRepository.save({ name: "gestor_recursos" }));
+    const workerRole =
+      (await roleRepository.findOne({ where: { name: "trabajador" } })) ||
+      (await roleRepository.save({ name: "trabajador" }));
+
+    adminRoleId = Number(adminRole.id);
+    gestorRoleId = Number(gestorRole.id);
+    workerRoleId = Number(workerRole.id);
+
+    const existingCamp = await campRepository.findOne({
+      where: { name: "Campamento AI Test" },
+    });
+    const camp =
+      existingCamp ||
+      (await campRepository.save({
+        name: "Campamento AI Test",
+        max_capacity: 100,
+        active: true,
+      }));
+    campId = Number(camp.id);
+
+    const existingProfession = await professionRepository.findOne({
+      where: { name: "Medico Test" },
+    });
+    const profession =
+      existingProfession ||
+      (await professionRepository.save({
+        name: "Medico Test",
+        can_explore: false,
+        minimum_active_required: 1,
+      }));
+    professionId = Number(profession.id);
   });
 
   afterAll(async () => {
-    await app.close();
-  });
-
-  afterEach(async () => {
     try {
       await sessionRepository.delete({});
     } catch (error) {
       // Ignorar errores en limpieza
     }
+    await app.close();
   });
 
   describe("Setup: Create test users and get tokens", () => {
@@ -95,8 +144,8 @@ describe("AI E2E Tests", () => {
       await userRepository.save({
         username: "admin_ai_test",
         email: "admin_ai@example.com",
-        password: hashedPassword,
-        role: "admin",
+        password_hash: hashedPassword,
+        role_id: adminRoleId,
         is_active: true,
       });
 
@@ -118,8 +167,8 @@ describe("AI E2E Tests", () => {
       await userRepository.save({
         username: "gestor_ai_test",
         email: "gestor_ai@example.com",
-        password: hashedPassword,
-        role: "gestor_recursos",
+        password_hash: hashedPassword,
+        role_id: gestorRoleId,
         is_active: true,
       });
 
@@ -142,23 +191,25 @@ describe("AI E2E Tests", () => {
         .post("/ai/admissions/submit")
         .send({
           first_name: "Juan",
-          last_name: "PÃ©rez",
-          last_name2: "GarcÃ­a",
+          last_name: "Perez",
+          last_name2: "Garcia",
           age: 35,
           health_status: 90,
           physical_condition: 85,
           medical_conditions: [],
-          psychological_eval: 75,
           criminal_record: false,
           skills: ["medicina", "agricultura"],
           years_experience: 10,
+          psychological_evaluation: 75,
+          camp_id: campId,
         })
         .expect(201);
 
       expect(response.body).toHaveProperty("id");
       expect(response.body).toHaveProperty("tracking_code");
-      expect(response.body.first_name).toBe("Juan");
-      expect(response.body.last_name).toBe("PÃ©rez");
+      expect(response.body).toHaveProperty("candidate_data");
+      expect(response.body.candidate_data.first_name).toBe("Juan");
+      expect(response.body.candidate_data.last_name).toBe("Perez");
 
       admissionId = response.body.id;
       trackingCode = response.body.tracking_code;
@@ -168,12 +219,14 @@ describe("AI E2E Tests", () => {
       await request(app.getHttpServer())
         .post("/ai/admissions/submit")
         .send({
-          last_name: "PÃ©rez",
+          last_name: "Perez",
           age: 35,
           health_status: 90,
           physical_condition: 85,
           medical_conditions: [],
           skills: [],
+          criminal_record: false,
+          camp_id: campId,
         })
         .expect(400);
     });
@@ -189,6 +242,8 @@ describe("AI E2E Tests", () => {
           physical_condition: 85,
           medical_conditions: [],
           skills: [],
+          criminal_record: false,
+          camp_id: campId,
         })
         .expect(400);
 
@@ -202,6 +257,8 @@ describe("AI E2E Tests", () => {
           physical_condition: 85,
           medical_conditions: [],
           skills: [],
+          criminal_record: false,
+          camp_id: campId,
         })
         .expect(400);
     });
@@ -217,6 +274,8 @@ describe("AI E2E Tests", () => {
           physical_condition: 85,
           medical_conditions: [],
           skills: [],
+          criminal_record: false,
+          camp_id: campId,
         })
         .expect(400);
     });
@@ -228,9 +287,10 @@ describe("AI E2E Tests", () => {
         .get(`/ai/admissions/track/${trackingCode}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty("id");
-      expect(response.body).toHaveProperty("first_name");
+      expect(response.body).toHaveProperty("tracking_code", trackingCode);
       expect(response.body).toHaveProperty("status");
+      expect(response.body).toHaveProperty("camp_name");
+      expect(response.body).toHaveProperty("candidate_name");
     });
 
     it("should return 404 for invalid tracking code", async () => {
@@ -247,7 +307,8 @@ describe("AI E2E Tests", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(typeof response.body.total).toBe("number");
     });
 
     it("should get pending admissions with gestor token", async () => {
@@ -256,7 +317,8 @@ describe("AI E2E Tests", () => {
         .set("Authorization", `Bearer ${gestorToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(typeof response.body.total).toBe("number");
     });
 
     it("should reject request without token", async () => {
@@ -271,7 +333,8 @@ describe("AI E2E Tests", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.limit).toBe(10);
     });
   });
 
@@ -283,8 +346,9 @@ describe("AI E2E Tests", () => {
         .expect(200);
 
       expect(response.body.id).toBe(admissionId);
-      expect(response.body).toHaveProperty("first_name");
-      expect(response.body).toHaveProperty("last_name");
+      expect(response.body).toHaveProperty("candidate_data");
+      expect(response.body.candidate_data).toHaveProperty("first_name");
+      expect(response.body.candidate_data).toHaveProperty("last_name");
     });
 
     it("should get admission detail with gestor token", async () => {
@@ -325,11 +389,13 @@ describe("AI E2E Tests", () => {
         .send({
           decision: "ACCEPTED",
           admin_notes: "Approved - Camp needs medics",
+          override_profession_id: professionId,
         })
         .expect(200);
 
-      expect(response.body).toHaveProperty("status");
-      expect(response.body.decision).toBe("ACCEPTED");
+      expect(response.body).toHaveProperty("admission");
+      expect(response.body.admission.status).toBe("ACCEPTED");
+      expect(response.body.admission.final_human_decision).toBe("ACCEPTED");
     });
 
     it("should reject admission with REJECTED decision", async () => {
@@ -344,6 +410,8 @@ describe("AI E2E Tests", () => {
           physical_condition: 40,
           medical_conditions: [],
           skills: [],
+          criminal_record: false,
+          camp_id: campId,
         })
         .expect(201);
 
@@ -358,7 +426,9 @@ describe("AI E2E Tests", () => {
         })
         .expect(200);
 
-      expect(response.body.decision).toBe("REJECTED");
+      expect(response.body).toHaveProperty("admission");
+      expect(response.body.admission.status).toBe("REJECTED");
+      expect(response.body.admission.final_human_decision).toBe("REJECTED");
     });
 
     it("should reject request with gestor token (admin only)", async () => {
@@ -396,10 +466,10 @@ describe("AI E2E Tests", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
           decision: "ACCEPTED",
-          override_profession_id: 1,
+          override_profession_id: professionId,
         });
 
-      expect([200, 400]).toContain(response.status); // 400 if profession not found
+      expect(response.status).toBe(200);
     });
   });
 
@@ -410,7 +480,9 @@ describe("AI E2E Tests", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
           username: "juan_perez_new",
+          email: "juan_perez_new@example.com",
           password: process.env.TEST_USER_PASSWORD ?? "***removed***",
+          role_id: workerRoleId,
         });
 
       expect([200, 201, 400, 409]).toContain(response.status);
@@ -422,7 +494,9 @@ describe("AI E2E Tests", () => {
         .set("Authorization", `Bearer ${gestorToken}`)
         .send({
           username: "test_user",
+          email: "test_user@example.com",
           password: process.env.TEST_USER_PASSWORD ?? "***removed***",
+          role_id: workerRoleId,
         })
         .expect(403);
     });
@@ -432,7 +506,9 @@ describe("AI E2E Tests", () => {
         .post(`/ai/admissions/${admissionId}/create-account`)
         .send({
           username: "test_user",
+          email: "test_user@example.com",
           password: process.env.TEST_USER_PASSWORD ?? "***removed***",
+          role_id: workerRoleId,
         })
         .expect(401);
     });

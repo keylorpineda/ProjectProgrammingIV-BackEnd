@@ -7,10 +7,13 @@ import { UserAccount } from "../../src/users/entities/user-account.entity";
 import { Session } from "../../src/auth/entities/session.entity";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
+import { AiAdmission } from "../../src/ai/entities/ai-admission.entity";
+import { Camp } from "../../src/camps/entities/camp.entity";
+import { Role } from "../../src/users/entities/role.entity";
+import { InventoryMovement } from "../../src/resources/entities/inventory-movement.entity";
 import { CampsModule } from "../../src/camps/camps.module";
 import { AuthModule } from "../../src/auth/auth.module";
 import { UsersModule } from "../../src/users/users.module";
-import { DatabaseModule } from "../../src/database/database.module";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { JwtAuthGuard } from "../../src/auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../../src/auth/guards/roles.guard";
@@ -22,6 +25,9 @@ describe("Camps E2E Tests", () => {
   let app: INestApplication;
   let userRepository: any;
   let sessionRepository: any;
+  let roleRepository: any;
+  let adminRoleId: number;
+  let gestorRoleId: number;
   let adminToken: string;
   let gestorToken: string;
   let campId: number;
@@ -47,10 +53,10 @@ describe("Camps E2E Tests", () => {
           password: process.env.DB_PASS || "postgres",
           database: process.env.DB_NAME_TEST || "gestion_test",
           autoLoadEntities: true,
+          entities: [AiAdmission, Camp, InventoryMovement],
           synchronize: true,
           logging: false,
         }),
-        DatabaseModule,
         AuthModule,
         UsersModule,
         CampsModule,
@@ -69,18 +75,26 @@ describe("Camps E2E Tests", () => {
 
     userRepository = moduleFixture.get(getRepositoryToken(UserAccount));
     sessionRepository = moduleFixture.get(getRepositoryToken(Session));
+    roleRepository = moduleFixture.get(getRepositoryToken(Role));
+
+    const adminRole =
+      (await roleRepository.findOne({ where: { name: "admin" } })) ||
+      (await roleRepository.save({ name: "admin" }));
+    const gestorRole =
+      (await roleRepository.findOne({ where: { name: "gestor_recursos" } })) ||
+      (await roleRepository.save({ name: "gestor_recursos" }));
+
+    adminRoleId = Number(adminRole.id);
+    gestorRoleId = Number(gestorRole.id);
   });
 
   afterAll(async () => {
-    await app.close();
-  });
-
-  afterEach(async () => {
     try {
       await sessionRepository.delete({});
     } catch (error) {
       // Ignorar errores en limpieza
     }
+    await app.close();
   });
 
   describe("Setup: Create test users and get tokens", () => {
@@ -90,8 +104,8 @@ describe("Camps E2E Tests", () => {
       await userRepository.save({
         username: "admin_camps_test",
         email: "admin_camps@example.com",
-        password: hashedPassword,
-        role: "admin",
+        password_hash: hashedPassword,
+        role_id: adminRoleId,
         is_active: true,
       });
 
@@ -113,8 +127,8 @@ describe("Camps E2E Tests", () => {
       await userRepository.save({
         username: "gestor_camps_test",
         email: "gestor_camps@example.com",
-        password: hashedPassword,
-        role: "gestor_recursos",
+        password_hash: hashedPassword,
+        role_id: gestorRoleId,
         is_active: true,
       });
 

@@ -83,7 +83,7 @@ export class AiController {
     @Body() dto: ReviewAdmissionDto,
     @CurrentUser() user: any,
   ) {
-    return this.aiService.reviewAdmission(id, dto, user.id);
+    return this.aiService.reviewAdmission(id, dto, user.userId);
   }
 
   @ApiBearerAuth()

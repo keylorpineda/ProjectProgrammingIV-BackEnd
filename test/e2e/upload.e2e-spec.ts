@@ -6,10 +6,12 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { UserAccount } from "../../src/users/entities/user-account.entity";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
+import { AiAdmission } from "../../src/ai/entities/ai-admission.entity";
+import { Camp } from "../../src/camps/entities/camp.entity";
+import { Role } from "../../src/users/entities/role.entity";
 import { UploadModule } from "../../src/upload/upload.module";
 import { AuthModule } from "../../src/auth/auth.module";
 import { UsersModule } from "../../src/users/users.module";
-import { DatabaseModule } from "../../src/database/database.module";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { JwtAuthGuard } from "../../src/auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../../src/auth/guards/roles.guard";
@@ -20,6 +22,8 @@ import { ThrottlerModule } from "@nestjs/throttler";
 describe("Upload E2E Tests", () => {
   let app: INestApplication;
   let userRepository: any;
+  let roleRepository: any;
+  let workerRoleId: number;
   let authToken: string;
 
   beforeAll(async () => {
@@ -43,10 +47,10 @@ describe("Upload E2E Tests", () => {
           password: process.env.DB_PASS || "postgres",
           database: process.env.DB_NAME_TEST || "gestion_test",
           autoLoadEntities: true,
+          entities: [AiAdmission, Camp],
           synchronize: true,
           logging: false,
         }),
-        DatabaseModule,
         AuthModule,
         UsersModule,
         UploadModule,
@@ -64,6 +68,12 @@ describe("Upload E2E Tests", () => {
     await app.init();
 
     userRepository = moduleFixture.get(getRepositoryToken(UserAccount));
+    roleRepository = moduleFixture.get(getRepositoryToken(Role));
+
+    const workerRole =
+      (await roleRepository.findOne({ where: { name: "trabajador" } })) ||
+      (await roleRepository.save({ name: "trabajador" }));
+    workerRoleId = Number(workerRole.id);
   });
 
   afterAll(async () => {
@@ -76,8 +86,8 @@ describe("Upload E2E Tests", () => {
     await userRepository.save({
       username: "uploadtestuser",
       email: "uploadtest@example.com",
-      password: hashedPassword,
-      role: "USER",
+      password_hash: hashedPassword,
+      role_id: workerRoleId,
       is_active: true,
     });
 

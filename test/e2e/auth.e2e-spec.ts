@@ -8,9 +8,11 @@ import { LoginAttempt } from "../../src/auth/entities/login-attempt.entity";
 import { Session } from "../../src/auth/entities/session.entity";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
+import { AiAdmission } from "../../src/ai/entities/ai-admission.entity";
+import { Camp } from "../../src/camps/entities/camp.entity";
+import { Role } from "../../src/users/entities/role.entity";
 import { AuthModule } from "../../src/auth/auth.module";
 import { UsersModule } from "../../src/users/users.module";
-import { DatabaseModule } from "../../src/database/database.module";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { JwtAuthGuard } from "../../src/auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../../src/auth/guards/roles.guard";
@@ -23,6 +25,8 @@ describe("Auth E2E Tests", () => {
   let userRepository: any;
   let loginAttemptRepository: any;
   let sessionRepository: any;
+  let roleRepository: any;
+  let workerRoleId: number;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -45,10 +49,10 @@ describe("Auth E2E Tests", () => {
           password: process.env.DB_PASS || "postgres",
           database: process.env.DB_NAME_TEST || "gestion_test",
           autoLoadEntities: true,
+          entities: [AiAdmission, Camp],
           synchronize: true,
           logging: false,
         }),
-        DatabaseModule,
         AuthModule,
         UsersModule,
       ],
@@ -69,6 +73,12 @@ describe("Auth E2E Tests", () => {
       getRepositoryToken(LoginAttempt),
     );
     sessionRepository = moduleFixture.get(getRepositoryToken(Session));
+    roleRepository = moduleFixture.get(getRepositoryToken(Role));
+
+    const workerRole =
+      (await roleRepository.findOne({ where: { name: "trabajador" } })) ||
+      (await roleRepository.save({ name: "trabajador" }));
+    workerRoleId = Number(workerRole.id);
   });
 
   afterAll(async () => {
@@ -93,8 +103,8 @@ describe("Auth E2E Tests", () => {
       await userRepository.save({
         username: "testuser",
         email: "test@example.com",
-        password: hashedPassword,
-        role: "USER",
+        password_hash: hashedPassword,
+        role_id: workerRoleId,
         is_active: true,
       });
     });
@@ -121,7 +131,7 @@ describe("Auth E2E Tests", () => {
       expect(res.status).toBe(200);
       expect(res.body.user).toHaveProperty("id");
       expect(res.body.user).toHaveProperty("username", "testuser");
-      expect(res.body.user).toHaveProperty("role", "USER");
+      expect(res.body.user).toHaveProperty("role", "trabajador");
     });
 
     it("should create a session record on login", async () => {
@@ -161,8 +171,8 @@ describe("Auth E2E Tests", () => {
       await userRepository.save({
         username: "testuser",
         email: "test@example.com",
-        password: hashedPassword,
-        role: "USER",
+        password_hash: hashedPassword,
+        role_id: workerRoleId,
         is_active: true,
       });
     });
@@ -219,8 +229,8 @@ describe("Auth E2E Tests", () => {
       await userRepository.save({
         username: "testuser",
         email: "test@example.com",
-        password: hashedPassword,
-        role: "USER",
+        password_hash: hashedPassword,
+        role_id: workerRoleId,
         is_active: true,
       });
 
@@ -274,8 +284,8 @@ describe("Auth E2E Tests", () => {
       await userRepository.save({
         username: "testuser",
         email: "test@example.com",
-        password: hashedPassword,
-        role: "USER",
+        password_hash: hashedPassword,
+        role_id: workerRoleId,
         is_active: true,
       });
 
@@ -294,8 +304,7 @@ describe("Auth E2E Tests", () => {
         .post("/auth/logout")
         .set("Authorization", `Bearer ${accessToken}`);
 
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty("message");
+      expect(res.status).toBe(204);
     });
 
     it("should fail logout without token", async () => {
@@ -328,8 +337,8 @@ describe("Auth E2E Tests", () => {
       await userRepository.save({
         username: "testuser",
         email: "test@example.com",
-        password: hashedPassword,
-        role: "USER",
+        password_hash: hashedPassword,
+        role_id: workerRoleId,
         is_active: true,
       });
 
@@ -349,7 +358,9 @@ describe("Auth E2E Tests", () => {
         .set("Authorization", `Bearer ${accessToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty("is_active");
+      expect(res.body).toHaveProperty("isActive");
+      expect(res.body).toHaveProperty("lastActivity");
+      expect(res.body).toHaveProperty("minutesUntilExpiration");
     });
 
     it("should fail to access protected route without token", async () => {
@@ -374,8 +385,8 @@ describe("Auth E2E Tests", () => {
         .set("Authorization", `Bearer ${accessToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty("is_active");
-      expect(res.body).toHaveProperty("minutes_inactive");
+      expect(res.body).toHaveProperty("isActive");
+      expect(res.body).toHaveProperty("minutesUntilExpiration");
     });
   });
 
@@ -387,8 +398,8 @@ describe("Auth E2E Tests", () => {
       await userRepository.save({
         username: "testuser",
         email: "test@example.com",
-        password: hashedPassword,
-        role: "USER",
+        password_hash: hashedPassword,
+        role_id: workerRoleId,
         is_active: true,
       });
 
@@ -427,8 +438,8 @@ describe("Auth E2E Tests", () => {
       await userRepository.save({
         username: "testuser",
         email: "test@example.com",
-        password: hashedPassword,
-        role: "USER",
+        password_hash: hashedPassword,
+        role_id: workerRoleId,
         is_active: true,
       });
 
@@ -472,7 +483,7 @@ describe("Auth E2E Tests", () => {
         .post("/auth/logout")
         .set("Authorization", `Bearer ${newAccessToken}`);
 
-      expect(logoutRes.status).toBe(200);
+      expect(logoutRes.status).toBe(204);
 
       // 7. Token ya no funciona despuÃ©s de logout
       const finalRes = await request(app.getHttpServer())
@@ -492,8 +503,8 @@ describe("Auth E2E Tests", () => {
       const user = await userRepository.save({
         username: "testuser",
         email: "test@example.com",
-        password: hashedPassword,
-        role: "USER",
+        password_hash: hashedPassword,
+        role_id: workerRoleId,
         is_active: true,
       });
       userId = user.id;
@@ -513,7 +524,7 @@ describe("Auth E2E Tests", () => {
         where: { user_id: userId },
       });
 
-      const timestampBefore = sessionBefore?.last_activity_at?.getTime() || 0;
+      const timestampBefore = sessionBefore?.last_activity?.getTime() || 0;
 
       // Esperar un poco para que timestamp sea diferente
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -527,7 +538,7 @@ describe("Auth E2E Tests", () => {
         where: { user_id: userId },
       });
 
-      expect(sessionAfter?.last_activity_at?.getTime()).toBeGreaterThan(
+      expect(sessionAfter?.last_activity?.getTime()).toBeGreaterThan(
         timestampBefore,
       );
     });

@@ -6,7 +6,8 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { HealthModule } from "../../src/health/health.module";
 import { AuthModule } from "../../src/auth/auth.module";
 import { UsersModule } from "../../src/users/users.module";
-import { DatabaseModule } from "../../src/database/database.module";
+import { AiAdmission } from "../../src/ai/entities/ai-admission.entity";
+import { Camp } from "../../src/camps/entities/camp.entity";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { JwtAuthGuard } from "../../src/auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../../src/auth/guards/roles.guard";
@@ -38,10 +39,10 @@ describe("Health E2E Tests", () => {
           password: process.env.DB_PASS || "postgres",
           database: process.env.DB_NAME_TEST || "gestion_test",
           autoLoadEntities: true,
+          entities: [AiAdmission, Camp],
           synchronize: true,
           logging: false,
         }),
-        DatabaseModule,
         AuthModule,
         UsersModule,
         HealthModule,
