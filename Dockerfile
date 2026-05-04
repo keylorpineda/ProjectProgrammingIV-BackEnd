@@ -28,8 +28,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-# Copy built application from builder stage using absolute paths
-COPY --from=builder /app/dist /app/dist
+# Copy built application from builder stage
+COPY --from=builder /app/dist ./dist
 
 # Create non-root user and fix permissions
 RUN addgroup -g 1001 -S nodejs && \
@@ -37,12 +37,12 @@ RUN addgroup -g 1001 -S nodejs && \
     chown -R nestjs:nodejs /app
 
 # Final image structure check (debug)
-RUN ls -R /app/dist | head -n 20
+RUN ls -R dist | head -n 20
 
 USER nestjs
 
 # Expose port (Render defaults to 10000 or uses $PORT)
 EXPOSE 3000
 
-# Start the application using absolute path
-CMD ["node", "/app/dist/main.js"]
+# Start the application using relative path
+CMD ["node", "dist/main.js"]
