@@ -19,6 +19,7 @@ async function getToken(request: any): Promise<string> {
 
 test.describe("Traslados Inter-campamentos", () => {
   let token: string;
+  let campsRaw: any;
   let camps: any[];
   let requestId: number;
   let originCampId: number;
@@ -31,11 +32,16 @@ test.describe("Traslados Inter-campamentos", () => {
     const campsRes = await request.get(`${BASE}/camps`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    camps = await campsRes.json();
+    campsRaw = await campsRes.json();
+
+    // Soportar tanto array directo como respuesta paginada { data: [] }
+    camps = Array.isArray(campsRaw) ? campsRaw : (campsRaw?.data ?? []);
 
     if (camps.length >= 2) {
       originCampId = Number(camps[0].id);
       destCampId = Number(camps[1].id);
+    } else if (camps.length === 1) {
+      originCampId = Number(camps[0].id);
     }
 
     const resourcesRes = await request.get(`${BASE}/resources?page=1&limit=5`, {
@@ -50,8 +56,9 @@ test.describe("Traslados Inter-campamentos", () => {
   test("GET /transfers/requests → lista solicitudes del campamento", async ({
     request,
   }) => {
+    const campId = originCampId ?? Number(camps[0]?.id ?? 1);
     const response = await request.get(
-      `${BASE}/transfers/requests/camp/${camps[0]?.id ?? 1}`,
+      `${BASE}/transfers/requests/camp/${campId}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -201,8 +208,9 @@ test.describe("Traslados Inter-campamentos", () => {
   test("GET /transfers/statistics/:campId → estadísticas de traslados por campamento", async ({
     request,
   }) => {
+    const campId = originCampId ?? Number(camps[0]?.id ?? 1);
     const response = await request.get(
-      `${BASE}/transfers/statistics/${camps[0]?.id ?? 1}`,
+      `${BASE}/transfers/statistics/${campId}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
