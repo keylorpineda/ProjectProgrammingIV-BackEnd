@@ -1,5 +1,5 @@
 # Build stage
-# Cache buster: 2026-05-04T01:43:00
+# Cache buster: 2026-05-04T05:00:00
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -24,22 +24,22 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
+
 # Install only production dependencies
-COPY package*.json ./
+COPY --chown=nestjs:nodejs package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
 # Copy built application from builder stage
-COPY --from=builder /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
-# Create non-root user and fix permissions
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001 && \
-    chown -R nestjs:nodejs /app
+# Run as non-root user
+USER nestjs
 
 # Final image structure check (debug)
 RUN ls -R dist | head -n 20
-
-USER nestjs
 
 # Expose port (Render defaults to 10000 or uses $PORT)
 EXPOSE 3000
