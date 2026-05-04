@@ -198,15 +198,37 @@ Running 44 tests using 1 worker
 
 #### ▶️ Opción B — Contra servidor local
 
-1. Inicia el servidor:
-   ```bash
-   npm run start:dev
-   ```
-2. En otra terminal, ejecuta los tests:
-   ```bash
-   npm run test:playwright
-   ```
-   *(Por defecto usa `http://localhost:3000/api/v1` definido en `.env`)*
+> Requiere tener el servidor corriendo localmente con la base de datos configurada.
+
+**Paso 1 — Asegúrate de que tu `.env` tiene esto:**
+```env
+API_BASE_URL=http://localhost:3000/api/v1
+TEST_USERNAME=admin
+TEST_PASSWORD=Admin@1234!
+```
+
+**Paso 2 — Levanta el servidor (en una terminal):**
+```bash
+npm run start:dev
+```
+> Espera hasta ver: `Nest application successfully started`
+
+**Paso 3 — Ejecuta los tests (en otra terminal):**
+
+*PowerShell:*
+```powershell
+$env:API_BASE_URL="http://localhost:3000/api/v1"; $env:TEST_USERNAME="admin"; $env:TEST_PASSWORD="Admin@1234!"; npm run test:playwright
+```
+
+*Bash / macOS / Linux:*
+```bash
+API_BASE_URL=http://localhost:3000/api/v1 TEST_USERNAME=admin TEST_PASSWORD="Admin@1234!" npm run test:playwright
+```
+
+*O simplemente (si ya configuraste el `.env`):*
+```bash
+npm run test:playwright
+```
 
 #### ▶️ Ejecutar un spec individual
 
