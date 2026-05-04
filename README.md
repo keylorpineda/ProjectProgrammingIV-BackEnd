@@ -11,7 +11,7 @@
 <p align="center">
   <strong>The core backend engine powering the Doomsday System.</strong>
   <br />
-  A robust, enterprise-grade RESTful API built with NestJS to manage critical resources, personnel, and communications between outposts.
+  A robust, enterprise-grade RESTful API built with NestJS to manage critical resources, personnel, and communications between outposts in a post-apocalyptic world.
 </p>
 
 <p align="center">
@@ -26,14 +26,33 @@ The **Doomsday System API** is the foundational backend infrastructure for the *
 
 Built upon the powerful **NestJS** framework, this backend leverages decorators, dependency injection, and heavy TypeScript typing to ensure a scalable and strictly validated data flow.
 
+## 🏗️ Architecture & Design
+
+To ensure technical transparency and compliance with design requirements, the following diagrams are presented:
+
+### 🧩 System Architecture
+Visual representation of the data flow between the Client (React), the Server (NestJS), and External Services (AI, Cloudinary, Database).
+
+![System Architecture](docs/architecture.png)
+
+### 📊 Data Design (ERD)
+The data model is normalized and designed to support multi-camp environments, resource traceability, and health status tracking.
+
+- **Interactive Diagram:** [dbdiagram.io - Doomsday System](https://dbdiagram.io/d/6893dfbedd90d17865cbf822)
+
+![Database Diagram](docs/erd.png)
+*(Click the link above to view live detailed relationships)*
+
+---
+
 ## ✨ Key Features
 
-- **🔐 Enterprise Security:** Secure JWT-based authentication with properly managed environment configurations (no hardcoded credentials).
+- **🔐 Enterprise Security:** Secure JWT-based authentication with properly managed environment configurations (no hardcoded credentials). Session auto-logout after 20 minutes of inactivity.
 - **🏕️ Camp Resource Orchestration:** Endpoints dedicated to tracking, allocating, and updating physical and human resources across multiple camp instances.
-- **📡 Inter-Camp Transfers:** Facilitates resource and personnel transfers between distinct geographical nodes with a dual-approval flow.
+- **📡 Inter-Camp Transfers:** Facilitates resource and personnel transfers between distinct geographical nodes with a strict dual-approval flow (origin & destination).
 - **🗺️ Explorations:** Full lifecycle management of scouting missions — scheduling, dispatch, and return with found resources.
-- **🤖 AI Admissions:** Automatic candidate evaluation via integrated AI microservice with human review override.
-- **🚦 API Standardization:** All endpoints standardized under `/api/v1` with clean RESTful architecture.
+- **🤖 AI Admissions:** Automatic candidate evaluation via integrated AI microservice with transparent justification and human review override.
+- **🚦 API Standardization:** All endpoints standardized under `/api/v1` with clean RESTful architecture and Swagger documentation.
 - **🛡️ Strict Validation:** Complete Request/Response schema validation using DTOs and `class-validator`.
 - **🧪 Comprehensive Testing:** 724 unit tests (Jest) + 44 E2E tests (Playwright) covering all critical flows.
 
@@ -48,7 +67,7 @@ Built upon the powerful **NestJS** framework, this backend leverages decorators,
 | E2E Testing | [Playwright](https://playwright.dev/) (API mode) |
 | Validation | class-validator & class-transformer |
 | Auth | JWT (Passport) |
-| Deployment | [Render](https://render.com/) |
+| Infrastructure | Render (Server) & Supabase (Database) |
 
 ---
 
@@ -64,8 +83,8 @@ Built upon the powerful **NestJS** framework, this backend leverages decorators,
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/doomsday-system-api.git
-cd doomsday-system-api
+git clone https://github.com/keylorpineda/ProjectProgrammingIV-BackEnd.git
+cd ProjectProgrammingIV-BackEnd
 
 # 2. Install dependencies
 npm install
@@ -79,82 +98,31 @@ Copy `.env.example` to `.env` and fill in your values:
 cp .env.example .env
 ```
 
-```env
-# ── App ──────────────────────────────────────────────────────────
-PORT=3000
-NODE_ENV=development
-
-# ── Database (PostgreSQL) ─────────────────────────────────────────
-DB_HOST=your_db_host
-DB_PORT=5432
-DB_USER=your_db_user
-DB_PASS=your_db_password
-DB_NAME=your_db_name
-
-# ── JWT ───────────────────────────────────────────────────────────
-JWT_SECRET=your_super_secret_key_min_32_chars
-JWT_EXPIRES_IN=20m
-
-# ── Rate Limiting ─────────────────────────────────────────────────
-THROTTLE_TTL=1000
-THROTTLE_LIMIT=1000
-
-# ── CORS ──────────────────────────────────────────────────────────
-CORS_ORIGIN=http://localhost:3000,http://localhost:5173
-
-# ── Request Size ──────────────────────────────────────────────────
-MAX_REQUEST_SIZE=1mb
-
-# ── Cloudinary (image storage) ────────────────────────────────────
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-
-# ── E2E Tests (Playwright) ────────────────────────────────────────
-API_BASE_URL=http://localhost:3000/api/v1
-TEST_USERNAME=admin
-TEST_PASSWORD=YourAdminPassword
-```
-
-### Start Development Server
-
-```bash
-npm run start:dev
-```
-
-> Server starts at `http://localhost:3000/api/v1`
-
 ---
 
 ## 🧪 Testing
 
 ### 📋 Quick Reference
 
-| Comando | Descripción |
+| Command | Description |
 |---|---|
-| `npm run test` | Pruebas unitarias (Jest) — 724 tests |
-| `npm run test:cov` | Pruebas unitarias con cobertura |
-| `npm run test:playwright` | E2E contra servidor local (`localhost:3000`) |
-| `npm run test:playwright:ui` | E2E con interfaz gráfica de Playwright |
-| `npm run test:playwright:report` | Abre el último reporte HTML |
+| `npm run test` | Unit tests (Jest) — 724 tests total |
+| `npm run test:cov` | Unit tests with coverage report |
+| `npm run test:playwright` | E2E tests against specified `API_BASE_URL` |
+| `npm run test:playwright:ui` | E2E tests with Playwright's UI Mode |
+| `npm run test:playwright:report` | Opens the last HTML test report |
 
 ---
 
-### 🔬 Pruebas Unitarias (Jest)
+### 🔬 Unit Testing (Jest)
 
-Ejecuta todos los módulos `.spec.ts` dentro de `src/`. No requiere servidor activo ni base de datos.
+Executes all `.spec.ts` modules inside `src/`. Does not require an active server or database.
 
 ```bash
 npm run test
 ```
 
-**Con reporte de cobertura:**
-
-```bash
-npm run test:cov
-```
-
-**Resultado esperado:**
+**Expected Result:**
 ```
 Test Suites: 63 passed, 63 total
 Tests:       724 passed, 724 total
@@ -163,116 +131,53 @@ Time:        ~18s
 
 ---
 
-### 🎭 Pruebas E2E (Playwright)
+### 🎭 E2E Testing (Playwright)
 
-Los tests E2E validan los flujos HTTP completos contra la API. Están ubicados en `e2e-playwright/` y cubren:
+E2E tests validate full HTTP flows. Located in `e2e-playwright/`, covering:
 
-| Archivo | Flujos |
+| File | Flows |
 |---|---|
-| `auth.spec.ts` | Login, refresh token, session status, 401 sin token |
-| `dashboard-camps.spec.ts` | CRUD campamentos, estadísticas del dashboard |
-| `resources.spec.ts` | Inventario, movimientos (entradas/salidas), paginación |
-| `transfers.spec.ts` | Solicitudes inter-campamento, doble aprobación, llegada |
-| `explorations.spec.ts` | Creación, despacho, retorno con recursos encontrados |
-| `users.spec.ts` | Admisión IA, revisión humana, cambio de estado, reasignaciones |
+| `auth.spec.ts` | Login, refresh, session status, 401 handling |
+| `dashboard-camps.spec.ts` | Camp CRUD, dashboard metrics |
+| `resources.spec.ts` | Inventory, movements, pagination |
+| `transfers.spec.ts` | Inter-camp requests, dual approval, arrivals |
+| `explorations.spec.ts` | Creation, departure, return with resources |
+| `users.spec.ts` | AI Admission, human review, status changes |
 
-#### ▶️ Opción A — Contra el servidor de Render (Producción)
+#### ▶️ Option A — Against Production (Render)
 
-> ✅ **Recomendado.** No requiere servidor local ni base de datos.
+> ✅ **Recommended.** Does not require local setup.
 
 **PowerShell:**
 ```powershell
 $env:API_BASE_URL="https://doomsday-system-api.onrender.com/api/v1"; $env:TEST_USERNAME="admin"; $env:TEST_PASSWORD="Admin@1234!"; npm run test:playwright
 ```
 
-**Bash / macOS / Linux:**
+**Bash (macOS / Linux):**
 ```bash
 API_BASE_URL=https://doomsday-system-api.onrender.com/api/v1 TEST_USERNAME=admin TEST_PASSWORD="Admin@1234!" npm run test:playwright
 ```
 
-**Resultado esperado:**
-```
-Running 44 tests using 1 worker
-  44 passed (~58s)
-```
+---
 
-#### ▶️ Opción B — Contra servidor local
+#### ▶️ Option B — Against Local Server
 
-> Requiere tener el servidor corriendo localmente con la base de datos configurada.
-
-**Paso 1 — Asegúrate de que tu `.env` tiene esto:**
+**Step 1 — Configure your `.env`:**
 ```env
 API_BASE_URL=http://localhost:3000/api/v1
 TEST_USERNAME=admin
 TEST_PASSWORD=Admin@1234!
 ```
 
-**Paso 2 — Levanta el servidor (en una terminal):**
+**Step 2 — Start the server:**
 ```bash
 npm run start:dev
 ```
-> Espera hasta ver: `Nest application successfully started`
 
-**Paso 3 — Ejecuta los tests (en otra terminal):**
-
-*PowerShell:*
-```powershell
-$env:API_BASE_URL="http://localhost:3000/api/v1"; $env:TEST_USERNAME="admin"; $env:TEST_PASSWORD="Admin@1234!"; npm run test:playwright
-```
-
-*Bash / macOS / Linux:*
-```bash
-API_BASE_URL=http://localhost:3000/api/v1 TEST_USERNAME=admin TEST_PASSWORD="Admin@1234!" npm run test:playwright
-```
-
-*O simplemente (si ya configuraste el `.env`):*
+**Step 3 — Run tests (in another terminal):**
 ```bash
 npm run test:playwright
 ```
-
-#### ▶️ Ejecutar un spec individual
-
-```powershell
-# PowerShell — contra Render, solo transfers
-$env:API_BASE_URL="https://doomsday-system-api.onrender.com/api/v1"; $env:TEST_USERNAME="admin"; $env:TEST_PASSWORD="Admin@1234!"; npm run test:playwright -- e2e-playwright/transfers.spec.ts --reporter=list
-```
-
-```bash
-# Bash — contra Render, solo auth
-API_BASE_URL=https://doomsday-system-api.onrender.com/api/v1 TEST_USERNAME=admin TEST_PASSWORD="Admin@1234!" npm run test:playwright -- e2e-playwright/auth.spec.ts --reporter=list
-```
-
-#### ▶️ Modo UI interactivo
-
-```bash
-npm run test:playwright:ui
-```
-
-> Abre el explorador visual de Playwright para depurar tests paso a paso.
-
-#### ▶️ Ver reporte HTML del último run
-
-```bash
-npm run test:playwright:report
-```
-
----
-
-### ⚙️ Variables de entorno para los tests E2E
-
-| Variable | Descripción | Ejemplo local | Ejemplo Render |
-|---|---|---|---|
-| `API_BASE_URL` | Base URL de la API | `http://localhost:3000/api/v1` | `https://doomsday-system-api.onrender.com/api/v1` |
-| `TEST_USERNAME` | Usuario admin para auth | `admin` | `admin` |
-| `TEST_PASSWORD` | Contraseña del usuario admin | *(ver con el equipo)* | *(ver con el equipo)* |
-
-> 💡 **Alternativa rápida:** Agrega estas líneas a tu `.env` para no pasar las variables en cada ejecución:
-> ```env
-> API_BASE_URL=https://doomsday-system-api.onrender.com/api/v1
-> TEST_USERNAME=admin
-> TEST_PASSWORD=Admin@1234!
-> ```
-> Y luego simplemente corre: `npm run test:playwright`
 
 ---
 
@@ -280,24 +185,17 @@ npm run test:playwright:report
 
 ```text
 src/
- ├── auth/           # JWT authentication, guards, strategies
- ├── camps/          # Camp management and dashboard stats
- ├── explorations/   # Scouting mission lifecycle
- ├── health/         # Health check endpoint
- ├── resources/      # Inventory tracking and movements
- ├── transfers/      # Inter-camp transfer requests and approvals
- ├── users/          # Personnel management and AI admissions
- ├── common/         # Global filters, interceptors, decorators
- ├── main.ts         # Bootstrap and global config
+ ├── ai/             # AI logic and Admission evaluation
+ ├── auth/           # JWT security, guards, and session management
+ ├── camps/          # Outpost management and dashboard metrics
+ ├── explorations/   # Mission lifecycle (Scouting/Exploration)
+ ├── health/         # System status and Server Time
+ ├── resources/      # Inventory and resource movement
+ ├── transfers/      # Inter-camp communication and transfers
+ ├── users/          # Personnel, roles, and professions
+ ├── common/         # Shared filters, interceptors, and decorators
+ ├── main.ts         # Application entry point
  └── app.module.ts   # Root module
-
-e2e-playwright/
- ├── auth.spec.ts
- ├── dashboard-camps.spec.ts
- ├── explorations.spec.ts
- ├── resources.spec.ts
- ├── transfers.spec.ts
- └── users.spec.ts
 ```
 
 ---
