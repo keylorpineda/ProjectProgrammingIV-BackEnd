@@ -6,6 +6,7 @@ import { json, urlencoded } from "express";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { SanitizeInterceptor } from "./common/interceptors/sanitize.interceptor";
+import { RedisIoAdapter } from "./notifications/redis-io.adapter";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -21,6 +22,8 @@ async function bootstrap() {
   app.use(helmet());
 
   app.useGlobalInterceptors(new SanitizeInterceptor());
+
+  app.useWebSocketAdapter(new RedisIoAdapter(app));
 
   const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3000")
     .split(",")

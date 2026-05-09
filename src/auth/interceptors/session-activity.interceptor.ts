@@ -1,15 +1,18 @@
-﻿import {
+import {
   Injectable,
   NestInterceptor,
   ExecutionContext,
   CallHandler,
 } from "@nestjs/common";
+import { Inject } from "@nestjs/common";
 import { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Session } from "../entities/session.entity";
 import { JwtService } from "@nestjs/jwt";
+import { REDIS_CLIENT } from "../../redis/redis.constants";
+import { Redis } from "ioredis";
 
 /**
  * Interceptor que actualiza last_activity en cada request autenticado
@@ -21,6 +24,7 @@ export class SessionActivityInterceptor implements NestInterceptor {
     @InjectRepository(Session)
     private readonly sessionRepo: Repository<Session>,
     private readonly jwtService: JwtService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
   async intercept(
@@ -38,7 +42,12 @@ export class SessionActivityInterceptor implements NestInterceptor {
         const payload = this.jwtService.verify(token);
         const userId = payload.sub;
 
-        // Actualizar last_activity de todas las sesiones activas del usuario
+        // Actualizar TTL de inactividad en Redis en cada request (1200s = 20m)
+        await this.redis.expire(`session:${userId}`, 1200);
+
+        // Opcional: Actualizar last_activity en BD solo una vez cada cierto tiempo
+        // para no sobrecargar PostgreSQL con UPDATEs en cada request.
+        // Aqu lo mantenemos por consistencia si as se desea.
         await this.sessionRepo.update(
           { user_id: userId, is_active: true },
           { last_activity: new Date() },

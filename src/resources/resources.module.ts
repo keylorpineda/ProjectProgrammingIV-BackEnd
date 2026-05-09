@@ -10,6 +10,8 @@ import { DailyConsumption } from "./entities/daily-consumption.entity";
 import { AuditLog } from "../common/entities/audit-log.entity";
 import { Camp } from "../camps/entities/camp.entity";
 import { Person } from "../users/entities/person.entity";
+import { BullModule } from "@nestjs/bullmq";
+import { DailyTasksProcessor } from "./processors/daily-tasks.processor";
 
 @Module({
   imports: [
@@ -23,9 +25,12 @@ import { Person } from "../users/entities/person.entity";
       Camp,
       Person,
     ]),
+    BullModule.registerQueue({
+      name: "daily-tasks",
+    }),
   ],
   controllers: [ResourcesController],
-  providers: [ResourcesService],
+  providers: [ResourcesService, DailyTasksProcessor],
   exports: [ResourcesService, TypeOrmModule],
 })
 export class ResourcesModule {}

@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, Inject } from "@nestjs/common";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Cache } from "cache-manager";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import {
@@ -62,12 +64,20 @@ export class DashboardService {
     private readonly explorationSummaryView: Repository<ExplorationSummaryView>,
     @InjectRepository(PersonProfessionStatsView)
     private readonly professionStatsView: Repository<PersonProfessionStatsView>,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
   async getMetricsByCamp(
     campId: number,
     role: string,
   ): Promise<DashboardMetricsResponse> {
+    const cacheKey = `dashboard:metrics:${campId}:${role}`;
+    const cachedMetrics = await this.cacheManager.get<DashboardMetricsResponse>(cacheKey);
+
+    if (cachedMetrics) {
+      return cachedMetrics;
+    }
+
     const campPopulation = await this.campPopulationView.findOne({
       where: { camp_id: campId },
     });
@@ -80,7 +90,7 @@ export class DashboardService {
     const warehouse = await this.buildWarehouseMetrics(campId);
     const transfers = await this.buildTransferMetrics(campId);
 
-    return {
+    const metrics: DashboardMetricsResponse = {
       campId,
       role,
       generatedAt: new Date(),
@@ -88,6 +98,10 @@ export class DashboardService {
       warehouse,
       transfers,
     };
+
+    await this.cacheManager.set(cacheKey, metrics);
+
+    return metrics;
   }
 
   private async buildCampMetrics(

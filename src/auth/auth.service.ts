@@ -3,6 +3,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
+import { Inject } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -13,6 +14,8 @@ import { Session } from "./entities/session.entity";
 import { UserAccount } from "../users/entities/user-account.entity";
 import { Camp } from "../camps/entities/camp.entity";
 import { LoginDto } from "./dto/login.dto";
+import { REDIS_CLIENT } from "../redis/redis.constants";
+import { Redis } from "ioredis";
 
 const SALT_ROUNDS = 12;
 const MAX_LOGIN_ATTEMPTS = 1000;
@@ -31,6 +34,7 @@ export class AuthService {
     private readonly userRepo: Repository<UserAccount>,
     @InjectRepository(Camp)
     private readonly campRepo: Repository<Camp>,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
   async login(
@@ -121,6 +125,9 @@ export class AuthService {
       }),
     );
 
+    // Guardar sesin en Redis para timeout de inactividad de 20 mins (1200 seg)
+    await this.redis.setex(`session:${user.id}`, 1200, "active");
+
     user.last_access = new Date();
     await this.userRepo.save(user);
 
@@ -169,6 +176,9 @@ export class AuthService {
       { user_id: userId, is_active: true },
       { is_active: false, auto_logout: false },
     );
+
+    // Eliminar sesin de Redis
+    await this.redis.del(`session:${userId}`);
   }
 
   async refresh(refreshToken: string): Promise<{
@@ -238,6 +248,9 @@ export class AuthService {
     validSession.last_activity = new Date();
     validSession.expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await this.sessionRepo.save(validSession);
+
+    // Actualizar sesin en Redis
+    await this.redis.setex(`session:${user.id}`, 1200, "active");
 
     return {
       access_token: newAccessToken,
@@ -311,6 +324,9 @@ export class AuthService {
       }),
     );
 
+    // Actualizar sesin en Redis
+    await this.redis.setex(`session:${userId}`, 1200, "active");
+
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
@@ -374,12 +390,8 @@ export class AuthService {
     minutesUntilExpiration: number;
     willExpireSoon: boolean;
   }> {
-    const session = await this.sessionRepo.findOne({
-      where: { user_id: userId, is_active: true },
-      order: { last_activity: "DESC" },
-    });
-
-    if (!session) {
+    const sessionExists = await this.redis.exists(`session:${userId}`);
+    if (!sessionExists) {
       return {
         isActive: false,
         lastActivity: new Date(),
@@ -388,18 +400,14 @@ export class AuthService {
       };
     }
 
-    const now = new Date();
-    const timeSinceLastActivity =
-      now.getTime() - session.last_activity.getTime();
-    const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutos
-    const timeRemaining = INACTIVITY_TIMEOUT_MS - timeSinceLastActivity;
-    const minutesRemaining = Math.max(0, Math.floor(timeRemaining / 60000));
+    const ttl = await this.redis.ttl(`session:${userId}`);
+    const minutesRemaining = Math.max(0, Math.floor(ttl / 60));
 
     return {
       isActive: true,
-      lastActivity: session.last_activity,
+      lastActivity: new Date(),
       minutesUntilExpiration: minutesRemaining,
-      willExpireSoon: minutesRemaining <= 2, // Advertir si quedan 2 min o menos
+      willExpireSoon: minutesRemaining <= 2,
     };
   }
 }

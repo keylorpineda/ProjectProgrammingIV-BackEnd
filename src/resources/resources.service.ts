@@ -6,7 +6,9 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, IsNull } from "typeorm";
-import { Cron, CronExpression } from "@nestjs/schedule";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import { OnModuleInit } from "@nestjs/common";
 import { Resource } from "./entities/resource.entity";
 import { Inventory } from "./entities/inventory.entity";
 import { InventoryMovement } from "./entities/inventory-movement.entity";
@@ -34,7 +36,7 @@ const INCOME_TYPES = [
 ];
 
 @Injectable()
-export class ResourcesService {
+export class ResourcesService implements OnModuleInit {
   private readonly logger = new Logger(ResourcesService.name);
 
   constructor(
@@ -54,7 +56,17 @@ export class ResourcesService {
     private readonly campRepo: Repository<Camp>,
     @InjectRepository(Person)
     private readonly personRepo: Repository<Person>,
+    @InjectQueue('daily-tasks') private readonly dailyTasksQueue: Queue,
   ) {}
+
+  async onModuleInit() {
+    this.logger.log('Scheduling daily-resources job...');
+    await this.dailyTasksQueue.add(
+      'daily-resources',
+      {},
+      { repeat: { pattern: '0 0 * * *' }, jobId: 'daily-resources-job' }
+    );
+  }
 
   async findAll(
     page = 1,
@@ -427,8 +439,7 @@ export class ResourcesService {
     return { production, consumption, movementCount };
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async handleDailyCron(): Promise<void> {
+  async executeAllDailyProcesses(): Promise<void> {
     this.logger.log("Iniciando proceso diario automático de recursos...");
 
     const camps = await this.campRepo.find({ where: { active: true } });

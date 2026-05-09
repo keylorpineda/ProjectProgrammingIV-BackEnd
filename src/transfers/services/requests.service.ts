@@ -14,6 +14,7 @@ import { Inventory } from "../../resources/entities/inventory.entity";
 import { Resource } from "../../resources/entities/resource.entity";
 import { AuditLog } from "../../common/entities/audit-log.entity";
 import { CreateIntercampRequestDto } from "../dto/create-intercamp-request.dto";
+import { NotificationsGateway } from "../../notifications/notifications.gateway";
 
 @Injectable()
 export class RequestsService {
@@ -35,6 +36,7 @@ export class RequestsService {
     @InjectRepository(AuditLog)
     private readonly auditRepo: Repository<AuditLog>,
     private readonly dataSource: DataSource,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   async createRequest(
@@ -109,7 +111,17 @@ export class RequestsService {
 
       await queryRunner.commitTransaction();
 
-      return this.findRequestById(Number(savedRequest.id));
+      const finalRequest = await this.findRequestById(Number(savedRequest.id));
+      
+      // Emitir notificacin por WebSocket
+      this.notificationsGateway.emitTransferRequest(dto.camp_destination_id, {
+        id: finalRequest.id,
+        type: finalRequest.type,
+        originCamp: originCamp.name,
+        requestDate: finalRequest.request_date,
+      });
+
+      return finalRequest;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;

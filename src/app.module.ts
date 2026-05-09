@@ -1,4 +1,4 @@
-﻿import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common";
+import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { CsrfMiddleware } from "./common/middleware/csrf.middleware";
@@ -20,6 +20,9 @@ import { AiModule } from "./ai/ai.module";
 import { UploadModule } from "./upload/upload.module";
 import { HealthModule } from "./health/health.module";
 import { DatabaseModule } from "./database/database.module";
+import { NotificationsModule } from "./notifications/notifications.module";
+import { RedisModule } from "./redis/redis.module";
+import { BullModule } from "@nestjs/bullmq";
 
 @Module({
   imports: [
@@ -58,6 +61,20 @@ import { DatabaseModule } from "./database/database.module";
 
     ScheduleModule.forRoot(),
 
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get("REDIS_HOST", "localhost"),
+          port: config.get("REDIS_PORT", 6379),
+          password: config.get("REDIS_PASSWORD"),
+        },
+      }),
+      inject: [ConfigService],
+    }),
+
+    RedisModule,
+
     HealthModule,
     AuthModule,
     UsersModule,
@@ -69,6 +86,7 @@ import { DatabaseModule } from "./database/database.module";
     AiModule,
     UploadModule,
     DatabaseModule,
+    NotificationsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

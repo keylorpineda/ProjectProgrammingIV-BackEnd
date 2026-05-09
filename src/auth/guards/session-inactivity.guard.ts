@@ -1,17 +1,18 @@
-﻿import {
+import {
   Injectable,
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
 } from "@nestjs/common";
+import { Inject } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Session } from "../entities/session.entity";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
-
-const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutos
+import { REDIS_CLIENT } from "../../redis/redis.constants";
+import { Redis } from "ioredis";
 
 /**
  * Guard que valida si la sesi�n ha estado inactiva por m�s de 20 minutos
@@ -24,6 +25,7 @@ export class SessionInactivityGuard implements CanActivate {
     private readonly sessionRepo: Repository<Session>,
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -51,33 +53,19 @@ export class SessionInactivityGuard implements CanActivate {
       const payload = this.jwtService.verify(token);
       const userId = payload.sub;
 
-      // Buscar sesiones activas del usuario
-      const sessions = await this.sessionRepo.find({
-        where: { user_id: userId, is_active: true },
-        order: { last_activity: "DESC" },
-      });
+      // Verificar en Redis si la sesin an est activa (no ha expirado el TTL)
+      const sessionExists = await this.redis.exists(`session:${userId}`);
 
-      if (sessions.length === 0) {
-        throw new UnauthorizedException(
-          "No hay sesi�n activa. Por favor, inicie sesi�n nuevamente",
-        );
-      }
-
-      // Verificar la sesi�n m�s reciente
-      const mostRecentSession = sessions[0];
-      const now = new Date();
-      const timeSinceLastActivity =
-        now.getTime() - mostRecentSession.last_activity.getTime();
-
-      if (timeSinceLastActivity > INACTIVITY_TIMEOUT_MS) {
-        // Marcar todas las sesiones como inactivas por timeout
+      if (!sessionExists) {
+        // La llave expir o fue eliminada (logout)
+        // Actualizamos BD histricamente si es necesario (opcional)
         await this.sessionRepo.update(
           { user_id: userId, is_active: true },
           { is_active: false, auto_logout: true },
         );
 
         throw new UnauthorizedException(
-          "Su sesi�n ha expirado por inactividad. Por favor, inicie sesi�n nuevamente",
+          "Su sesin ha expirado por inactividad o no existe. Por favor, inicie sesin nuevamente",
         );
       }
 
