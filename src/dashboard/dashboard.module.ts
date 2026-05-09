@@ -5,6 +5,7 @@ import { DashboardService } from "./dashboard.service";
 import { DatabaseModule } from "../database/database.module";
 import {
   CampPopulationSummaryView,
+  PersonStatusStatsView,
   InventoryStatusView,
   InventoryAlertView,
   TransferCampSummaryView,
@@ -13,13 +14,13 @@ import {
 } from "../database/views";
 import { CacheModule } from "@nestjs/cache-manager";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { redisStore } from "cache-manager-redis-yet";
 
 @Module({
   imports: [
     DatabaseModule,
     TypeOrmModule.forFeature([
       CampPopulationSummaryView,
+      PersonStatusStatsView,
       InventoryStatusView,
       InventoryAlertView,
       TransferCampSummaryView,
@@ -29,16 +30,24 @@ import { redisStore } from "cache-manager-redis-yet";
     CacheModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        store: await redisStore({
-          socket: {
-            host: configService.get<string>("REDIS_HOST", "localhost"),
-            port: configService.get<number>("REDIS_PORT", 6379),
-          },
-          password: configService.get<string>("REDIS_PASSWORD"),
-          ttl: 300000, // 5 minutos por defecto en milisegundos (para redisStore puede ser ms o segn versión, asumo default ttl en ms/s)
-        }),
-      }),
+      useFactory: async (configService: ConfigService) => {
+        try {
+          const { redisStore } = await import("cache-manager-redis-yet");
+          return {
+            store: await redisStore({
+              socket: {
+                host: configService.get<string>("REDIS_HOST", "localhost"),
+                port: configService.get<number>("REDIS_PORT", 6379),
+              },
+              password: configService.get<string>("REDIS_PASSWORD"),
+              ttl: 300000,
+            }),
+          };
+        } catch {
+          // Fallback to default in-memory store to avoid startup failures.
+          return { ttl: 300000 };
+        }
+      },
     }),
   ],
   controllers: [DashboardController],

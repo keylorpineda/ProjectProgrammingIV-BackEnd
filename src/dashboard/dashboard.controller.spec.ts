@@ -4,7 +4,7 @@ import { DashboardService } from "./dashboard.service";
 
 describe("DashboardController", () => {
   let controller: DashboardController;
-  let service: { getMetricsByCamp: jest.Mock };
+  let service: { getMetricsByCamp: jest.Mock; getCampLeaderboard: jest.Mock };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -14,6 +14,7 @@ describe("DashboardController", () => {
           provide: DashboardService,
           useValue: {
             getMetricsByCamp: jest.fn(),
+            getCampLeaderboard: jest.fn(),
           },
         },
       ],
@@ -70,5 +71,18 @@ describe("DashboardController", () => {
     await controller.getDashboardByCamp(2, undefined as any);
 
     expect(service.getMetricsByCamp).toHaveBeenCalledWith(2, "");
+  });
+
+  it("should get camp leaderboard", async () => {
+    const leaderboard = [
+      { campId: 1, campName: "Camp 1", survivalScore: 500 },
+      { campId: 2, campName: "Camp 2", survivalScore: 450 },
+    ];
+    service.getCampLeaderboard.mockResolvedValue(leaderboard);
+
+    const result = await controller.getCampLeaderboard();
+
+    expect(service.getCampLeaderboard).toHaveBeenCalled();
+    expect(result).toEqual(leaderboard);
   });
 });
