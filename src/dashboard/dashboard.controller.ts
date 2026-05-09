@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import {
   DashboardService,
   DashboardMetricsResponse,
+  CampLeaderboardEntry,
 } from "./dashboard.service";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -12,6 +13,15 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 @Controller("dashboard")
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
+
+  @Get("leaderboard")
+  @Roles("admin", "gestor_recursos")
+  @ApiOperation({
+    summary: "Get top 10 camps by survival score",
+  })
+  async getCampLeaderboard(): Promise<CampLeaderboardEntry[]> {
+    return this.dashboardService.getCampLeaderboard();
+  }
 
   @Get(":campId")
   @Roles("admin", "gestor_recursos")

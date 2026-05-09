@@ -9,6 +9,7 @@ import {
   InventoryAlertView,
   TransferCampSummaryView,
   ExplorationSummaryView,
+  PersonStatusStatsView,
   PersonProfessionStatsView,
 } from "../database/views";
 
@@ -49,6 +50,21 @@ export interface DashboardMetricsResponse {
   transfers: TransfersMetrics;
 }
 
+export interface CampLeaderboardEntry {
+  campId: number;
+  campName: string;
+  survivalScore: number;
+  resources: {
+    foodRations: number;
+    waterRations: number;
+  };
+  population: {
+    healthy: number;
+    sick: number;
+    deceased: number;
+  };
+}
+
 @Injectable()
 export class DashboardService {
   constructor(
@@ -62,17 +78,123 @@ export class DashboardService {
     private readonly transferSummaryView: Repository<TransferCampSummaryView>,
     @InjectRepository(ExplorationSummaryView)
     private readonly explorationSummaryView: Repository<ExplorationSummaryView>,
+    @InjectRepository(PersonStatusStatsView)
+    private readonly personStatusStatsView: Repository<PersonStatusStatsView>,
     @InjectRepository(PersonProfessionStatsView)
     private readonly professionStatsView: Repository<PersonProfessionStatsView>,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
+
+  async getCampLeaderboard(): Promise<CampLeaderboardEntry[]> {
+    const activeCamps = await this.campPopulationView.find({
+      order: { camp_id: "ASC" },
+    });
+
+    if (!activeCamps.length) {
+      return [];
+    }
+
+    const [inventoryRows, personStatusRows] = await Promise.all([
+      this.inventoryStatusView.find(),
+      this.personStatusStatsView.find(),
+    ]);
+
+    const rationByCamp = new Map<number, { food: number; water: number }>();
+    for (const row of inventoryRows) {
+      const campId = Number(row.camp_id);
+      if (!Number.isInteger(campId)) {
+        continue;
+      }
+
+      const current = rationByCamp.get(campId) ?? { food: 0, water: 0 };
+      const quantity = Number(row.current_quantity) || 0;
+      const category = String(row.resource_category ?? "").toLowerCase();
+
+      if (category === "food") {
+        current.food += quantity;
+      }
+
+      if (category === "water") {
+        current.water += quantity;
+      }
+
+      rationByCamp.set(campId, current);
+    }
+
+    const populationByCamp = new Map<
+      number,
+      { healthy: number; sick: number; deceased: number }
+    >();
+    for (const row of personStatusRows) {
+      const campId = Number(row.camp_id);
+      if (!Number.isInteger(campId)) {
+        continue;
+      }
+
+      const current = populationByCamp.get(campId) ?? {
+        healthy: 0,
+        sick: 0,
+        deceased: 0,
+      };
+      const status = String(row.status ?? "").toLowerCase();
+      const personCount = Number(row.person_count) || 0;
+
+      if (status === "active") {
+        current.healthy += personCount;
+      } else if (status === "sick") {
+        current.sick += personCount;
+      } else if (status === "deceased") {
+        current.deceased += personCount;
+      }
+
+      populationByCamp.set(campId, current);
+    }
+
+    return activeCamps
+      .map((camp): CampLeaderboardEntry => {
+        const campId = Number(camp.camp_id);
+        const resources = rationByCamp.get(campId) ?? { food: 0, water: 0 };
+        const population = populationByCamp.get(campId) ?? {
+          healthy: 0,
+          sick: 0,
+          deceased: 0,
+        };
+
+        const survivalScore =
+          resources.food +
+          resources.water +
+          population.healthy * 50 -
+          population.sick * 20 -
+          population.deceased * 100;
+
+        return {
+          campId,
+          campName: camp.camp_name,
+          survivalScore,
+          resources: {
+            foodRations: resources.food,
+            waterRations: resources.water,
+          },
+          population,
+        };
+      })
+      .sort((a, b) => b.survivalScore - a.survivalScore)
+      .slice(0, 10);
+  }
 
   async getMetricsByCamp(
     campId: number,
     role: string,
   ): Promise<DashboardMetricsResponse> {
     const cacheKey = `dashboard:metrics:${campId}:${role}`;
-    const cachedMetrics = await this.cacheManager.get<DashboardMetricsResponse>(cacheKey);
+    let cachedMetrics: DashboardMetricsResponse | undefined;
+    try {
+      cachedMetrics = await this.cacheManager.get<DashboardMetricsResponse>(
+        cacheKey,
+      );
+    } catch {
+      cachedMetrics = undefined;
+    }
 
     if (cachedMetrics) {
       return cachedMetrics;
@@ -99,7 +221,11 @@ export class DashboardService {
       transfers,
     };
 
-    await this.cacheManager.set(cacheKey, metrics);
+    try {
+      await this.cacheManager.set(cacheKey, metrics);
+    } catch {
+      // Cache is best-effort; do not fail dashboard response if cache backend is down.
+    }
 
     return metrics;
   }
