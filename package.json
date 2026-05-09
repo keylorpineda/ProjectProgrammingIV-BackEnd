@@ -20,7 +20,6 @@
     "test:playwright": "playwright test",
     "test:playwright:ui": "playwright test --ui",
     "test:playwright:report": "playwright show-report",
-    "deploy:gcloud": "gcloud run deploy gestion-del-fin-api --source . --platform managed --region us-central1 --allow-unauthenticated",
     "setup:keepalive": "powershell -ExecutionPolicy Bypass -File ./setup-keepalive.ps1"
   },
   "dependencies": {

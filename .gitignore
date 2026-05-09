@@ -42,3 +42,7 @@ pip-wheel-metadata/
 /.jest-cache
 /src/.jest-cache
 /.tmp
+
+# AI Agent Configs
+.geminiignore
+ANTIGRAVITY_SKILLS.md
