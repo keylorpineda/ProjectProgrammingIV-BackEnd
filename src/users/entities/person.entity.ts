@@ -46,6 +46,12 @@ export class Person {
   @Column({ type: "int", default: 1 })
   experience_level: number;
 
+  @Column({ type: "int", default: 0 })
+  expeditionsSurvived: number;
+
+  @Column({ type: "text", array: true, default: () => "'{}'" })
+  achievements: string[];
+
   @Column({ type: "text", nullable: true })
   photo_url: string;
 

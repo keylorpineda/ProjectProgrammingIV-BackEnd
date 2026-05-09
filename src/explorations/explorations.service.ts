@@ -12,6 +12,7 @@ import { ExplorationResource } from "./entities/exploration-resource.entity";
 import { Person } from "../users/entities/person.entity";
 import { AuditLog } from "../common/entities/audit-log.entity";
 import { ResourcesService } from "../resources/resources.service";
+import { PythonAiService } from "../ai/services/python-ai.service";
 import { CreateExplorationDto } from "./dto/create-exploration.dto";
 import { ReturnExplorationDto } from "./dto/return-exploration.dto";
 import {
@@ -33,6 +34,7 @@ export class ExplorationsService {
     @InjectRepository(AuditLog)
     private readonly auditRepo: Repository<AuditLog>,
     private readonly resourcesService: ResourcesService,
+    private readonly pythonAiService: PythonAiService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -270,6 +272,7 @@ export class ExplorationsService {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
+    let transactionCommitted = false;
 
     try {
       exploration.real_return_date = new Date(dto.real_return_date);
@@ -329,13 +332,59 @@ export class ExplorationsService {
       );
 
       await queryRunner.commitTransaction();
+      transactionCommitted = true;
+
+      await this.awardAchievements(
+        exploration.explorationPersons.map((ep) => String(ep.person_id)),
+      );
 
       return this.findById(Number(exploration.id));
     } catch (err) {
-      await queryRunner.rollbackTransaction();
+      if (!transactionCommitted) {
+        await queryRunner.rollbackTransaction();
+      }
       throw err;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  private async awardAchievements(personIds: string[]): Promise<void> {
+    if (!personIds?.length) {
+      return;
+    }
+
+    const normalizedIds = [...new Set(personIds.map((id) => Number(id)))].filter(
+      (id) => Number.isInteger(id),
+    );
+
+    if (!normalizedIds.length) {
+      return;
+    }
+
+    await this.personRepo.increment(
+      { id: In(normalizedIds) },
+      "expeditionsSurvived",
+      1,
+    );
+
+    const persons = await this.personRepo.find({
+      where: { id: In(normalizedIds) },
+    });
+
+    for (const person of persons) {
+      const achievements = Array.isArray(person.achievements)
+        ? person.achievements
+        : [];
+
+      if (
+        person.expeditionsSurvived === 5 &&
+        !achievements.includes("VETERANO_PARAMO")
+      ) {
+        await this.personRepo.update(person.id, {
+          achievements: [...achievements, "VETERANO_PARAMO"],
+        });
+      }
     }
   }
 
@@ -461,6 +510,7 @@ export class ExplorationsService {
   async depart(id: number, userId?: number): Promise<Exploration> {
     const exploration = await this.explorationRepo.findOne({
       where: { id },
+      relations: ["explorationPersons", "explorationPersons.person"],
     });
 
     if (!exploration) {
@@ -477,6 +527,11 @@ export class ExplorationsService {
     exploration.departure_date = new Date();
     await this.explorationRepo.save(exploration);
 
+    const expeditionPayload = this.buildExpeditionPayload(exploration);
+    const expeditionAiAnalysis = await this.pythonAiService.analyzeExpedition(
+      expeditionPayload,
+    );
+
     await this.auditRepo.save(
       this.auditRepo.create({
         user_id: userId,
@@ -484,11 +539,90 @@ export class ExplorationsService {
         action: "exploration_departed",
         entity_type: "exploration",
         entity_id: Number(exploration.id),
-        new_value: { departed_at: new Date() },
+        new_value: {
+          departed_at: new Date(),
+          expedition_ai_analysis: expeditionAiAnalysis,
+        },
         date: new Date(),
       }),
     );
 
     return this.findById(Number(exploration.id));
+  }
+
+  private buildExpeditionPayload(exploration: Exploration): Record<string, unknown> {
+    const explorers = (exploration.explorationPersons ?? []).map((ep) => ({
+      id: Number(ep.person_id),
+      role: ep.is_leader ? "leader" : "member",
+      health_status: this.resolveHealthStatus(ep.person),
+      achievements: Array.isArray(ep.person?.achievements)
+        ? ep.person.achievements
+        : [],
+    }));
+
+    const avgHealth = explorers.length
+      ? explorers.reduce((sum, person) => sum + person.health_status, 0) /
+        explorers.length
+      : 75;
+
+    const avgExperience = (exploration.explorationPersons ?? []).length
+      ? (exploration.explorationPersons ?? []).reduce(
+          (sum, ep) => sum + Number(ep.person?.experience_level ?? 1),
+          0,
+        ) / (exploration.explorationPersons ?? []).length
+      : 1;
+
+    return {
+      objective: exploration.destination_description ?? exploration.name,
+      difficulty: this.resolveDifficulty(exploration),
+      group_size: explorers.length,
+      leaders: explorers.filter((person) => person.role === "leader").length,
+      avg_experience: Number(avgExperience.toFixed(2)),
+      duration_days: Number(exploration.estimated_days ?? 1),
+      avg_health: Number(avgHealth.toFixed(2)),
+      explorers,
+    };
+  }
+
+  private resolveHealthStatus(person?: Person): number {
+    if (!person) {
+      return 75;
+    }
+
+    if (person.status === PersonStatus.SICK) {
+      return 40;
+    }
+
+    if (person.status === PersonStatus.INJURED) {
+      return 60;
+    }
+
+    if (person.status === PersonStatus.EXPLORING || person.status === PersonStatus.ACTIVE) {
+      return 85;
+    }
+
+    return person.can_work ? 80 : 70;
+  }
+
+  private resolveDifficulty(exploration: Exploration): number {
+    const duration = Number(exploration.estimated_days ?? 1);
+
+    if (duration >= 10) {
+      return 5;
+    }
+
+    if (duration >= 7) {
+      return 4;
+    }
+
+    if (duration >= 4) {
+      return 3;
+    }
+
+    if (duration >= 2) {
+      return 2;
+    }
+
+    return 1;
   }
 }

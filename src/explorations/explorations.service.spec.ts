@@ -7,6 +7,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { DataSource } from "typeorm";
 import { AuditLog } from "../common/entities/audit-log.entity";
+import { PythonAiService } from "../ai/services/python-ai.service";
 import { ResourcesService } from "../resources/resources.service";
 import { PersonStatus } from "../users/constants/professions.constants";
 import { Person } from "../users/entities/person.entity";
@@ -57,6 +58,7 @@ describe("ExplorationsService", () => {
   let personRepo: RepoMock;
   let auditRepo: RepoMock;
   let resourcesService: { findAll: jest.Mock; createMovement: jest.Mock };
+  let pythonAiService: { analyzeExpedition: jest.Mock };
   let dataSource: { createQueryRunner: jest.Mock };
   let queryRunner: ReturnType<typeof createQueryRunnerMock>;
 
@@ -91,6 +93,9 @@ describe("ExplorationsService", () => {
       findAll: jest.fn(),
       createMovement: jest.fn(),
     };
+    pythonAiService = {
+      analyzeExpedition: jest.fn().mockResolvedValue({ success_probability: 80 }),
+    };
     dataSource = {
       createQueryRunner: jest.fn(() => queryRunner),
     };
@@ -115,6 +120,10 @@ describe("ExplorationsService", () => {
         {
           provide: ResourcesService,
           useValue: resourcesService,
+        },
+        {
+          provide: PythonAiService,
+          useValue: pythonAiService,
         },
         {
           provide: DataSource,
@@ -798,8 +807,35 @@ describe("ExplorationsService", () => {
       const exploration = {
         id: 80,
         camp_id: 3,
+        name: "Salida norte",
+        destination_description: "Zona norte",
+        estimated_days: 4,
         status: "scheduled",
         departure_date: new Date("2026-03-20T00:00:00.000Z"),
+        explorationPersons: [
+          {
+            person_id: 10,
+            is_leader: true,
+            person: {
+              id: 10,
+              status: PersonStatus.EXPLORING,
+              can_work: false,
+              experience_level: 3,
+              achievements: ["VETERANO_PARAMO"],
+            },
+          },
+          {
+            person_id: 11,
+            is_leader: false,
+            person: {
+              id: 11,
+              status: PersonStatus.EXPLORING,
+              can_work: false,
+              experience_level: 2,
+              achievements: [],
+            },
+          },
+        ],
       } as Exploration;
 
       explorationRepo.findOne.mockResolvedValue(exploration);
@@ -815,10 +851,31 @@ describe("ExplorationsService", () => {
       expect(exploration.status).toBe("in_progress");
       expect(exploration.departure_date).toBeInstanceOf(Date);
       expect(explorationRepo.save).toHaveBeenCalledWith(exploration);
+      expect(pythonAiService.analyzeExpedition).toHaveBeenCalledWith(
+        expect.objectContaining({
+          explorers: [
+            {
+              id: 10,
+              role: "leader",
+              health_status: 85,
+              achievements: ["VETERANO_PARAMO"],
+            },
+            {
+              id: 11,
+              role: "member",
+              health_status: 85,
+              achievements: [],
+            },
+          ],
+        }),
+      );
       expect(auditRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
           action: "exploration_departed",
           entity_id: 80,
+          new_value: expect.objectContaining({
+            expedition_ai_analysis: expect.anything(),
+          }),
         }),
       );
       expect(result).toEqual({ id: 80 });
