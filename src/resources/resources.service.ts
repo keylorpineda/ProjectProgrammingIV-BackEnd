@@ -57,15 +57,15 @@ export class ResourcesService implements OnModuleInit {
     private readonly campRepo: Repository<Camp>,
     @InjectRepository(Person)
     private readonly personRepo: Repository<Person>,
-    @InjectQueue('daily-tasks') private readonly dailyTasksQueue: Queue,
+    @InjectQueue("daily-tasks") private readonly dailyTasksQueue: Queue,
   ) {}
 
   async onModuleInit() {
-    this.logger.log('Scheduling daily-resources job...');
+    this.logger.log("Scheduling daily-resources job...");
     await this.dailyTasksQueue.add(
-      'daily-resources',
+      "daily-resources",
       {},
-      { repeat: { pattern: '0 0 * * *' }, jobId: 'daily-resources-job' }
+      { repeat: { pattern: "0 0 * * *" }, jobId: "daily-resources-job" },
     );
   }
 

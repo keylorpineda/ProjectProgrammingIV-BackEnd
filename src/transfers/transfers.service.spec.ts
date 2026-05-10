@@ -90,9 +90,9 @@ describe("TransfersService", () => {
   it("should delegate findRequestsByCamp", async () => {
     requestsService.findRequestsByCamp.mockResolvedValueOnce([mockRequest]);
 
-    await expect(service.findRequestsByCamp(10, "destination")).resolves.toEqual([
-      mockRequest,
-    ]);
+    await expect(
+      service.findRequestsByCamp(10, "destination"),
+    ).resolves.toEqual([mockRequest]);
     expect(requestsService.findRequestsByCamp).toHaveBeenCalledWith(
       10,
       "destination",

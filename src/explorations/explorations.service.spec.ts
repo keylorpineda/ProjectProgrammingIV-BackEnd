@@ -94,7 +94,9 @@ describe("ExplorationsService", () => {
       createMovement: jest.fn(),
     };
     pythonAiService = {
-      analyzeExpedition: jest.fn().mockResolvedValue({ success_probability: 80 }),
+      analyzeExpedition: jest
+        .fn()
+        .mockResolvedValue({ success_probability: 80 }),
     };
     dataSource = {
       createQueryRunner: jest.fn(() => queryRunner),

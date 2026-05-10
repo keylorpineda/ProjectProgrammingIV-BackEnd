@@ -3,17 +3,19 @@ import {
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { JwtService } from '@nestjs/jwt';
-import { Logger } from '@nestjs/common';
+} from "@nestjs/websockets";
+import { Server, Socket } from "socket.io";
+import { JwtService } from "@nestjs/jwt";
+import { Logger } from "@nestjs/common";
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: "*",
   },
 })
-export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class NotificationsGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -23,9 +25,11 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
   async handleConnection(client: Socket) {
     try {
-      const token = client.handshake.auth.token || client.handshake.headers['authorization']?.replace('Bearer ', '');
+      const token =
+        client.handshake.auth.token ||
+        client.handshake.headers["authorization"]?.replace("Bearer ", "");
       if (!token) {
-        throw new Error('No token provided');
+        throw new Error("No token provided");
       }
 
       const payload = this.jwtService.verify(token);
@@ -35,7 +39,9 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
       client.join(room);
       this.logger.log(`Client ${client.id} joined room ${room}`);
     } catch (error) {
-      this.logger.error(`Client ${client.id} disconnected due to invalid token: ${error.message}`);
+      this.logger.error(
+        `Client ${client.id} disconnected due to invalid token: ${error.message}`,
+      );
       client.disconnect();
     }
   }
@@ -45,6 +51,6 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   emitTransferRequest(campId: number, requestData: any) {
-    this.server.to(`camp_${campId}`).emit('transfer.requested', requestData);
+    this.server.to(`camp_${campId}`).emit("transfer.requested", requestData);
   }
 }

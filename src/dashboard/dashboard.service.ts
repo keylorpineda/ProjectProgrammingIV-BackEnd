@@ -189,9 +189,8 @@ export class DashboardService {
     const cacheKey = `dashboard:metrics:${campId}:${role}`;
     let cachedMetrics: DashboardMetricsResponse | undefined;
     try {
-      cachedMetrics = await this.cacheManager.get<DashboardMetricsResponse>(
-        cacheKey,
-      );
+      cachedMetrics =
+        await this.cacheManager.get<DashboardMetricsResponse>(cacheKey);
     } catch {
       cachedMetrics = undefined;
     }

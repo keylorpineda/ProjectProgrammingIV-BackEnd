@@ -68,11 +68,12 @@ import Redis from "ioredis";
         const redisUrl = config.get("REDIS_URL");
         return {
           connection: redisUrl
-            ? new Redis(redisUrl)
+            ? new Redis(redisUrl, { maxRetriesPerRequest: null })
             : {
                 host: config.get("REDIS_HOST", "localhost"),
                 port: config.get("REDIS_PORT", 6379),
                 password: config.get("REDIS_PASSWORD"),
+                maxRetriesPerRequest: null,
               },
         };
       },

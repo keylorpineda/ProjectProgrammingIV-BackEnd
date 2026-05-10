@@ -112,7 +112,7 @@ export class RequestsService {
       await queryRunner.commitTransaction();
 
       const finalRequest = await this.findRequestById(Number(savedRequest.id));
-      
+
       // Emitir notificacin por WebSocket
       this.notificationsGateway.emitTransferRequest(dto.camp_destination_id, {
         id: finalRequest.id,

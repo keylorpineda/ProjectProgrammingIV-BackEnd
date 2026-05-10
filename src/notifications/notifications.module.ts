@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { NotificationsGateway } from './notifications.gateway';
+import { Module } from "@nestjs/common";
+import { JwtModule } from "@nestjs/jwt";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { NotificationsGateway } from "./notifications.gateway";
 
 @Module({
   imports: [
@@ -9,7 +9,7 @@ import { NotificationsGateway } from './notifications.gateway';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET', 'secret'),
+        secret: config.get<string>("JWT_SECRET", "secret"),
       }),
     }),
   ],

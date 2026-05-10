@@ -57,7 +57,14 @@ export class TransfersController {
   @ApiQuery({
     name: "status",
     required: false,
-    enum: ["pending", "approved", "in_transit", "completed", "rejected", "cancelled"],
+    enum: [
+      "pending",
+      "approved",
+      "in_transit",
+      "completed",
+      "rejected",
+      "cancelled",
+    ],
     description: "Filtrar por estado de la solicitud",
   })
   async getRequestsByCamp(
