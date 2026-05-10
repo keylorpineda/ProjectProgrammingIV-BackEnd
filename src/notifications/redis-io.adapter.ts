@@ -12,13 +12,26 @@ export class RedisIoAdapter extends IoAdapter {
     super(app);
     const configService = app.get(ConfigService);
 
-    const pubClient = new Redis({
+    const redisUrl = configService.get<string>("REDIS_URL");
+    const redisOptions = {
       host: configService.get<string>("REDIS_HOST", "localhost"),
       port: configService.get<number>("REDIS_PORT", 6379),
       password: configService.get<string>("REDIS_PASSWORD"),
-    });
+      maxRetriesPerRequest: null,
+    };
+
+    const pubClient = redisUrl
+      ? new Redis(redisUrl, { maxRetriesPerRequest: null })
+      : new Redis(redisOptions);
 
     const subClient = pubClient.duplicate();
+
+    pubClient.on("error", (err) => {
+      console.error("Redis pubClient error:", err.message);
+    });
+    subClient.on("error", (err) => {
+      console.error("Redis subClient error:", err.message);
+    });
     this.adapterConstructor = createAdapter(pubClient, subClient);
   }
 
