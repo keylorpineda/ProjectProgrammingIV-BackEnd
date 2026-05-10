@@ -84,6 +84,32 @@ Content-Type: application/json
 
 ---
 
+### **🏕️ Campamentos** (`/camps`)
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/camps` | Listar campamentos activos | ✅ |
+| GET | `/camps/:id` | Detalle de campamento e inventario | ✅ |
+| POST | `/camps` | Crear nuevo campamento | ✅ (Admin) |
+| PATCH | `/camps/:id` | Actualizar campamento | ✅ (Admin) |
+| DELETE| `/camps/:id` | Desactivar campamento | ✅ (Admin) |
+
+**Ejemplo Crear Campamento:**
+```bash
+POST https://doomsday-system-api.onrender.com/api/v1/camps
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "name": "Campamento Esperanza",
+  "location_lat": 9.93224,
+  "location_lng": -84.07952,
+  "max_capacity": 150
+}
+```
+
+---
+
 ### **👥 Usuarios y Personas** (`/users`)
 
 | Método | Endpoint | Descripción | Auth |

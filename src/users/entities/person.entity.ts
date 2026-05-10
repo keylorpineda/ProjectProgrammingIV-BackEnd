@@ -47,6 +47,9 @@ export class Person {
   experience_level: number;
 
   @Column({ type: "int", default: 0 })
+  experience_points: number;
+
+  @Column({ type: "int", default: 0 })
   expeditionsSurvived: number;
 
   @Column({ type: "text", array: true, default: () => "'{}'" })

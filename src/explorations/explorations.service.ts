@@ -354,9 +354,9 @@ export class ExplorationsService {
       return;
     }
 
-    const normalizedIds = [...new Set(personIds.map((id) => Number(id)))].filter(
-      (id) => Number.isInteger(id),
-    );
+    const normalizedIds = [
+      ...new Set(personIds.map((id) => Number(id))),
+    ].filter((id) => Number.isInteger(id));
 
     if (!normalizedIds.length) {
       return;
@@ -377,14 +377,30 @@ export class ExplorationsService {
         ? person.achievements
         : [];
 
+      let newExpPoints = person.experience_points + 50; // 50 XP por expedición
+      let newLevel = person.experience_level;
+
+      // Cada 100 XP se sube un nivel
+      if (newExpPoints >= 100) {
+        newLevel += Math.floor(newExpPoints / 100);
+        newExpPoints = newExpPoints % 100;
+      }
+      const newAchievements = [...achievements];
       if (
         person.expeditionsSurvived === 5 &&
         !achievements.includes("VETERANO_PARAMO")
       ) {
-        await this.personRepo.update(person.id, {
-          achievements: [...achievements, "VETERANO_PARAMO"],
-        });
+        newAchievements.push("VETERANO_PARAMO");
       }
+      if (newLevel >= 5 && !achievements.includes("SOBREVIVIENTE_ELITE")) {
+        newAchievements.push("SOBREVIVIENTE_ELITE");
+      }
+
+      await this.personRepo.update(person.id, {
+        experience_points: newExpPoints,
+        experience_level: newLevel,
+        achievements: newAchievements,
+      });
     }
   }
 
@@ -528,9 +544,8 @@ export class ExplorationsService {
     await this.explorationRepo.save(exploration);
 
     const expeditionPayload = this.buildExpeditionPayload(exploration);
-    const expeditionAiAnalysis = await this.pythonAiService.analyzeExpedition(
-      expeditionPayload,
-    );
+    const expeditionAiAnalysis =
+      await this.pythonAiService.analyzeExpedition(expeditionPayload);
 
     await this.auditRepo.save(
       this.auditRepo.create({
@@ -550,7 +565,9 @@ export class ExplorationsService {
     return this.findById(Number(exploration.id));
   }
 
-  private buildExpeditionPayload(exploration: Exploration): Record<string, unknown> {
+  private buildExpeditionPayload(
+    exploration: Exploration,
+  ): Record<string, unknown> {
     const explorers = (exploration.explorationPersons ?? []).map((ep) => ({
       id: Number(ep.person_id),
       role: ep.is_leader ? "leader" : "member",
@@ -597,7 +614,10 @@ export class ExplorationsService {
       return 60;
     }
 
-    if (person.status === PersonStatus.EXPLORING || person.status === PersonStatus.ACTIVE) {
+    if (
+      person.status === PersonStatus.EXPLORING ||
+      person.status === PersonStatus.ACTIVE
+    ) {
       return 85;
     }
 

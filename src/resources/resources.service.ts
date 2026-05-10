@@ -9,6 +9,7 @@ import { Repository, IsNull } from "typeorm";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { OnModuleInit } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
 import { Resource } from "./entities/resource.entity";
 import { Inventory } from "./entities/inventory.entity";
 import { InventoryMovement } from "./entities/inventory-movement.entity";
@@ -439,6 +440,7 @@ export class ResourcesService implements OnModuleInit {
     return { production, consumption, movementCount };
   }
 
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async executeAllDailyProcesses(): Promise<void> {
     this.logger.log("Iniciando proceso diario automático de recursos...");
 

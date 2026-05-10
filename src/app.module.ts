@@ -23,6 +23,7 @@ import { DatabaseModule } from "./database/database.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { RedisModule } from "./redis/redis.module";
 import { BullModule } from "@nestjs/bullmq";
+import Redis from "ioredis";
 
 @Module({
   imports: [
@@ -63,13 +64,18 @@ import { BullModule } from "@nestjs/bullmq";
 
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        connection: {
-          host: config.get("REDIS_HOST", "localhost"),
-          port: config.get("REDIS_PORT", 6379),
-          password: config.get("REDIS_PASSWORD"),
-        },
-      }),
+      useFactory: (config: ConfigService) => {
+        const redisUrl = config.get("REDIS_URL");
+        return {
+          connection: redisUrl
+            ? new Redis(redisUrl)
+            : {
+                host: config.get("REDIS_HOST", "localhost"),
+                port: config.get("REDIS_PORT", 6379),
+                password: config.get("REDIS_PASSWORD"),
+              },
+        };
+      },
       inject: [ConfigService],
     }),
 

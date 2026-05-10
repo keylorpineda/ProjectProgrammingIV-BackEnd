@@ -21,10 +21,12 @@ services:
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
       - AI_SERVICE_URL=http://ai-microservice:8080
+      - REDIS_HOST=redis
     ports:
       - "8080:8080"
     depends_on:
       - ai-microservice
+      - redis
     restart: unless-stopped
 
   ai-microservice:
@@ -36,6 +38,13 @@ services:
       - PORT=8080
     ports:
       - "8081:8080"
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
     restart: unless-stopped
 
 # No se incluye base de datos local, ya que usas Supabase.
