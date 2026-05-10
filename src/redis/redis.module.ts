@@ -11,15 +11,20 @@ import { REDIS_CLIENT } from "./redis.constants";
       provide: REDIS_CLIENT,
       useFactory: (configService: ConfigService) => {
         const redisUrl = configService.get<string>("REDIS_URL");
-        if (redisUrl) {
-          return new Redis(redisUrl, { maxRetriesPerRequest: null });
-        }
-        return new Redis({
-          host: configService.get<string>("REDIS_HOST", "localhost"),
-          port: configService.get<number>("REDIS_PORT", 6379),
-          password: configService.get<string>("REDIS_PASSWORD"),
-          maxRetriesPerRequest: null,
+        const client = redisUrl
+          ? new Redis(redisUrl, { maxRetriesPerRequest: null })
+          : new Redis({
+              host: configService.get<string>("REDIS_HOST", "localhost"),
+              port: configService.get<number>("REDIS_PORT", 6379),
+              password: configService.get<string>("REDIS_PASSWORD"),
+              maxRetriesPerRequest: null,
+            });
+
+        client.on("error", (err) => {
+          console.error("Redis client error:", err.message);
         });
+
+        return client;
       },
       inject: [ConfigService],
     },

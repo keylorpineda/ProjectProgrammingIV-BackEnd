@@ -66,15 +66,21 @@ import Redis from "ioredis";
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => {
         const redisUrl = config.get("REDIS_URL");
+        const client = redisUrl
+          ? new Redis(redisUrl, { maxRetriesPerRequest: null })
+          : new Redis({
+              host: config.get("REDIS_HOST", "localhost"),
+              port: config.get("REDIS_PORT", 6379),
+              password: config.get("REDIS_PASSWORD"),
+              maxRetriesPerRequest: null,
+            });
+
+        client.on("error", (err) => {
+          console.error("BullMQ Redis error:", err.message);
+        });
+
         return {
-          connection: redisUrl
-            ? new Redis(redisUrl, { maxRetriesPerRequest: null })
-            : {
-                host: config.get("REDIS_HOST", "localhost"),
-                port: config.get("REDIS_PORT", 6379),
-                password: config.get("REDIS_PASSWORD"),
-                maxRetriesPerRequest: null,
-              },
+          connection: client,
         };
       },
       inject: [ConfigService],
