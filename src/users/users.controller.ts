@@ -78,14 +78,14 @@ export class UsersController {
 
   @Post("persons")
   @Roles("admin")
-  @ApiOperation({ summary: "Crear una nueva persona (despu�s de admisi�n)" })
+  @ApiOperation({ summary: "Crear una nueva persona (despues de admision)" })
   async createPerson(@Body() dto: CreatePersonDto) {
     return this.usersService.createPerson(dto);
   }
 
   @Put("persons/:id")
   @Roles("admin", "gestor_recursos")
-  @ApiOperation({ summary: "Actualizar informaci�n de una persona" })
+  @ApiOperation({ summary: "Actualizar informacion de una persona" })
   async updatePerson(
     @Param("id", ParseIntPipe) id: number,
     @Body() dto: UpdatePersonDto,
@@ -115,7 +115,7 @@ export class UsersController {
 
   @Get("persons/stats/by-status")
   @Roles("admin", "gestor_recursos")
-  @ApiOperation({ summary: "Estad�sticas de personas por estado" })
+  @ApiOperation({ summary: "Estadisticas de personas por estado" })
   @ApiQuery({
     name: "campId",
     required: false,
@@ -129,7 +129,7 @@ export class UsersController {
 
   @Get("persons/stats/by-profession")
   @Roles("admin", "gestor_recursos")
-  @ApiOperation({ summary: "Estad�sticas de personas por profesi�n" })
+  @ApiOperation({ summary: "Estadisticas de personas por profesi�n" })
   @ApiQuery({
     name: "campId",
     required: false,
@@ -148,14 +148,14 @@ export class UsersController {
   }
 
   @Get("professions/:id")
-  @ApiOperation({ summary: "Obtener una profesi�n por ID" })
+  @ApiOperation({ summary: "Obtener una profesion por ID" })
   async getProfessionById(@Param("id", ParseIntPipe) id: number) {
     return this.usersService.findProfessionById(id);
   }
 
   @Post("professions")
   @Roles("admin")
-  @ApiOperation({ summary: "Crear una nueva profesi�n" })
+  @ApiOperation({ summary: "Crear una nueva profesion" })
   async createProfession(@Body() dto: CreateProfessionDto) {
     return this.usersService.createProfession(dto);
   }
@@ -179,7 +179,7 @@ export class UsersController {
   @Post("temporary-assignments")
   @Roles("admin", "gestor_recursos")
   @ApiOperation({
-    summary: "Crear asignaci�n temporal (debe ser aprobada despu�s)",
+    summary: "Crear asignacion temporal (debe ser aprobada despu�s)",
   })
   async createTemporaryAssignment(
     @Body() dto: CreateTemporaryAssignmentDto,
@@ -205,7 +205,7 @@ export class UsersController {
   @Put("temporary-assignments/:id/end")
   @Roles("admin", "gestor_recursos")
   @ApiOperation({
-    summary: "Finalizar asignaci�n temporal (devolver a profesi�n original)",
+    summary: "Finalizar asignacion temporal (devolver a profesion original)",
   })
   async endTemporaryAssignment(@Param("id", ParseIntPipe) id: number) {
     return this.usersService.endTemporaryAssignment(id);
@@ -213,7 +213,7 @@ export class UsersController {
 
   @Get("camp/:campId/production")
   @Roles("admin", "gestor_recursos")
-  @ApiOperation({ summary: "Calcular producci�n diaria del campamento" })
+  @ApiOperation({ summary: "Calcular produccion diaria del campamento" })
   async getDailyProduction(@Param("campId", ParseIntPipe) campId: number) {
     return this.usersService.calculateDailyProduction(campId);
   }
@@ -227,7 +227,7 @@ export class UsersController {
 
   @Get("camp/:campId/balance")
   @Roles("admin", "gestor_recursos", "trabajador")
-  @ApiOperation({ summary: "Calcular balance diario (producci�n - consumo)" })
+  @ApiOperation({ summary: "Calcular balance diario (produccion - consumo)" })
   async getDailyBalance(@Param("campId", ParseIntPipe) campId: number) {
     return this.usersService.calculateDailyBalance(campId);
   }

@@ -77,7 +77,7 @@ export class TransfersController {
 
   @Get("requests/camp/:campId/pending")
   @Roles("admin", "gestor_recursos", "encargado_viajes")
-  @ApiOperation({ summary: "Solicitudes pendientes de aprobaci�n" })
+  @ApiOperation({ summary: "Solicitudes pendientes de aprobacion" })
   async getPendingRequests(@Param("campId", ParseIntPipe) campId: number) {
     return this.transfersService.findPendingRequestsByCamp(campId);
   }
@@ -119,7 +119,7 @@ export class TransfersController {
 
   @Get("statistics/:campId")
   @Roles("admin", "gestor_recursos")
-  @ApiOperation({ summary: "Estad�sticas de transferencias del campamento" })
+  @ApiOperation({ summary: "Estadisticas de transferencias del campamento" })
   async getStatistics(@Param("campId", ParseIntPipe) campId: number) {
     return this.transfersService.getTransferStatistics(campId);
   }

@@ -25,7 +25,7 @@ export class AuthController {
   @Public()
   @Post("login")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Iniciar sesi�n con credenciales" })
+  @ApiOperation({ summary: "Iniciar sesion con credenciales" })
   async login(
     @Body() dto: LoginDto,
     @Ip() ipAddress: string,
@@ -37,7 +37,7 @@ export class AuthController {
   @Post("logout")
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: "Cerrar sesi�n del usuario actual" })
+  @ApiOperation({ summary: "Cerrar sesion del usuario actual" })
   async logout(
     @CurrentUser() user: any,
     @Body() body?: { refresh_token?: string },
@@ -57,7 +57,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      "Verificar estado de la sesi�n y tiempo restante antes del auto-logout",
+      "Verificar estado de la sesion y tiempo restante antes del auto-logout",
   })
   async checkSessionStatus(@CurrentUser() user: any) {
     return this.authService.checkSessionStatus(user.userId);

@@ -30,7 +30,7 @@ export class UploadController {
 
   @Post("person")
   @ApiOperation({
-    summary: "Subir foto de persona o tarjeta de identificaci�n",
+    summary: "Subir foto de persona o tarjeta de identificacion",
   })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
@@ -49,7 +49,7 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<UploadResponseDto> {
     if (!file) {
-      throw new BadRequestException("No se proporcion� ning�n archivo");
+      throw new BadRequestException("No se proporciona ningun archivo");
     }
 
     const result = await this.uploadService.uploadImage(file, "person");
@@ -85,7 +85,7 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<UploadResponseDto> {
     if (!file) {
-      throw new BadRequestException("No se proporcion� ning�n archivo");
+      throw new BadRequestException("No se proporciona ningun archivo");
     }
 
     const result = await this.uploadService.uploadImage(file, "resource");
@@ -121,7 +121,7 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<UploadResponseDto> {
     if (!file) {
-      throw new BadRequestException("No se proporcion� ning�n archivo");
+      throw new BadRequestException("No se proporciona ningun archivo");
     }
 
     const result = await this.uploadService.uploadImage(file, "camp");
@@ -157,7 +157,7 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<UploadResponseDto> {
     if (!file) {
-      throw new BadRequestException("No se proporcion� ning�n archivo");
+      throw new BadRequestException("No se proporciona ningun archivo");
     }
 
     const result = await this.uploadService.uploadImage(file, "avatar");
@@ -172,7 +172,7 @@ export class UploadController {
 
   @Post("badge")
   @ApiOperation({
-    summary: "Subir imagen de badge/logro/medalla (asset gen�rico)",
+    summary: "Subir imagen de badge/logro/medalla (asset generico)",
   })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
@@ -191,7 +191,7 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<UploadResponseDto> {
     if (!file) {
-      throw new BadRequestException("No se proporcion� ning�n archivo");
+      throw new BadRequestException("No se proporciona ningun archivo");
     }
 
     const result = await this.uploadService.uploadImage(file, "badge");
@@ -205,7 +205,7 @@ export class UploadController {
 
   @Post("multiple")
   @ApiOperation({
-    summary: "Subir m�ltiples im�genes (ej: evidencia de exploraciones)",
+    summary: "Subir multiples imagenes (ej: evidencia de exploraciones)",
   })
   @ApiConsumes("multipart/form-data")
   @ApiBody({

@@ -23,7 +23,7 @@ export class ExplorationsController {
 
   @Post()
   @Roles("admin", "encargado_viajes")
-  @ApiOperation({ summary: "Crear una nueva exploraci�n" })
+  @ApiOperation({ summary: "Crear una nueva exploracion" })
   create(@Body() dto: CreateExplorationDto, @CurrentUser() user: any) {
     return this.explorationsService.create(dto, user?.id);
   }
@@ -40,21 +40,21 @@ export class ExplorationsController {
 
   @Get(":id")
   @Roles("admin", "encargado_viajes", "gestor_recursos")
-  @ApiOperation({ summary: "Obtener detalle de una exploraci�n" })
+  @ApiOperation({ summary: "Obtener detalle de una exploracion" })
   findById(@Param("id", ParseIntPipe) id: number) {
     return this.explorationsService.findById(id);
   }
 
   @Patch(":id/depart")
   @Roles("admin", "encargado_viajes")
-  @ApiOperation({ summary: "Marcar exploraci�n como en curso (partida)" })
+  @ApiOperation({ summary: "Marcar exploracion como en curso (partida)" })
   depart(@Param("id", ParseIntPipe) id: number, @CurrentUser() user: any) {
     return this.explorationsService.depart(id, user?.id);
   }
 
   @Patch(":id/return")
   @Roles("admin", "encargado_viajes")
-  @ApiOperation({ summary: "Registrar retorno de exploraci�n" })
+  @ApiOperation({ summary: "Registrar retorno de exploracion" })
   registerReturn(
     @Param("id", ParseIntPipe) id: number,
     @Body() dto: ReturnExplorationDto,
@@ -65,7 +65,7 @@ export class ExplorationsController {
 
   @Delete(":id")
   @Roles("admin", "encargado_viajes")
-  @ApiOperation({ summary: "Cancelar una exploraci�n programada" })
+  @ApiOperation({ summary: "Cancelar una exploracion programada" })
   cancel(@Param("id", ParseIntPipe) id: number, @CurrentUser() user: any) {
     return this.explorationsService.cancel(id, user?.id);
   }

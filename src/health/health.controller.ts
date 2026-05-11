@@ -11,7 +11,7 @@ export class HealthController {
   @Public()
   @Get()
   @ApiOperation({
-    summary: "Health check endpoint - Verifica que la API est� activa",
+    summary: "Health check endpoint - Verifica que la API esta activa",
   })
   @ApiResponse({ status: 200, description: "API funcionando correctamente" })
   check() {

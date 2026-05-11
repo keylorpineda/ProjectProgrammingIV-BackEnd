@@ -50,7 +50,7 @@ export class ResourcesController {
   @Roles("admin", "gestor_recursos")
   @ApiOperation({
     summary:
-      "Actualizar configuraci�n de inventario (m�nimo requerido, cantidad)",
+      "Actualizar configuracion de inventario (minimo requerido, cantidad)",
   })
   async updateInventory(
     @Param("campId", ParseIntPipe) campId: number,
@@ -78,7 +78,7 @@ export class ResourcesController {
     name: "limit",
     required: false,
     type: Number,
-    description: "M�ximo de registros (default 50)",
+    description: "Maximo de registros (default 50)",
   })
   async getMovements(
     @Param("campId", ParseIntPipe) campId: number,
@@ -105,7 +105,7 @@ export class ResourcesController {
   @Post("daily-process/:campId")
   @Roles("admin", "gestor_recursos")
   @ApiOperation({
-    summary: "Ejecutar proceso diario manualmente (producci�n + consumo)",
+    summary: "Ejecutar proceso diario manualmente (produccion + consumo)",
   })
   async triggerDailyProcess(@Param("campId", ParseIntPipe) campId: number) {
     return this.resourcesService.executeDailyProcess(campId);
@@ -114,7 +114,7 @@ export class ResourcesController {
   @Post("daily-production/:personId")
   @Roles("admin", "gestor_recursos", "trabajador")
   @ApiOperation({
-    summary: "Ajustar producci�n diaria de una persona manualmente",
+    summary: "Ajustar produccion diaria de una persona manualmente",
   })
   async adjustDailyProduction(
     @Param("personId", ParseIntPipe) personId: number,
