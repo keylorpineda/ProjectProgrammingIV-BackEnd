@@ -132,7 +132,7 @@ describe("SessionInactivityGuard", () => {
 
     reflector.getAllAndOverride.mockReturnValueOnce(false);
     jwtService.verify.mockReturnValueOnce({ sub: 1, username: "testuser" });
-    redisClient.exists.mockResolvedValueOnce(1); // sesión activa en Redis
+    redisClient.exists.mockResolvedValueOnce(1); // sesion activa en Redis
 
     const result = await guard.canActivate(mockContext);
 
@@ -173,7 +173,7 @@ describe("SessionInactivityGuard", () => {
 
     reflector.getAllAndOverride.mockReturnValueOnce(false);
     jwtService.verify.mockReturnValueOnce({ sub: 1, username: "testuser" });
-    // El TTL en Redis expiró (0 = no existe), guard debe rechazar
+    // El TTL en Redis expiro (0 = no existe), guard debe rechazar
     redisClient.exists.mockResolvedValueOnce(0);
     sessionRepo.update.mockResolvedValueOnce({});
 
@@ -220,10 +220,10 @@ describe("SessionInactivityGuard", () => {
 
     reflector.getAllAndOverride.mockReturnValueOnce(false);
     jwtService.verify.mockReturnValueOnce({ sub: 1, username: "testuser" });
-    redisClient.exists.mockResolvedValueOnce(1); // sesión activa en Redis
+    redisClient.exists.mockResolvedValueOnce(1); // sesion activa en Redis
 
     const result = await guard.canActivate(mockContext);
 
-    expect(result).toBe(true); // La sesión Redis está activa
+    expect(result).toBe(true); // La sesion Redis esta activa
   });
 });

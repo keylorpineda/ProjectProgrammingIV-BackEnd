@@ -330,7 +330,7 @@ describe("TransferExecutionService", () => {
       service.arriveTransfer({ status: "approved" } as any, 7),
     ).rejects.toThrow(
       new BadRequestException(
-        "La solicitud debe estar en tránsito para poder recibirla",
+        "La solicitud debe estar en transito para poder recibirla",
       ),
     );
   });

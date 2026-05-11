@@ -1,7 +1,7 @@
 /**
  * E2E Tests — Exploraciones
- * Flujos críticos: Creación, despacho, retorno con recursos encontrados,
- * cancelación, validación de personas exploradoras
+ * Flujos criticos: Creacion, despacho, retorno con recursos encontrados,
+ * cancelacion, validacion de personas exploradoras
  */
 import { test, expect } from "@playwright/test";
 
@@ -49,10 +49,10 @@ test.describe("Exploraciones — Ciclo completo", () => {
     expect(Array.isArray(body)).toBe(true);
   });
 
-  test("POST /explorations → crea exploración con personas exploradoras y deduce raciones", async ({
+  test("POST /explorations → crea exploracion con personas exploradoras y deduce raciones", async ({
     request,
   }) => {
-    // Buscar persona con profesión que puede explorar
+    // Buscar persona con profesion que puede explorar
     const personsRes = await request.get(
       `${BASE}/users/persons?campId=${campId}&page=1&limit=50`,
       {
@@ -61,7 +61,7 @@ test.describe("Exploraciones — Ciclo completo", () => {
     );
     const { data: persons } = await personsRes.json();
 
-    // Buscar alguien con profesión explorable y que esté activo
+    // Buscar alguien con profesion explorable y que este activo
     const explorer = persons?.find(
       (p: any) =>
         p.profession?.can_explore === true &&
@@ -83,9 +83,9 @@ test.describe("Exploraciones — Ciclo completo", () => {
       headers: { Authorization: `Bearer ${token}` },
       data: {
         camp_id: campId,
-        name: "Exploración E2E Test",
+        name: "Exploracion E2E Test",
         destination_description:
-          "Zona norte, antigua gasolinera. Posibles suministros médicos.",
+          "Zona norte, antigua gasolinera. Posibles suministros medicos.",
         departure_date: departureDate.toISOString(),
         estimated_days: 3,
         grace_days: 1,
@@ -107,7 +107,7 @@ test.describe("Exploraciones — Ciclo completo", () => {
     explorationId = body.id;
   });
 
-  test("GET /explorations/:id → detalle de exploración con personas y recursos", async ({
+  test("GET /explorations/:id → detalle de exploracion con personas y recursos", async ({
     request,
   }) => {
     if (!explorationId) return;
@@ -126,7 +126,7 @@ test.describe("Exploraciones — Ciclo completo", () => {
     expect(body.explorationPersons.length).toBeGreaterThan(0);
   });
 
-  test("POST /explorations/:id/depart → inicia la exploración (in_progress)", async ({
+  test("POST /explorations/:id/depart → inicia la exploracion (in_progress)", async ({
     request,
   }) => {
     if (!explorationId) return;
@@ -165,7 +165,7 @@ test.describe("Exploraciones — Ciclo completo", () => {
         headers: { Authorization: `Bearer ${token}` },
         data: {
           real_return_date: new Date().toISOString(),
-          notes: "Retorno exitoso. Se encontraron suministros médicos.",
+          notes: "Retorno exitoso. Se encontraron suministros medicos.",
           found_resources: foundResources,
         },
       },
@@ -197,7 +197,7 @@ test.describe("Exploraciones — Ciclo completo", () => {
       headers: { Authorization: `Bearer ${token}` },
       data: {
         camp_id: campId,
-        name: "Exploración Inválida",
+        name: "Exploracion Invalida",
         destination_description: "Zona sur",
         departure_date: new Date().toISOString(),
         estimated_days: 2,

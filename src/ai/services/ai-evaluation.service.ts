@@ -305,7 +305,7 @@ export class AiEvaluationService {
     const skillMap: Record<string, string[]> = {
       Explorador: ["exploration", "scouting", "navigation", "survival"],
       Guardia: ["security", "combat", "defense", "weapons"],
-      Médico: ["medicine", "medical", "first aid", "healthcare", "nursing"],
+      Medico: ["medicine", "medical", "first aid", "healthcare", "nursing"],
       Granjero: ["agriculture", "farming", "cultivation", "gardening"],
       Cazador: ["hunting", "tracking", "weapons", "marksmanship"],
       "Recolector de Agua": ["water collection", "engineering", "plumbing"],

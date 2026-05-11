@@ -163,7 +163,7 @@ describe("UsersService", () => {
       { status: "active", count: 1 },
     ]);
     personsService.getStatsByProfession.mockResolvedValueOnce([
-      { professionName: "Médico", total: 1, active: 1, inactive: 0 },
+      { professionName: "Medico", total: 1, active: 1, inactive: 0 },
     ]);
 
     await expect(service.createPerson(dto)).resolves.toBe(person);
@@ -184,7 +184,7 @@ describe("UsersService", () => {
       { status: "active", count: 1 },
     ]);
     await expect(service.getPersonStatsByProfession(1)).resolves.toEqual([
-      { professionName: "Médico", total: 1, active: 1, inactive: 0 },
+      { professionName: "Medico", total: 1, active: 1, inactive: 0 },
     ]);
 
     expect(personsService.create).toHaveBeenCalledWith(dto);

@@ -525,7 +525,7 @@ describe("ResourcesService", () => {
 
       await expect(service.executeDailyProcess(1)).rejects.toThrow(
         new NotFoundException(
-          'Recursos de tipo "food" y "water" no configurados. Cree recursos con esas categorías.',
+          'Recursos de tipo "food" y "water" no configurados. Cree recursos con esas categorias.',
         ),
       );
     });
@@ -616,7 +616,7 @@ describe("ResourcesService", () => {
         resource_id: 11,
         quantity: 20,
         type: "daily_production",
-        description: "Producción diaria: Ana Perez (Recolector)",
+        description: "Produccion diaria: Ana Perez (Recolector)",
       });
       expect(createMovementSpy).toHaveBeenNthCalledWith(2, {
         camp_id: 10,
@@ -704,14 +704,14 @@ describe("ResourcesService", () => {
         resource_id: 31,
         quantity: 8,
         type: "daily_production",
-        description: "Producción diaria: Rosa Campo (Agricultor)",
+        description: "Produccion diaria: Rosa Campo (Agricultor)",
       });
       expect(createMovementSpy).toHaveBeenNthCalledWith(2, {
         camp_id: 12,
         resource_id: 32,
         quantity: 6,
         type: "daily_production",
-        description: "Producción de agua: Rosa Campo (Agricultor)",
+        description: "Produccion de agua: Rosa Campo (Agricultor)",
       });
       expect(createMovementSpy).toHaveBeenNthCalledWith(3, {
         camp_id: 12,
@@ -876,7 +876,7 @@ describe("ResourcesService", () => {
         resource_id: 22,
         quantity: 15,
         type: "daily_production",
-        description: "Producción de agua: Mario Aguador (Aguatero)",
+        description: "Produccion de agua: Mario Aguador (Aguatero)",
       });
       expect(refreshSpy).toHaveBeenCalledWith(11);
       expect(result).toEqual({
@@ -917,7 +917,7 @@ describe("ResourcesService", () => {
       expect(service.executeDailyProcess).toHaveBeenNthCalledWith(1, 1);
       expect(service.executeDailyProcess).toHaveBeenNthCalledWith(2, 2);
       expect(logSpy).toHaveBeenCalledWith(
-        "Iniciando proceso diario automático de recursos...",
+        "Iniciando proceso diario automatico de recursos...",
       );
       expect(logSpy).toHaveBeenCalledWith(
         'Camp "Camp Alpha" (1): 2 movimientos procesados',
@@ -1030,7 +1030,7 @@ describe("ResourcesService", () => {
         {
           resource_id: 1,
           quantity: 2,
-          description: "Producción extraordinaria",
+          description: "Produccion extraordinaria",
         },
         31,
       );
@@ -1041,7 +1041,7 @@ describe("ResourcesService", () => {
           resource_id: 1,
           quantity: 2,
           type: "daily_production",
-          description: "Producción extraordinaria",
+          description: "Produccion extraordinaria",
         },
         31,
       );

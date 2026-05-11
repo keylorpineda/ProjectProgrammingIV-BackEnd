@@ -14,7 +14,7 @@ describe("Public Decorator", () => {
   it("should return a function that can be used as decorator", () => {
     const decorator = Public();
 
-    // Los decoradores de NestJS retornan una función
+    // Los decoradores de NestJS retornan una funcion
     expect(typeof decorator).toBe("function");
   });
 });

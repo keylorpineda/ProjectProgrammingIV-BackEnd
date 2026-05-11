@@ -47,7 +47,7 @@ describe("Explorations support files", () => {
     it("should validate a complete create exploration dto", async () => {
       const dto = plainToInstance(CreateExplorationDto, {
         camp_id: 1,
-        name: "Expedición",
+        name: "Expedicion",
         destination_description: "Zona este",
         departure_date: "2026-03-25T00:00:00.000Z",
         estimated_days: 2,

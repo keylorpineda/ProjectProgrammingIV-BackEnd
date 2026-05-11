@@ -384,7 +384,7 @@ describe("AiEvaluationService", () => {
     expect(result === null || result).toBeDefined();
   });
 
-  it("should match Médico profession with medical skills", async () => {
+  it("should match Medico profession with medical skills", async () => {
     const medicoSkills = ["medicine", "first aid"];
     const result = await service.matchProfession(
       medicoSkills,
@@ -885,8 +885,8 @@ describe("AiEvaluationService", () => {
     const criticalMedicalContext = {
       ...mockContext,
       criticalDeficit: 2,
-      criticalProfession: "Médico",
-      professionsNeeded: [{ profession: "Médico", count: 2 }],
+      criticalProfession: "Medico",
+      professionsNeeded: [{ profession: "Medico", count: 2 }],
     };
     const result = service.checkCriticalRules(
       criticallySkilledCandidate as any,
@@ -1107,7 +1107,7 @@ describe("AiEvaluationService", () => {
     };
     const criticalDeficitContext = {
       ...mockContext,
-      professionsNeeded: [{ profession: "Médico", count: 5, deficit: 2 }],
+      professionsNeeded: [{ profession: "Medico", count: 5, deficit: 2 }],
     };
     const result = await service.calculateAdmissionScore(
       criticalSkillCandidate as any,
@@ -1264,14 +1264,14 @@ describe("AiEvaluationService extra coverage", () => {
         ...baseContext,
         occupancyRate: 96,
         criticalDeficit: 3,
-        criticalProfession: "Médico",
+        criticalProfession: "Medico",
       },
     );
 
     expect(result).toEqual({
       applies: true,
       decision: "ACCEPT",
-      reason: "URGENT: Camp critically needs Médico. Immediate acceptance.",
+      reason: "URGENT: Camp critically needs Medico. Immediate acceptance.",
     });
   });
 
@@ -1286,14 +1286,14 @@ describe("AiEvaluationService extra coverage", () => {
       {
         ...baseContext,
         criticalDeficit: 3,
-        criticalProfession: "Médico",
+        criticalProfession: "Medico",
       },
     );
 
     expect(result).toEqual({
       applies: true,
       decision: "ACCEPT",
-      reason: "URGENT: Camp critically needs Médico. Immediate acceptance.",
+      reason: "URGENT: Camp critically needs Medico. Immediate acceptance.",
     });
   });
 
@@ -1310,7 +1310,7 @@ describe("AiEvaluationService extra coverage", () => {
       {
         ...baseContext,
         balance: { food: 5, water: 10 },
-        professionsNeeded: [{ profession: "Médico", deficit: 3 }],
+        professionsNeeded: [{ profession: "Medico", deficit: 3 }],
       },
     );
 
@@ -1340,16 +1340,16 @@ describe("AiEvaluationService extra coverage", () => {
   });
 
   it("should match a profession from prioritized camp needs", async () => {
-    const profession = { id: 5, name: "Médico" } as Profession;
+    const profession = { id: 5, name: "Medico" } as Profession;
     professionRepo.findOne.mockResolvedValue(profession);
 
     const result = await service.matchProfession(["medicine", "first aid"], {
       ...baseContext,
-      professionsNeeded: [{ profession: "Médico", deficit: 2 }],
+      professionsNeeded: [{ profession: "Medico", deficit: 2 }],
     });
 
     expect(professionRepo.findOne).toHaveBeenCalledWith({
-      where: { name: "Médico" },
+      where: { name: "Medico" },
     });
     expect(result).toBe(profession);
   });
@@ -1361,7 +1361,7 @@ describe("AiEvaluationService extra coverage", () => {
 
     const result = await service.matchProfession(["survival", "navigation"], {
       ...baseContext,
-      professionsNeeded: [{ profession: "Médico", deficit: 1 }],
+      professionsNeeded: [{ profession: "Medico", deficit: 1 }],
     });
 
     expect(result).toEqual({ id: 7, name: "Explorador" });
@@ -1385,7 +1385,7 @@ describe("AiEvaluationService extra coverage", () => {
           category: "Profession Need",
           score: 40,
           maxScore: 40,
-          detail: "CRITICAL: Camp needs 3 Médicos",
+          detail: "CRITICAL: Camp needs 3 Medicos",
         },
       ],
     };
@@ -1396,14 +1396,14 @@ describe("AiEvaluationService extra coverage", () => {
       capacity: 100,
       occupancyRate: 82,
       balance: { food: 12, water: -4 },
-      professionsNeeded: [{ profession: "Médico", deficit: 3 }],
+      professionsNeeded: [{ profession: "Medico", deficit: 3 }],
     });
 
     expect(text).toContain("Score: 82/100 (HIGH confidence)");
     expect(text).toContain("Decision: RECOMMEND_ACCEPT");
     expect(text).toContain("- Food balance: +12");
     expect(text).toContain("- Water balance: -4");
-    expect(text).toContain("- Professions needed: Médico (-3)");
+    expect(text).toContain("- Professions needed: Medico (-3)");
   });
 
   it("should generate a justification without profession list and alternate balance signs", () => {

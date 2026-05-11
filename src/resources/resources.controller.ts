@@ -134,17 +134,17 @@ export class ResourcesController {
   @ApiQuery({
     name: "page",
     required: false,
-    description: "Página (default 1)",
+    description: "Pagina (default 1)",
   })
   @ApiQuery({
     name: "limit",
     required: false,
-    description: "Elementos por página (default 20)",
+    description: "Elementos por pagina (default 20)",
   })
   @ApiQuery({
     name: "category",
     required: false,
-    description: "Filtrar por categoría (opcional)",
+    description: "Filtrar por categoria (opcional)",
   })
   async findAll(
     @Query("page") page?: string,

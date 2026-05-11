@@ -1,13 +1,13 @@
-# 📚 Guía de URLs y Enlaces - Gestión del Fin API
+# 📚 Guia de URLs y Enlaces - Gestion del Fin API
 
-**Proyecto:** Gestión del Fin - Sistema de Gestión de Campamentos Post-Apocalípticos
-**Última actualización:** 04 de Mayo, 2026
+**Proyecto:** Gestion del Fin - Sistema de Gestion de Campamentos Post-Apocalipticos
+**Ultima actualizacion:** 04 de Mayo, 2026
 
 ---
 
 ## 🌐 URLs Principales
 
-### **Backend API (Producción en Render)**
+### **Backend API (Produccion en Render)**
 - **URL Base:** `https://doomsday-system-api.onrender.com/api/v1`
 - **Swagger Docs:** `https://doomsday-system-api.onrender.com/api/v1/docs`
 - **Health Check:** `https://doomsday-system-api.onrender.com/api/v1/health`
@@ -22,7 +22,7 @@
 - **Database Host:** `aws-0-us-west-2.pooler.supabase.com`
 - **Database Name:** `postgres`
 
-### **Cloudinary (Imágenes y Assets)**
+### **Cloudinary (Imagenes y Assets)**
 - **Cloud Name:** `dq3sagbgi`
 - **Media Library:** `https://console.cloudinary.com/console/c-dq3sagbgi/media_library`
 
@@ -33,14 +33,14 @@
 
 ## 📡 Endpoints del API
 
-### **🔐 Autenticación** (`/auth`)
+### **🔐 Autenticacion** (`/auth`)
 
-| Método | Endpoint | Descripción | Auth |
+| Metodo | Endpoint | Descripcion | Auth |
 |--------|----------|-------------|------|
-| POST | `/auth/login` | Iniciar sesión | ❌ |
-| POST | `/auth/logout` | Cerrar sesión | ✅ |
+| POST | `/auth/login` | Iniciar sesion | ❌ |
+| POST | `/auth/logout` | Cerrar sesion | ✅ |
 | POST | `/auth/refresh` | Refrescar token | ❌ |
-| GET | `/auth/session-status` | Estado de sesión | ✅ |
+| GET | `/auth/session-status` | Estado de sesion | ✅ |
 
 **Ejemplo Login:**
 ```bash
@@ -57,12 +57,12 @@ Content-Type: application/json
 
 ### **🤖 IA - Admisiones** (`/ai`)
 
-| Método | Endpoint | Descripción | Auth |
+| Metodo | Endpoint | Descripcion | Auth |
 |--------|----------|-------------|------|
-| POST | `/ai/admissions/submit` | Enviar solicitud de admisión | ✅ |
-| GET | `/ai/admissions/track/:code` | Rastrear admisión por código | ✅ |
+| POST | `/ai/admissions/submit` | Enviar solicitud de admision | ✅ |
+| GET | `/ai/admissions/track/:code` | Rastrear admision por codigo | ✅ |
 | GET | `/ai/admissions/pending` | Listar admisiones pendientes | ✅ |
-| GET | `/ai/admissions/:id` | Detalle de admisión | ✅ |
+| GET | `/ai/admissions/:id` | Detalle de admision | ✅ |
 | POST | `/ai/admissions/:id/review` | Revisar y aprobar/rechazar | ✅ |
 
 **Ejemplo Submit Admission:**
@@ -86,7 +86,7 @@ Content-Type: application/json
 
 ### **🏕️ Campamentos** (`/camps`)
 
-| Método | Endpoint | Descripción | Auth |
+| Metodo | Endpoint | Descripcion | Auth |
 |--------|----------|-------------|------|
 | GET | `/camps` | Listar campamentos activos | ✅ |
 | GET | `/camps/:id` | Detalle de campamento e inventario | ✅ |
@@ -112,25 +112,25 @@ Content-Type: application/json
 
 ### **👥 Usuarios y Personas** (`/users`)
 
-| Método | Endpoint | Descripción | Auth |
+| Metodo | Endpoint | Descripcion | Auth |
 |--------|----------|-------------|------|
 | GET | `/users/persons` | Listar personas | ✅ |
 | GET | `/users/persons/:id` | Detalle de persona | ✅ |
 | PUT | `/users/persons/:id/status` | Cambiar estado (enfermo, herido, activo) | ✅ |
 | GET | `/users/professions` | Listar profesiones | ✅ |
 | GET | `/users/professions/alerts/needing-workers` | Profesiones sin trabajadores | ✅ |
-| POST | `/users/temporary-assignments` | Crear asignación temporal | ✅ |
+| POST | `/users/temporary-assignments` | Crear asignacion temporal | ✅ |
 | GET | `/users/me/assigned-resources` | Recursos asignados al usuario | ✅ |
 
 ---
 
 ### **📦 Recursos e Inventario** (`/resources`)
 
-| Método | Endpoint | Descripción | Auth |
+| Metodo | Endpoint | Descripcion | Auth |
 |--------|----------|-------------|------|
 | GET | `/resources` | Listar tipos de recursos | ✅ |
 | GET | `/resources/inventory/:campId` | Inventario actual del campamento | ✅ |
-| GET | `/resources/inventory/:campId/alerts` | Alertas de recursos críticos | ✅ |
+| GET | `/resources/inventory/:campId/alerts` | Alertas de recursos criticos | ✅ |
 | POST | `/resources/movements` | Registrar movimiento (entrada/salida) | ✅ |
 | POST | `/resources/daily-process/:campId` | Ejecutar proceso diario manual | ✅ |
 
@@ -138,21 +138,21 @@ Content-Type: application/json
 
 ### **🔄 Transferencias Inter-campamento** (`/transfers`)
 
-| Método | Endpoint | Descripción | Auth |
+| Metodo | Endpoint | Descripcion | Auth |
 |--------|----------|-------------|------|
 | POST | `/transfers/requests` | Crear solicitud (Recursos/Personas) | ✅ |
 | GET | `/transfers/requests/:id` | Detalle de solicitud | ✅ |
 | GET | `/transfers/requests/camp/:campId` | Solicitudes del campamento | ✅ |
-| PATCH | `/transfers/requests/:id/approval` | Aprobar/rechazar (Doble Aprobación) | ✅ |
-| GET | `/transfers/statistics/:campId` | Estadísticas de transferencias | ✅ |
+| PATCH | `/transfers/requests/:id/approval` | Aprobar/rechazar (Doble Aprobacion) | ✅ |
+| GET | `/transfers/statistics/:campId` | Estadisticas de transferencias | ✅ |
 
 ---
 
 ### **🗺️ Exploraciones** (`/explorations`)
 
-| Método | Endpoint | Descripción | Auth |
+| Metodo | Endpoint | Descripcion | Auth |
 |--------|----------|-------------|------|
-| POST | `/explorations` | Crear exploración | ✅ |
+| POST | `/explorations` | Crear exploracion | ✅ |
 | GET | `/explorations` | Listar exploraciones | ✅ |
 | PATCH | `/explorations/:id/depart` | Marcar salida (En Progreso) | ✅ |
 | PATCH | `/explorations/:id/return` | Registrar retorno con suministros | ✅ |
@@ -161,24 +161,24 @@ Content-Type: application/json
 
 ### **📊 Dashboard** (`/dashboard`)
 
-| Método | Endpoint | Descripción | Auth |
+| Metodo | Endpoint | Descripcion | Auth |
 |--------|----------|-------------|------|
-| GET | `/dashboard/:campId` | Métricas del campamento (según rol) | ✅ |
+| GET | `/dashboard/:campId` | Metricas del campamento (segun rol) | ✅ |
 
 ---
 
 ### **📤 Upload y Assets** (`/upload`)
 
-| Método | Endpoint | Descripción | Auth |
+| Metodo | Endpoint | Descripcion | Auth |
 |--------|----------|-------------|------|
-| POST | `/upload/person` | Subir foto de persona/identificación | ✅ |
+| POST | `/upload/person` | Subir foto de persona/identificacion | ✅ |
 | POST | `/upload/camp` | Subir mapa/logo de campamento | ✅ |
 
 ---
 
 ### **❤️ Health y Tiempo** (`/health`)
 
-| Método | Endpoint | Descripción | Auth |
+| Metodo | Endpoint | Descripcion | Auth |
 |--------|----------|-------------|------|
 | GET | `/health` | Health check general | ❌ |
 | GET | `/health/server-time` | Hora oficial del servidor (UTC) | ❌ |
@@ -187,10 +187,10 @@ Content-Type: application/json
 
 ## 📋 Roles del Sistema
 
-| Rol | Slug | Descripción |
+| Rol | Slug | Descripcion |
 |-----|------|-------------|
-| Administrador | `admin` | Gestión de ingresos y visión global |
-| Trabajador | `worker` | Operaciones básicas de inventario |
+| Administrador | `admin` | Gestion de ingresos y vision global |
+| Trabajador | `worker` | Operaciones basicas de inventario |
 | Gestor Recursos | `resource_manager` | Traslados y bodega |
 | Viajes y Comms | `travel_comms` | Exploraciones y pactos |
 
@@ -198,6 +198,6 @@ Content-Type: application/json
 
 ## 🧪 Postman y Pruebas
 
-1. **Importar:** Usa el archivo `Postman_Collection.json` de la raíz.
+1. **Importar:** Usa el archivo `Postman_Collection.json` de la raiz.
 2. **Variable Base:** Cambia `{{baseUrl}}` a `https://doomsday-system-api.onrender.com/api/v1`.
 3. **Login First:** Ejecuta `/auth/login` y guarda el token en el environment.

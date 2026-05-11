@@ -377,7 +377,7 @@ export class ExplorationsService {
         ? person.achievements
         : [];
 
-      let newExpPoints = person.experience_points + 50; // 50 XP por expedición
+      let newExpPoints = person.experience_points + 50; // 50 XP por expedicion
       let newLevel = person.experience_level;
 
       // Cada 100 XP se sube un nivel

@@ -406,13 +406,13 @@ describe("PersonsService", () => {
       getRawMany: jest
         .fn()
         .mockResolvedValueOnce([
-          { professionName: "Médico", total: 2, active: 1, inactive: 1 },
+          { professionName: "Medico", total: 2, active: 1, inactive: 1 },
         ]),
     };
     personRepo.createQueryBuilder.mockReturnValueOnce(qb);
 
     await expect(service.getStatsByProfession(4)).resolves.toEqual([
-      { professionName: "Médico", total: 2, active: 1, inactive: 1 },
+      { professionName: "Medico", total: 2, active: 1, inactive: 1 },
     ]);
     expect(qb.where).toHaveBeenCalledWith("userAccount.camp_id = :campId", {
       campId: 4,

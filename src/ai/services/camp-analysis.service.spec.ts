@@ -375,7 +375,7 @@ describe("CampAnalysisService extra coverage", () => {
     professionsService.getProfessionsNeedingWorkers.mockResolvedValue([
       { profession: { name: "Guardia" }, deficit: 1 },
       { profession: { name: "Ingeniero" }, deficit: 4 },
-      { profession: { name: "Médico" }, deficit: 2 },
+      { profession: { name: "Medico" }, deficit: 2 },
     ]);
 
     const result = await service.analyzeCampContext(2);
@@ -388,7 +388,7 @@ describe("CampAnalysisService extra coverage", () => {
       professionsNeeded: [
         { profession: "Guardia", deficit: 1 },
         { profession: "Ingeniero", deficit: 4 },
-        { profession: "Médico", deficit: 2 },
+        { profession: "Medico", deficit: 2 },
       ],
       criticalProfession: "Ingeniero",
       criticalDeficit: 4,

@@ -146,7 +146,7 @@ describe("SessionActivityInterceptor", () => {
     const stream = await interceptor.intercept(mockContext, mockCallHandler);
     await firstValueFrom(stream);
 
-    // No debe throws, solo continúa
+    // No debe throws, solo continua
     expect(mockCallHandler.handle).toHaveBeenCalled();
   });
 
@@ -173,7 +173,7 @@ describe("SessionActivityInterceptor", () => {
       const stream = await interceptor.intercept(mockContext, mockCallHandler);
       await firstValueFrom(stream);
     } catch (error) {
-      // Si hay error, verifica que el handle aún fue llamado después
+      // Si hay error, verifica que el handle aun fue llamado despues
     }
 
     expect(mockCallHandler.handle).toHaveBeenCalled();

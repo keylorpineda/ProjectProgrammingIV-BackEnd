@@ -296,14 +296,14 @@ describe("CampsController", () => {
 
     it("should return message with special characters in camp name", async () => {
       const response = {
-        message: 'Campamento "Camp á é í ó ú" desactivado correctamente',
+        message: 'Campamento "Camp a e i o u" desactivado correctamente',
       };
 
       jest.spyOn(service, "remove").mockResolvedValue(response as any);
 
       const result = await controller.remove(1);
 
-      expect(result.message).toContain("á é í ó ú");
+      expect(result.message).toContain("a e i o u");
     });
   });
 });

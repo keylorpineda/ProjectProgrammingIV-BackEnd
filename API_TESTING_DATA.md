@@ -178,11 +178,19 @@ Añadir sobrevivientes. (Asegúrate de cambiar los IDs de `profession_id` por lo
 ```
 
 ### 6. Sistema de Autorización (Testing Flujo Completo) (`POST /auth/login`)
-Si tienes usuarios con contraseñas en tu semilla de DB (generalmente creados en un flujo o seeder oculto):
+Si usas el admin por defecto del sistema (AdminSeeder):
 
 ```json
 {
-  "username": "admin_alpha",
+  "username": "admin",
+  "password": "Admin@1234!"
+}
+```
+
+O si corriste el script actualizado de la semilla SQL donde configuramos los de prueba:
+```json
+{
+  "username": "worker1",
   "password": "Password123!"
 }
 ```
@@ -259,3 +267,23 @@ Simular expedición de recursos hacia el campamento 2:
 | **Guardar Peticiones** | Debes crear colecciones manuales para guardar tu trabajo local. | Todo es estático documentado, te genera esquemas basados en los DTOs de NestJS. |
 
 Estos JSON te permitirán crear desde la base la lógica completa de tu Backend de *Apolacalipsis Zombie / Gestión del fin*, probando desde la creación hasta las expediciones y consumo de inventarios.
+Admin Global (Campamento Alpha)
+
+Usuario: admin_z
+Email: admin@doomsday.com
+Rol: Administrador global (role_id: 1)
+Trabajador Regular (Campamento Alpha)
+
+Usuario: worker1
+Email: worker1@doomsday.com
+Rol: Trabajador (role_id: 2)
+Especialista en Recursos (Refugio Beta)
+
+Usuario: resources
+Email: resources@doomsday.com
+Rol: Resource Manager (role_id: 3)
+Coordinador de Traslados (Estación Echo)
+
+Usuario: comms
+Email: comms@doomsday.com
+Rol: Travel Comms (role_id: 4)

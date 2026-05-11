@@ -1,7 +1,7 @@
 /**
  * E2E Tests — Dashboard, Campamentos y Hora del Servidor
- * Flujos críticos: Métricas por rol, multi-campamento, hora centralizada,
- * restricción de acceso por rol
+ * Flujos criticos: Metricas por rol, multi-campamento, hora centralizada,
+ * restriccion de acceso por rol
  */
 import { test, expect } from "@playwright/test";
 
@@ -40,7 +40,7 @@ test.describe("Campamentos y Sistema Multi-campamento", () => {
     campId = body[0].id;
   });
 
-  test("GET /camps/:id → detalle de campamento con métricas de inventario", async ({
+  test("GET /camps/:id → detalle de campamento con metricas de inventario", async ({
     request,
   }) => {
     if (!campId) return;
@@ -64,14 +64,14 @@ test.describe("Campamentos y Sistema Multi-campamento", () => {
     });
 
     const camps = await response.json();
-    // Cada campamento tiene su propio ID único
+    // Cada campamento tiene su propio ID unico
     const ids = camps.map((c: any) => c.id);
     const uniqueIds = [...new Set(ids)];
     expect(ids.length).toBe(uniqueIds.length);
   });
 });
 
-test.describe("Dashboard — Métricas por Rol", () => {
+test.describe("Dashboard — Metricas por Rol", () => {
   let token: string;
   let campId: number;
 
@@ -84,7 +84,7 @@ test.describe("Dashboard — Métricas por Rol", () => {
     campId = Number(camps[0]?.id ?? 1);
   });
 
-  test("GET /dashboard/metrics/:campId → admin recibe métricas completas (personas + bodega + traslados)", async ({
+  test("GET /dashboard/metrics/:campId → admin recibe metricas completas (personas + bodega + traslados)", async ({
     request,
   }) => {
     const response = await request.get(`${BASE}/dashboard/${campId}`, {
@@ -99,14 +99,14 @@ test.describe("Dashboard — Métricas por Rol", () => {
     expect(body).toHaveProperty("camp");
     expect(body).toHaveProperty("transfers");
 
-    // Admin debe ver métricas de bodega
+    // Admin debe ver metricas de bodega
     expect(body).toHaveProperty("warehouse");
     expect(body.camp).toHaveProperty("totalPeople");
     expect(body.camp).toHaveProperty("activeWorkers");
     expect(body.camp).toHaveProperty("emptyProfessions");
   });
 
-  test("GET /dashboard/metrics/:campId → métricas incluyen exploraciones activas", async ({
+  test("GET /dashboard/metrics/:campId → metricas incluyen exploraciones activas", async ({
     request,
   }) => {
     const response = await request.get(`${BASE}/dashboard/${campId}`, {
@@ -118,7 +118,7 @@ test.describe("Dashboard — Métricas por Rol", () => {
     expect(typeof body.camp.activeExplorations).toBe("number");
   });
 
-  test("GET /dashboard/metrics/:campId → warehouse tiene alertas de recursos críticos", async ({
+  test("GET /dashboard/metrics/:campId → warehouse tiene alertas de recursos criticos", async ({
     request,
   }) => {
     const response = await request.get(`${BASE}/dashboard/${campId}`, {
@@ -145,11 +145,11 @@ test.describe("Hora Centralizada del Servidor (Req. G4)", () => {
     expect(body).toHaveProperty("timestampUnix");
     expect(body).toHaveProperty("timezone");
 
-    // La hora debe ser una fecha ISO válida
+    // La hora debe ser una fecha ISO valida
     const parsedTime = new Date(body.serverTime);
     expect(parsedTime.getTime()).not.toBeNaN();
 
-    // Debe ser hora reciente (dentro de los últimos 10 segundos)
+    // Debe ser hora reciente (dentro de los ultimos 10 segundos)
     const diffMs = Date.now() - parsedTime.getTime();
     expect(Math.abs(diffMs)).toBeLessThan(10000);
   });
@@ -185,7 +185,7 @@ test.describe("Control de Acceso por Roles", () => {
     }
   });
 
-  test("Token válido permite acceso a rutas autorizadas", async ({
+  test("Token valido permite acceso a rutas autorizadas", async ({
     request,
   }) => {
     const response = await request.get(`${BASE}/camps`, {

@@ -43,17 +43,17 @@ export class UsersController {
   @ApiQuery({
     name: "page",
     required: false,
-    description: "Página (default 1)",
+    description: "Pagina (default 1)",
   })
   @ApiQuery({
     name: "limit",
     required: false,
-    description: "Resultados por página (default 20)",
+    description: "Resultados por pagina (default 20)",
   })
   @ApiQuery({
     name: "search",
     required: false,
-    description: "Buscar por nombre o código",
+    description: "Buscar por nombre o codigo",
   })
   async getAllPersons(
     @Query("campId") campId?: string,

@@ -148,9 +148,9 @@ describe("main bootstrap", () => {
     expect(ctx.app.useGlobalPipes).toHaveBeenCalledWith({
       kind: "validation-pipe",
     });
-    expect(ctx.setTitle).toHaveBeenCalledWith("Gestión del Fin API");
+    expect(ctx.setTitle).toHaveBeenCalledWith("Gestion del Fin API");
     expect(ctx.setDescription).toHaveBeenCalledWith(
-      "API del sistema de gestión de campamentos - Apocalipsis Zombie",
+      "API del sistema de gestion de campamentos - Apocalipsis Zombie",
     );
     expect(ctx.setVersion).toHaveBeenCalledWith("1.0");
     expect(ctx.addBearerAuth).toHaveBeenCalledTimes(1);

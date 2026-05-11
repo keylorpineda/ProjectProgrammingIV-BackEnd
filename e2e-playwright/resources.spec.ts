@@ -1,7 +1,7 @@
 /**
- * E2E Tests — Gestión de Recursos e Inventario
- * Flujos críticos: Inventario por campamento, alertas mínimo, movimientos,
- * proceso diario automático, ajuste de producción
+ * E2E Tests — Gestion de Recursos e Inventario
+ * Flujos criticos: Inventario por campamento, alertas minimo, movimientos,
+ * proceso diario automatico, ajuste de produccion
  */
 import { test, expect } from "@playwright/test";
 
@@ -24,7 +24,7 @@ async function getToken(request: any, role = "admin"): Promise<string> {
   return body.access_token;
 }
 
-test.describe("Recursos — Inventario y Gestión de Bodega", () => {
+test.describe("Recursos — Inventario y Gestion de Bodega", () => {
   let token: string;
   let campId: number;
   let resourceId: number;
@@ -38,7 +38,7 @@ test.describe("Recursos — Inventario y Gestión de Bodega", () => {
     campId = Number(camps[0]?.id ?? 1);
   });
 
-  test("GET /resources → lista de recursos con paginación", async ({
+  test("GET /resources → lista de recursos con paginacion", async ({
     request,
   }) => {
     const response = await request.get(`${BASE}/resources?page=1&limit=20`, {
@@ -77,7 +77,7 @@ test.describe("Recursos — Inventario y Gestión de Bodega", () => {
     }
   });
 
-  test("GET /resources/inventory/:campId/alerts → alertas cuando recurso baja del mínimo", async ({
+  test("GET /resources/inventory/:campId/alerts → alertas cuando recurso baja del minimo", async ({
     request,
   }) => {
     const response = await request.get(
@@ -156,12 +156,12 @@ test.describe("Recursos — Inventario y Gestión de Bodega", () => {
     }
   });
 
-  test("PATCH /resources/inventory/:campId/resources/:resourceId → actualiza stock mínimo y dispara alerta", async ({
+  test("PATCH /resources/inventory/:campId/resources/:resourceId → actualiza stock minimo y dispara alerta", async ({
     request,
   }) => {
     if (!resourceId) return;
 
-    // Poner el mínimo muy alto para forzar alerta
+    // Poner el minimo muy alto para forzar alerta
     const response = await request.patch(
       `${BASE}/resources/inventory/${campId}/${resourceId}`,
       {

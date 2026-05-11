@@ -1,15 +1,15 @@
 ﻿/**
- * Roles del sistema según el enunciado del proyecto
+ * Roles del sistema segun el enunciado del proyecto
  *
  * ROLES OBLIGATORIOS (enunciado):
  * 5.1 - Administrador sistema: Tiene acceso a ver todo el sistema, pero solo gestiona los ingresos de personas
  * 5.2 - Trabajador: Solo puede hacer cambios de inventario, autorizados por el gestionador de los recursos
- * 5.3 - Gestión recursos: Encargado general de realizar traslados y envíos de recursos
- * 5.4 - Encargado de viajes y comunicación: Realiza las expediciones y negociaciones con los otros campamentos
+ * 5.3 - Gestion recursos: Encargado general de realizar traslados y envios de recursos
+ * 5.4 - Encargado de viajes y comunicacion: Realiza las expediciones y negociaciones con los otros campamentos
  *
  * ROLES ADICIONALES (justificados):
- * 6 - Líder de Campamento: Administra un campamento específico (sistema multi-campamento)
- * 7 - Supervisor: Audita operaciones del sistema (requerimiento de auditoría del enunciado)
+ * 6 - Lider de Campamento: Administra un campamento especifico (sistema multi-campamento)
+ * 7 - Supervisor: Audita operaciones del sistema (requerimiento de auditoria del enunciado)
  */
 
 export enum UserRole {
@@ -38,7 +38,7 @@ export const ROLES_CONFIG = {
   [UserRole.TRABAJADOR]: {
     name: "Trabajador",
     description:
-      "Realiza cambios de inventario autorizados por gestión de recursos",
+      "Realiza cambios de inventario autorizados por gestion de recursos",
     permissions: [
       "view_inventory",
       "adjust_daily_production",
@@ -47,9 +47,9 @@ export const ROLES_CONFIG = {
     ],
   },
   [UserRole.GESTOR_RECURSOS]: {
-    name: "Gestión de Recursos",
+    name: "Gestion de Recursos",
     description:
-      "Encargado de traslados y envíos de recursos entre campamentos",
+      "Encargado de traslados y envios de recursos entre campamentos",
     permissions: [
       "manage_inventory",
       "create_transfers",
@@ -61,7 +61,7 @@ export const ROLES_CONFIG = {
     ],
   },
   [UserRole.ENCARGADO_VIAJES]: {
-    name: "Encargado de Viajes y Comunicación",
+    name: "Encargado de Viajes y Comunicacion",
     description: "Realiza expediciones y negociaciones con otros campamentos",
     permissions: [
       "create_explorations",
@@ -73,8 +73,8 @@ export const ROLES_CONFIG = {
     ],
   },
   [UserRole.LIDER_CAMPAMENTO]: {
-    name: "Líder de Campamento",
-    description: "Administra su campamento específico (scope local, no global)",
+    name: "Lider de Campamento",
+    description: "Administra su campamento especifico (scope local, no global)",
     permissions: [
       "manage_own_camp_people",
       "approve_own_camp_admissions",
@@ -102,7 +102,7 @@ export const ROLES_CONFIG = {
 };
 
 /**
- * Verifica si un rol tiene un permiso específico
+ * Verifica si un rol tiene un permiso especifico
  */
 export function roleHasPermission(role: UserRole, permission: string): boolean {
   return ROLES_CONFIG[role]?.permissions.includes(permission) ?? false;

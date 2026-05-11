@@ -203,7 +203,7 @@ export class TransferExecutionService {
   ): Promise<void> {
     if (request.status !== "in_transit") {
       throw new BadRequestException(
-        "La solicitud debe estar en tránsito para poder recibirla",
+        "La solicitud debe estar en transito para poder recibirla",
       );
     }
 
@@ -247,7 +247,7 @@ export class TransferExecutionService {
             resource_id: Number(rd.resource_id),
             quantity: transferQty,
             type: "transfer_in",
-            description: `Recepción de transferencia desde origen (Solicitud #${request.id})`,
+            description: `Recepcion de transferencia desde origen (Solicitud #${request.id})`,
             date: new Date(),
             user_id: userId,
           });

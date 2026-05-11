@@ -44,7 +44,7 @@ export const PROFESSIONS_CONFIG = {
     description: "Protege el campamento de amenazas zombie y humanas",
   },
   MEDICO: {
-    name: "Médico",
+    name: "Medico",
     can_explore: false,
     minimum_required: 1,
     daily_food_production: 0,

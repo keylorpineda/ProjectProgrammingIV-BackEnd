@@ -264,7 +264,7 @@ export class RequestsService {
         "cancelled",
       ];
       if (!allowed.includes(status)) {
-        throw new BadRequestException("Estado de solicitud inválido");
+        throw new BadRequestException("Estado de solicitud invalido");
       }
       queryBuilder.andWhere("req.status = :status", { status });
     }

@@ -1,7 +1,7 @@
 /**
  * E2E Tests — Traslados Inter-campamentos
- * Flujos críticos: Crear solicitud, doble aprobación, despacho con deducción
- * de bodega origen, llegada con acreditación en destino, auditoría
+ * Flujos criticos: Crear solicitud, doble aprobacion, despacho con deduccion
+ * de bodega origen, llegada con acreditacion en destino, auditoria
  */
 import { test, expect } from "@playwright/test";
 
@@ -99,7 +99,7 @@ test.describe("Traslados Inter-campamentos", () => {
         camp_destination_id: destCampId,
         type: "resource",
         travel_days: 2,
-        notes: "Solicitud de prueba E2E — recursos críticos",
+        notes: "Solicitud de prueba E2E — recursos criticos",
         resource_details: [
           {
             resource_id: resourceId,
@@ -136,12 +136,12 @@ test.describe("Traslados Inter-campamentos", () => {
     expect(body).toHaveProperty("resourceDetails");
   });
 
-  test("POST /transfers/requests/:id/approve → aprobación de la solicitud (doble aprobación)", async ({
+  test("POST /transfers/requests/:id/approve → aprobacion de la solicitud (doble aprobacion)", async ({
     request,
   }) => {
     if (!requestId) return;
 
-    // Primera aprobación (origen)
+    // Primera aprobacion (origen)
     const response = await request.patch(
       `${BASE}/transfers/requests/${requestId}/approval`,
       {
@@ -185,7 +185,7 @@ test.describe("Traslados Inter-campamentos", () => {
     );
     const current = await statusRes.json();
 
-    // Solo podemos hacer arrive si está "in_transit"
+    // Solo podemos hacer arrive si esta "in_transit"
     if (current.status !== "in_transit") {
       console.log(
         `Estado ${current.status}, no es in_transit, saltando arrive`,
@@ -205,7 +205,7 @@ test.describe("Traslados Inter-campamentos", () => {
     expect(body.status).toBe("completed");
   });
 
-  test("GET /transfers/statistics/:campId → estadísticas de traslados por campamento", async ({
+  test("GET /transfers/statistics/:campId → estadisticas de traslados por campamento", async ({
     request,
   }) => {
     const campId = originCampId ?? Number(camps[0]?.id ?? 1);

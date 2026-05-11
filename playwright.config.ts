@@ -2,28 +2,28 @@ import { defineConfig } from "@playwright/test";
 
 /**
  * Playwright E2E Test Configuration
- * Proyecto: Gestión del Fin — Apocalipsis Zombie
- * Requerimiento no funcional: Pruebas E2E automáticas (enunciado)
+ * Proyecto: Gestion del Fin — Apocalipsis Zombie
+ * Requerimiento no funcional: Pruebas E2E automaticas (enunciado)
  *
  * Para ejecutar: npm run test:playwright
  * Para ver reporte: npm run test:playwright:report
  *
- * Modos de ejecución:
+ * Modos de ejecucion:
  *
  * 1. Contra servidor LOCAL (requiere Redis + BD corriendo):
  *      npm run test:playwright
- *    Playwright levanta el servidor NestJS automáticamente con `webServer`.
+ *    Playwright levanta el servidor NestJS automaticamente con `webServer`.
  *    Prerequisito: docker run -d -p 6379:6379 redis:alpine
  *
- * 2. Contra servidor REMOTO / Producción:
+ * 2. Contra servidor REMOTO / Produccion:
  *      API_BASE_URL=https://doomsday-system-api.onrender.com/api/v1 npm run test:playwright
- *    En este modo no se levanta ningún servidor local.
+ *    En este modo no se levanta ningun servidor local.
  */
 
 const PROD_URL = "https://doomsday-system-api.onrender.com/api/v1";
 const BASE_URL = process.env.API_BASE_URL ?? PROD_URL;
 
-// Si ya se especificó una URL base externa, no levantar servidor local
+// Si ya se especifico una URL base externa, no levantar servidor local
 const useExternalServer = !!process.env.API_BASE_URL;
 
 export default defineConfig({
@@ -42,10 +42,10 @@ export default defineConfig({
   },
 
   /**
-   * Levanta el servidor NestJS automáticamente antes de los tests E2E,
+   * Levanta el servidor NestJS automaticamente antes de los tests E2E,
    * solo cuando se corre en modo local (sin API_BASE_URL definida).
    *
-   * Si API_BASE_URL está definida (modo remoto/CI), este bloque se omite
+   * Si API_BASE_URL esta definida (modo remoto/CI), este bloque se omite
    * y Playwright conecta directamente al servidor externo.
    *
    * Para levantar localmente necesitas Redis corriendo en localhost:6379:

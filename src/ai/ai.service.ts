@@ -102,7 +102,7 @@ export class AiService {
         finalDecision = evaluation.decision;
       }
 
-      finalJustification = `${justification}\n\n${"-".repeat(64)}\nANÁLISIS IA (CAJA DE CRISTAL):\n${pythonResult.transparency_report}`;
+      finalJustification = `${justification}\n\n${"-".repeat(64)}\nANALISIS IA (CAJA DE CRISTAL):\n${pythonResult.transparency_report}`;
     } else {
       this.logger.warn(
         "Python AI microservice unavailable – using NestJS-only evaluation",

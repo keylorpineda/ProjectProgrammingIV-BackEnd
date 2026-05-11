@@ -305,7 +305,7 @@ export class ResourcesService implements OnModuleInit {
 
     if (!foodResource || !waterResource) {
       throw new NotFoundException(
-        'Recursos de tipo "food" y "water" no configurados. Cree recursos con esas categorías.',
+        'Recursos de tipo "food" y "water" no configurados. Cree recursos con esas categorias.',
       );
     }
 
@@ -353,7 +353,7 @@ export class ResourcesService implements OnModuleInit {
           resource_id: Number(foodResource.id),
           quantity: foodProd,
           type: "daily_production",
-          description: `Producción diaria: ${person.first_name} ${person.last_name} (${person.profession.name})`,
+          description: `Produccion diaria: ${person.first_name} ${person.last_name} (${person.profession.name})`,
         });
         production["food"] = (production["food"] || 0) + foodProd;
         movementCount++;
@@ -365,7 +365,7 @@ export class ResourcesService implements OnModuleInit {
           resource_id: Number(waterResource.id),
           quantity: waterProd,
           type: "daily_production",
-          description: `Producción de agua: ${person.first_name} ${person.last_name} (${person.profession.name})`,
+          description: `Produccion de agua: ${person.first_name} ${person.last_name} (${person.profession.name})`,
         });
         production["water"] = (production["water"] || 0) + waterProd;
         movementCount++;
@@ -442,7 +442,7 @@ export class ResourcesService implements OnModuleInit {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async executeAllDailyProcesses(): Promise<void> {
-    this.logger.log("Iniciando proceso diario automático de recursos...");
+    this.logger.log("Iniciando proceso diario automatico de recursos...");
 
     const camps = await this.campRepo.find({ where: { active: true } });
 

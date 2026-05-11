@@ -1,6 +1,6 @@
 /**
- * E2E Tests — Gestión de Personas y Admisión con IA
- * Flujos críticos: Evaluación IA, revisión humana, asignación de profesión,
+ * E2E Tests — Gestion de Personas y Admision con IA
+ * Flujos criticos: Evaluacion IA, revision humana, asignacion de profesion,
  * cambio de estado, asignaciones temporales
  */
 import { test, expect } from "@playwright/test";
@@ -18,7 +18,7 @@ async function getAdminToken(request: any): Promise<string> {
   return body.access_token;
 }
 
-test.describe("Personas — Admisión IA y Gestión Humana", () => {
+test.describe("Personas — Admision IA y Gestion Humana", () => {
   let token: string;
   let admissionId: number;
   let trackingCode: string;
@@ -28,7 +28,7 @@ test.describe("Personas — Admisión IA y Gestión Humana", () => {
     token = await getAdminToken(request);
   });
 
-  test("POST /ai/admissions/submit → envía candidato y recibe evaluación IA con justificación", async ({
+  test("POST /ai/admissions/submit → envia candidato y recibe evaluacion IA con justificacion", async ({
     request,
   }) => {
     const campRes = await request.get(`${BASE}/camps`, {
@@ -88,7 +88,7 @@ test.describe("Personas — Admisión IA y Gestión Humana", () => {
     expect(body.justification.length).toBeGreaterThan(20);
   });
 
-  test("GET /ai/admissions/track/:code → seguimiento público de admisión", async ({
+  test("GET /ai/admissions/track/:code → seguimiento publico de admision", async ({
     request,
   }) => {
     if (!trackingCode) return;
@@ -106,7 +106,7 @@ test.describe("Personas — Admisión IA y Gestión Humana", () => {
     expect(body).toHaveProperty("tracking_code");
   });
 
-  test("POST /ai/admissions/:id/review → humano puede aprobar o rechazar decisión de IA", async ({
+  test("POST /ai/admissions/:id/review → humano puede aprobar o rechazar decision de IA", async ({
     request,
   }) => {
     if (!admissionId) return;
@@ -126,7 +126,7 @@ test.describe("Personas — Admisión IA y Gestión Humana", () => {
     console.log(await response.text()); expect([200, 201]).toContain(response.status());
   });
 
-  test("GET /users/persons → lista de personas con paginación", async ({
+  test("GET /users/persons → lista de personas con paginacion", async ({
     request,
   }) => {
     const response = await request.get(
@@ -190,10 +190,10 @@ test.describe("Personas — Admisión IA y Gestión Humana", () => {
     expect(Array.isArray(body)).toBe(true);
   });
 
-  test("POST /users/temporary-assignments → reasignación temporal de profesión", async ({
+  test("POST /users/temporary-assignments → reasignacion temporal de profesion", async ({
     request,
   }) => {
-    // Buscar una profesión para asignar
+    // Buscar una profesion para asignar
     const professionsRes = await request.get(`${BASE}/users/professions`, {
       headers: { Authorization: `Bearer ${token}` },
     });

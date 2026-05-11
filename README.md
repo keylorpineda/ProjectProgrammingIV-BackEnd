@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/Deployed%20on-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="Render" />
 </div>
 
-<h1 align="center">⚙️ Doomsday System API (Gestión del Fin)</h1>
+<h1 align="center">⚙️ Doomsday System API (Gestion del Fin)</h1>
 
 <p align="center">
   <strong>The core backend engine powering the Doomsday System.</strong>
@@ -22,7 +22,7 @@
 
 ## 📖 Overview
 
-The **Doomsday System API** is the foundational backend infrastructure for the *Gestión del fin* ecosystem. It handles all business logic, data persistence, and inter-camp communication strategies safely and reliably.
+The **Doomsday System API** is the foundational backend infrastructure for the *Gestion del fin* ecosystem. It handles all business logic, data persistence, and inter-camp communication strategies safely and reliably.
 
 Built upon the powerful **NestJS** framework, this backend leverages decorators, dependency injection, and heavy TypeScript typing to ensure a scalable and strictly validated data flow.
 
