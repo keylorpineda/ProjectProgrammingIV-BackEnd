@@ -4,7 +4,7 @@
 -- =========================================================================================
 
 -- Limpiar tablas si es necesario (Descomentar para reiniciar base)
--- TRUNCATE TABLE "user_account", "person", "inventory", "inventory_movement", "resource", "profession", "role", "camp", "intercamp_request", "exploration" RESTART IDENTITY CASCADE;
+TRUNCATE TABLE "user_account", "person", "inventory", "inventory_movement", "resource", "profession", "role", "camp", "intercamp_request", "exploration" RESTART IDENTITY CASCADE;
 
 -- ==========================================================
 -- 1. CAMPAMENTOS (Para endpoints GET /camps, PATCH /camps/:id, y Dashboards /dashboard/:campId)
@@ -76,53 +76,53 @@ INSERT INTO "person" ("profession_id", "first_name", "last_name", "join_date", "
 -- o inserta el hash manual generado de tu app.
 -- ==========================================================
 INSERT INTO "user_account" ("camp_id", "person_id", "role_id", "username", "email", "password_hash") VALUES 
-    (1, 1, 1, 'admin', 'admin@doomsday.com', '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW'), -- Admin global en Alpha
-    (1, 2, 2, 'worker1', 'worker1@doomsday.com', '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW'), -- Trabajador en Alpha
-    (2, 3, 3, 'resources', 'resources@doomsday.com', '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW'), -- Resource Manager en Beta
-    (3, 10, 4, 'comms', 'comms@doomsday.com', '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW'); -- Coordinador en Echo
+    (1, 1, 1, 'admin_z', 'admin@doomsday.com', '$2b$12$b8CuXIKx.puXg9ARrc2zt.bS3spl4qZMCu/c9b7N1kk53pC0VaTQu'), -- Admin global en Alpha
+    (1, 2, 2, 'worker1', 'worker1@doomsday.com', '$2b$12$b8CuXIKx.puXg9ARrc2zt.bS3spl4qZMCu/c9b7N1kk53pC0VaTQu'), -- Trabajador en Alpha
+    (2, 3, 3, 'resources', 'resources@doomsday.com', '$2b$12$b8CuXIKx.puXg9ARrc2zt.bS3spl4qZMCu/c9b7N1kk53pC0VaTQu'), -- Resource Manager en Beta
+    (3, 10, 4, 'comms', 'comms@doomsday.com', '$2b$12$b8CuXIKx.puXg9ARrc2zt.bS3spl4qZMCu/c9b7N1kk53pC0VaTQu'); -- Coordinador en Echo
 
 -- ==========================================================
 -- 7. INVENTARIOS (Para las vistas de GET /resources/inventory/:campId, GET /resources/inventory/:campId/alerts)
 -- Se generan déficits aproposito para activar las "Alertas" de inventario
 -- ==========================================================
-INSERT INTO "inventory" ("camp_id", "resource_id", "quantity", "minimum_required", "maximum_capacity", "last_restock_date") VALUES
-    (1, 1, 15000.00, 500, 50000, CURRENT_DATE), -- Alpha: Agua (Sano)
-    (1, 2, 800.00, 1000, 5000, CURRENT_DATE),   -- Alpha: MRE (ALERTA: 800 < 1000 requerido)
-    (1, 3, 500.00, 50, 1000, CURRENT_DATE),     -- Alpha: Municion (Sano)
-    (1, 4, 10.00, 100, 500, CURRENT_DATE),      -- Alpha: Antibióticos (ALERTA CRÍTICA: 10 < 100)
-    (2, 1, 3000.00, 2000, 10000, CURRENT_DATE), -- Beta: Agua
-    (2, 4, 500.00, 100, 1500, CURRENT_DATE),    -- Beta: Antibióticos (Sano - ideal para transferir a Alpha)
-    (3, 7, 5.00, 200, 500, CURRENT_DATE);       -- Echo: Gasolina (ALERTA)
+INSERT INTO "inventory" ("camp_id", "resource_id", "current_quantity", "minimum_stock_required", "last_update") VALUES
+    (1, 1, 15000.00, 500, CURRENT_DATE), -- Alpha: Agua (Sano)
+    (1, 2, 800.00, 1000, CURRENT_DATE),   -- Alpha: MRE (ALERTA: 800 < 1000 requerido)
+    (1, 3, 500.00, 50, CURRENT_DATE),     -- Alpha: Municion (Sano)
+    (1, 4, 10.00, 100, CURRENT_DATE),      -- Alpha: Antibióticos (ALERTA CRÍTICA: 10 < 100)
+    (2, 1, 3000.00, 2000, CURRENT_DATE), -- Beta: Agua
+    (2, 4, 500.00, 100, CURRENT_DATE),    -- Beta: Antibióticos (Sano - ideal para transferir a Alpha)
+    (3, 7, 5.00, 200, CURRENT_DATE);       -- Echo: Gasolina (ALERTA)
 
 -- ==========================================================
 -- 8. MOVIMIENTOS DE INVENTARIO (Para el DashBoard de consumos y GET /resources/movements/:campId)
 -- Tipos de movimiento: 'in' (ingreso), 'out' (consumo/salida), 'loss' (perdida x zombies/asalto)
 -- ==========================================================
-INSERT INTO "inventory_movement" ("camp_id", "resource_id", "movement_type", "quantity", "reason") VALUES 
-    (1, 1, 'in', 500, 'Recolección del río por exploradores'),
-    (1, 1, 'out', -200, 'Consumo diario poblacional'),
-    (1, 2, 'out', -50, 'Raciones para expedición sector 4'),
-    (1, 4, 'loss', -20, 'Lote estropeado por humedad en bodega'),
-    (2, 4, 'in', 100, 'Producción del laboratorio interno de Beta');
+INSERT INTO "inventory_movement" ("camp_id", "resource_id", "type", "quantity", "description", "date") VALUES 
+    (1, 1, 'in', 500, 'Recolección del río por exploradores', CURRENT_TIMESTAMP),
+    (1, 1, 'out', -200, 'Consumo diario poblacional', CURRENT_TIMESTAMP),
+    (1, 2, 'out', -50, 'Raciones para expedición sector 4', CURRENT_TIMESTAMP),
+    (1, 4, 'loss', -20, 'Lote estropeado por humedad en bodega', CURRENT_TIMESTAMP),
+    (2, 4, 'in', 100, 'Producción del laboratorio interno de Beta', CURRENT_TIMESTAMP);
 
 -- ==========================================================
 -- 9. EXPEDICIONES Y EXPLORACIONES (Para GET /explorations y sub-endpoints)
 -- Estados: 'planning', 'departed', 'returned_success', 'returned_failed', 'lost'
 -- ==========================================================
-INSERT INTO "exploration" ("camp_id", "name", "destination", "status", "departure_date") VALUES 
-    (1, 'Expedición Hospital Central', 'Hospital Mercy (Ciudad Muerta)', 'departed', CURRENT_DATE - INTERVAL '2 days'),
-    (2, 'Búsqueda de Combustible', 'Gasolinera Ruta 66', 'returned_success', CURRENT_DATE - INTERVAL '10 days'),
-    (1, 'Rastreo de Señal de Radio', 'Antena Colina Norte', 'lost', CURRENT_DATE - INTERVAL '30 days');
+INSERT INTO "exploration" ("camp_id", "name", "destination_description", "status", "departure_date", "estimated_days") VALUES 
+    (1, 'Expedición Hospital Central', 'Hospital Mercy (Ciudad Muerta)', 'departed', CURRENT_DATE - INTERVAL '2 days', 5),
+    (2, 'Búsqueda de Combustible', 'Gasolinera Ruta 66', 'returned_success', CURRENT_DATE - INTERVAL '10 days', 7),
+    (1, 'Rastreo de Señal de Radio', 'Antena Colina Norte', 'lost', CURRENT_DATE - INTERVAL '30 days', 15);
 
 -- ==========================================================
 -- 10. SOLICITUDES ENTRE CAMPAMENTOS (Para GET /transfers/requests y /transfers/statistics)
 -- Estados: 'pending', 'approved', 'rejected', 'in_transit', 'completed'
 -- Tipos: 'resources', 'personnel'
 -- ==========================================================
-INSERT INTO "intercamp_request" ("origin_camp_id", "destination_camp_id", "transfer_type", "priority", "status", "reason") VALUES 
-    (1, 2, 'resources', 'high', 'pending', 'Brote de infección en Alpha, se requieren antibióticos urgentes de Beta'),
-    (3, 1, 'personnel', 'low', 'approved', 'Solicitud de ingeniero agrónomo para revisar cultivos'),
-    (2, 3, 'resources', 'medium', 'completed', 'Envío de gasolina completado hace 2 días');
+INSERT INTO "intercamp_request" ("camp_origin_id", "camp_destination_id", "type", "status", "notes", "request_date") VALUES 
+    (1, 2, 'resources', 'pending', 'Brote de infección en Alpha, se requieren antibióticos urgentes de Beta', CURRENT_TIMESTAMP),
+    (3, 1, 'personnel', 'approved', 'Solicitud de ingeniero agrónomo para revisar cultivos', CURRENT_TIMESTAMP),
+    (2, 3, 'resources', 'completed', 'Envío de gasolina completado hace 2 días', CURRENT_TIMESTAMP);
 
 
 -- =========================================================================================
