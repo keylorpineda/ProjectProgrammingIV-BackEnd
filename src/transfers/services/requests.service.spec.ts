@@ -11,6 +11,7 @@ import { Person } from "../../users/entities/person.entity";
 import { Inventory } from "../../resources/entities/inventory.entity";
 import { Resource } from "../../resources/entities/resource.entity";
 import { AuditLog } from "../../common/entities/audit-log.entity";
+import { NotificationsGateway } from "../../notifications/notifications.gateway";
 
 const createRepoMock = () => ({
   findOne: jest.fn(),
@@ -66,6 +67,13 @@ describe("RequestsService", () => {
         { provide: getRepositoryToken(Resource), useValue: createRepoMock() },
         { provide: getRepositoryToken(AuditLog), useValue: createRepoMock() },
         { provide: DataSource, useValue: dataSource },
+        {
+          provide: NotificationsGateway,
+          useValue: {
+            emitTransferRequest: jest.fn(),
+            emitTransferStatusUpdate: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

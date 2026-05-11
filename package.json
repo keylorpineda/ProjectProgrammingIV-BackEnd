@@ -18,6 +18,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:playwright": "playwright test",
+    "test:playwright:local": "playwright test",
+    "test:playwright:prod": "API_BASE_URL=https://doomsday-system-api.onrender.com/api/v1 playwright test",
     "test:playwright:ui": "playwright test --ui",
     "test:playwright:report": "playwright show-report",
     "setup:keepalive": "powershell -ExecutionPolicy Bypass -File ./setup-keepalive.ps1"

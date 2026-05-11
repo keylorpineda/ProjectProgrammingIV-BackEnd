@@ -15,6 +15,7 @@ describe("main bootstrap", () => {
     const use = jest.fn();
     const set = jest.fn();
     const useGlobalInterceptors = jest.fn();
+    const useWebSocketAdapter = jest.fn();
     const enableCors = jest.fn();
     const setGlobalPrefix = jest.fn();
     const useGlobalPipes = jest.fn();
@@ -24,6 +25,7 @@ describe("main bootstrap", () => {
       use,
       set,
       useGlobalInterceptors,
+      useWebSocketAdapter,
       enableCors,
       setGlobalPrefix,
       useGlobalPipes,
@@ -78,6 +80,9 @@ describe("main bootstrap", () => {
     jest.doMock("./app.module", () => ({ AppModule: class AppModule {} }));
     jest.doMock("./common/interceptors/sanitize.interceptor", () => ({
       SanitizeInterceptor,
+    }));
+    jest.doMock("./notifications/redis-io.adapter", () => ({
+      RedisIoAdapter: class RedisIoAdapter {},
     }));
 
     await import("./main");

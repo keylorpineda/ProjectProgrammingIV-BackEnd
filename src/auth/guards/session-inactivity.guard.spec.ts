@@ -5,6 +5,7 @@ import { JwtService } from "@nestjs/jwt";
 import { Reflector } from "@nestjs/core";
 import { SessionInactivityGuard } from "./session-inactivity.guard";
 import { Session } from "../entities/session.entity";
+import { REDIS_CLIENT } from "../../redis/redis.constants";
 
 describe("SessionInactivityGuard", () => {
   let guard: SessionInactivityGuard;
@@ -19,6 +20,8 @@ describe("SessionInactivityGuard", () => {
     is_active: true,
     auto_logout: false,
   };
+
+  let redisClient: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -43,6 +46,16 @@ describe("SessionInactivityGuard", () => {
             getAllAndOverride: jest.fn(),
           },
         },
+        {
+          provide: REDIS_CLIENT,
+          useValue: {
+            exists: jest.fn().mockResolvedValue(1),
+            ttl: jest.fn().mockResolvedValue(1200),
+            expire: jest.fn().mockResolvedValue(1),
+            setex: jest.fn().mockResolvedValue("OK"),
+            del: jest.fn().mockResolvedValue(1),
+          },
+        },
       ],
     }).compile();
 
@@ -50,6 +63,7 @@ describe("SessionInactivityGuard", () => {
     sessionRepo = module.get(getRepositoryToken(Session));
     jwtService = module.get(JwtService) as jest.Mocked<JwtService>;
     reflector = module.get(Reflector) as jest.Mocked<Reflector>;
+    redisClient = module.get(REDIS_CLIENT);
   });
 
   it("should be defined", () => {
@@ -118,12 +132,11 @@ describe("SessionInactivityGuard", () => {
 
     reflector.getAllAndOverride.mockReturnValueOnce(false);
     jwtService.verify.mockReturnValueOnce({ sub: 1, username: "testuser" });
-    sessionRepo.find.mockResolvedValueOnce([mockSession]);
+    redisClient.exists.mockResolvedValueOnce(1); // sesión activa en Redis
 
     const result = await guard.canActivate(mockContext);
 
     expect(result).toBe(true);
-    expect(sessionRepo.find).toHaveBeenCalled();
   });
 
   it("should reject when no active sessions found", async () => {
@@ -139,7 +152,8 @@ describe("SessionInactivityGuard", () => {
 
     reflector.getAllAndOverride.mockReturnValueOnce(false);
     jwtService.verify.mockReturnValueOnce({ sub: 1, username: "testuser" });
-    sessionRepo.find.mockResolvedValueOnce([]);
+    redisClient.exists.mockResolvedValueOnce(0); // no existe en Redis → expirado
+    sessionRepo.update.mockResolvedValueOnce({});
 
     await expect(guard.canActivate(mockContext)).rejects.toThrow(
       UnauthorizedException,
@@ -147,11 +161,6 @@ describe("SessionInactivityGuard", () => {
   });
 
   it("should reject session when user has been inactive for more than 20 minutes", async () => {
-    const inactiveSession = {
-      ...mockSession,
-      last_activity: new Date(Date.now() - 25 * 60 * 1000), // 25 minutes ago
-    };
-
     const mockContext = {
       getHandler: jest.fn(),
       getClass: jest.fn(),
@@ -164,7 +173,8 @@ describe("SessionInactivityGuard", () => {
 
     reflector.getAllAndOverride.mockReturnValueOnce(false);
     jwtService.verify.mockReturnValueOnce({ sub: 1, username: "testuser" });
-    sessionRepo.find.mockResolvedValueOnce([inactiveSession]);
+    // El TTL en Redis expiró (0 = no existe), guard debe rechazar
+    redisClient.exists.mockResolvedValueOnce(0);
     sessionRepo.update.mockResolvedValueOnce({});
 
     await expect(guard.canActivate(mockContext)).rejects.toThrow(
@@ -198,15 +208,6 @@ describe("SessionInactivityGuard", () => {
   });
 
   it("should work with multiple active sessions for same user", async () => {
-    const sessions = [
-      {
-        ...mockSession,
-        id: 1,
-        last_activity: new Date(Date.now() - 5 * 60000),
-      },
-      { ...mockSession, id: 2, last_activity: new Date() }, // más reciente
-    ];
-
     const mockContext = {
       getHandler: jest.fn(),
       getClass: jest.fn(),
@@ -219,10 +220,10 @@ describe("SessionInactivityGuard", () => {
 
     reflector.getAllAndOverride.mockReturnValueOnce(false);
     jwtService.verify.mockReturnValueOnce({ sub: 1, username: "testuser" });
-    sessionRepo.find.mockResolvedValueOnce(sessions);
+    redisClient.exists.mockResolvedValueOnce(1); // sesión activa en Redis
 
     const result = await guard.canActivate(mockContext);
 
-    expect(result).toBe(true); // La más reciente está activa
+    expect(result).toBe(true); // La sesión Redis está activa
   });
 });

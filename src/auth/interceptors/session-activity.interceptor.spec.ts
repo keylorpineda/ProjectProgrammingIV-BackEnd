@@ -5,6 +5,7 @@ import { JwtService } from "@nestjs/jwt";
 import { SessionActivityInterceptor } from "./session-activity.interceptor";
 import { Session } from "../entities/session.entity";
 import { firstValueFrom, of } from "rxjs";
+import { REDIS_CLIENT } from "../../redis/redis.constants";
 
 describe("SessionActivityInterceptor", () => {
   let interceptor: SessionActivityInterceptor;
@@ -25,6 +26,15 @@ describe("SessionActivityInterceptor", () => {
           provide: JwtService,
           useValue: {
             verify: jest.fn(),
+          },
+        },
+        {
+          provide: REDIS_CLIENT,
+          useValue: {
+            expire: jest.fn().mockResolvedValue(1),
+            setex: jest.fn().mockResolvedValue("OK"),
+            del: jest.fn().mockResolvedValue(1),
+            exists: jest.fn().mockResolvedValue(1),
           },
         },
       ],

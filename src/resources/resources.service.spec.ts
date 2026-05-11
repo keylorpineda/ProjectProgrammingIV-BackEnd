@@ -1,6 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { BadRequestException, Logger, NotFoundException } from "@nestjs/common";
+import { getQueueToken } from "@nestjs/bullmq";
 import { ResourcesService } from "./resources.service";
 import { Resource } from "./entities/resource.entity";
 import { Inventory } from "./entities/inventory.entity";
@@ -96,6 +97,12 @@ describe("ResourcesService", () => {
         { provide: getRepositoryToken(AuditLog), useValue: createRepoMock() },
         { provide: getRepositoryToken(Camp), useValue: createRepoMock() },
         { provide: getRepositoryToken(Person), useValue: createRepoMock() },
+        {
+          provide: getQueueToken("daily-tasks"),
+          useValue: {
+            add: jest.fn().mockResolvedValue({}),
+          },
+        },
       ],
     }).compile();
 
@@ -880,7 +887,7 @@ describe("ResourcesService", () => {
     });
   });
 
-  describe("handleDailyCron", () => {
+  describe("executeAllDailyProcesses", () => {
     it("should process active camps and log success", async () => {
       const camps = [
         { id: 1, name: "Camp Alpha", active: true },
@@ -904,7 +911,7 @@ describe("ResourcesService", () => {
         .spyOn(Logger.prototype, "error")
         .mockImplementation();
 
-      await service.handleDailyCron();
+      await service.executeAllDailyProcesses();
 
       expect(campRepo.find).toHaveBeenCalledWith({ where: { active: true } });
       expect(service.executeDailyProcess).toHaveBeenNthCalledWith(1, 1);
@@ -936,7 +943,7 @@ describe("ResourcesService", () => {
         .mockImplementation();
       jest.spyOn(Logger.prototype, "log").mockImplementation();
 
-      await service.handleDailyCron();
+      await service.executeAllDailyProcesses();
 
       expect(errorSpy).toHaveBeenCalledWith("Error en camp 5: boom");
     });
@@ -953,7 +960,7 @@ describe("ResourcesService", () => {
         .mockImplementation();
       jest.spyOn(Logger.prototype, "log").mockImplementation();
 
-      await service.handleDailyCron();
+      await service.executeAllDailyProcesses();
 
       expect(errorSpy).toHaveBeenCalledWith("Error en camp 6: fallo-string");
     });
