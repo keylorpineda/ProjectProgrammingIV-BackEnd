@@ -235,11 +235,11 @@ export class PersonsService {
       .select("profession.name", "professionName")
       .addSelect("COUNT(*)", "total")
       .addSelect(
-        `COUNT(CASE WHEN person.can_work = true AND person.status = "${PersonStatus.ACTIVE}" THEN 1 END)`,
+        `COUNT(CASE WHEN person.can_work = true AND person.status = '${PersonStatus.ACTIVE}' THEN 1 END)`,
         "active",
       )
       .addSelect(
-        `COUNT(CASE WHEN person.can_work = false OR person.status != "${PersonStatus.ACTIVE}" THEN 1 END)`,
+        `COUNT(CASE WHEN person.can_work = false OR person.status != '${PersonStatus.ACTIVE}' THEN 1 END)`,
         "inactive",
       )
       .groupBy("profession.name");
