@@ -47,9 +47,9 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle("Gestion del Fin API")
+    .setTitle("Gestión del Fin API")
     .setDescription(
-      "API del sistema de gestion de campamentos - Apocalipsis Zombie",
+      "API del sistema de gestión de campamentos - Apocalipsis Zombie",
     )
     .setVersion("1.0")
     .addBearerAuth()
