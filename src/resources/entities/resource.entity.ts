@@ -1,4 +1,11 @@
-﻿import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
+﻿import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
 import { Inventory } from "./inventory.entity";
 import { InventoryMovement } from "./inventory-movement.entity";
 
@@ -30,4 +37,10 @@ export class Resource {
 
   @OneToMany(() => InventoryMovement, (m) => m.resource)
   movements: InventoryMovement[];
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

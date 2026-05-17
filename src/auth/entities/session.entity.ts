@@ -4,6 +4,8 @@
   Column,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { UserAccount } from "../../users/entities/user-account.entity";
 
@@ -33,4 +35,10 @@ export class Session {
   @ManyToOne(() => UserAccount, (ua) => ua.sessions)
   @JoinColumn({ name: "user_id" })
   user: UserAccount;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

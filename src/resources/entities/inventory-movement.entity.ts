@@ -4,6 +4,8 @@
   Column,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { Resource } from "./resource.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
@@ -46,4 +48,10 @@ export class InventoryMovement {
   @ManyToOne(() => Camp)
   @JoinColumn({ name: "camp_id" })
   camp: Camp;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

@@ -5,6 +5,8 @@
   ManyToOne,
   JoinColumn,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { Camp } from "../../camps/entities/camp.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
@@ -59,4 +61,10 @@ export class Exploration {
 
   @OneToMany(() => ExplorationResource, (er) => er.exploration)
   explorationResources!: ExplorationResource[];
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

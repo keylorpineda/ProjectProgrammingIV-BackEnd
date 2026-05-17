@@ -6,6 +6,8 @@
   OneToOne,
   JoinColumn,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { Camp } from "../../camps/entities/camp.entity";
 import { Person } from "./person.entity";
@@ -66,4 +68,13 @@ export class UserAccount {
 
   @OneToMany(() => UserAsset, (ua) => ua.userAccount)
   userAssets: UserAsset[];
+
+  @Column({ type: "text", default: "ACTIVE" })
+  status: string;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

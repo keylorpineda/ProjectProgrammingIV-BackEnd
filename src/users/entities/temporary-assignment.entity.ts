@@ -4,6 +4,8 @@
   Column,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { UserAccount } from "./user-account.entity";
 import { Profession } from "./profession.entity";
@@ -49,4 +51,10 @@ export class TemporaryAssignment {
   @ManyToOne(() => UserAccount)
   @JoinColumn({ name: "user_approve_id" })
   userApprove: UserAccount;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

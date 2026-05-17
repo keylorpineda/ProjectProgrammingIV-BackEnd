@@ -5,6 +5,7 @@
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { UserAccount } from "./user-account.entity";
 import { Asset } from "./asset.entity";
@@ -39,4 +40,10 @@ export class UserAsset {
   @ManyToOne(() => Asset)
   @JoinColumn({ name: "asset_id" })
   asset: Asset;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

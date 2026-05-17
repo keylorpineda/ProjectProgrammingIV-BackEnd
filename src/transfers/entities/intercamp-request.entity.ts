@@ -5,6 +5,8 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { Camp } from "../../camps/entities/camp.entity";
 import { RequestResourceDetail } from "./request-resource-detail.entity";
@@ -59,4 +61,10 @@ export class IntercampRequest {
 
   @OneToMany(() => Approval, (a) => a.intercampRequest)
   approvals: Approval[];
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

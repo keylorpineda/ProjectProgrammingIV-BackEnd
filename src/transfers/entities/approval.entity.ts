@@ -4,6 +4,8 @@
   Column,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { UserAccount } from "../../users/entities/user-account.entity";
 import { IntercampRequest } from "./intercamp-request.entity";
@@ -35,4 +37,10 @@ export class Approval {
   @ManyToOne(() => IntercampRequest, (r) => r.approvals, { nullable: true })
   @JoinColumn({ name: "entity_id" })
   intercampRequest: IntercampRequest;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

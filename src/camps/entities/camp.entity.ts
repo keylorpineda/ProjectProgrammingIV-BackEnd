@@ -1,4 +1,11 @@
-﻿import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
+﻿import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
 import { UserAccount } from "../../users/entities/user-account.entity";
 
 @Entity("camp")
@@ -41,4 +48,10 @@ export class Camp {
 
   @OneToMany(() => UserAccount, (ua) => ua.camp)
   userAccounts: UserAccount[];
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

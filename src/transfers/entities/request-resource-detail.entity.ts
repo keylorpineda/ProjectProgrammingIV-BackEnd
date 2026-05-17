@@ -1,4 +1,12 @@
-﻿import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn } from "typeorm";
+﻿import {
+  Entity,
+  PrimaryColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
 import { IntercampRequest } from "./intercamp-request.entity";
 import { Resource } from "../../resources/entities/resource.entity";
 
@@ -26,4 +34,10 @@ export class RequestResourceDetail {
   @ManyToOne(() => Resource)
   @JoinColumn({ name: "resource_id" })
   resource: Resource;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

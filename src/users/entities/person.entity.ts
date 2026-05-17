@@ -6,6 +6,8 @@ import {
   JoinColumn,
   OneToOne,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { Profession } from "./profession.entity";
 import { UserAccount } from "./user-account.entity";
@@ -49,7 +51,7 @@ export class Person {
   @Column({ type: "int", default: 0 })
   experience_points: number;
 
-  @Column({ type: "int", default: 0 })
+  @Column({ name: "expeditions_survived", type: "int", default: 0 })
   expeditionsSurvived: number;
 
   @Column({ type: "text", array: true, default: () => "'{}'" })
@@ -79,4 +81,10 @@ export class Person {
 
   @OneToMany(() => AiAdmission, (ai) => ai.person)
   aiAdmissions: AiAdmission[];
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

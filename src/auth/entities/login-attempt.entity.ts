@@ -1,11 +1,17 @@
-﻿import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
 
 @Entity("login_attempt")
 export class LoginAttempt {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
   id: number;
 
-  @Column({ type: "text", nullable: true })
+  @Column({ type: "text" })
   username: string;
 
   @Column({ type: "text" })
@@ -25,4 +31,10 @@ export class LoginAttempt {
 
   @Column({ type: "timestamptz", default: () => "CURRENT_TIMESTAMP" })
   attempted_at: Date;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

@@ -4,6 +4,8 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { Person } from "../../users/entities/person.entity";
 import { Profession } from "../../users/entities/profession.entity";
@@ -75,4 +77,10 @@ export class AiAdmission {
   @ManyToOne(() => UserAccount, { nullable: true })
   @JoinColumn({ name: "reviewed_by_user_id" })
   reviewedBy: UserAccount;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }

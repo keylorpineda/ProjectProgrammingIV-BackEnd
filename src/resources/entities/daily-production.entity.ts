@@ -5,6 +5,8 @@
   ManyToOne,
   PrimaryGeneratedColumn,
   Unique,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { Camp } from "../../camps/entities/camp.entity";
 import { Profession } from "../../users/entities/profession.entity";
@@ -39,4 +41,10 @@ export class DailyProduction {
   @ManyToOne(() => Resource)
   @JoinColumn({ name: "resource_id" })
   resource!: Resource;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updated_at: Date;
 }
