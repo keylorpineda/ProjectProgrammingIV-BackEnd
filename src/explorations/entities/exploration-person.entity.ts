@@ -1,4 +1,5 @@
 ﻿import {
+  Index,
   Entity,
   PrimaryColumn,
   Column,
@@ -24,10 +25,12 @@ export class ExplorationPerson {
   @Column({ type: "boolean", default: false })
   return_confirmed!: boolean;
 
+  @Index()
   @ManyToOne(() => Exploration, (e) => e.explorationPersons)
   @JoinColumn({ name: "exploration_id" })
   exploration!: Exploration;
 
+  @Index()
   @ManyToOne(() => Person)
   @JoinColumn({ name: "person_id" })
   person!: Person;

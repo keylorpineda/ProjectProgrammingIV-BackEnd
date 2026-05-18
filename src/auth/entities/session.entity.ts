@@ -1,4 +1,5 @@
 ﻿import {
+  Index,
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -32,6 +33,7 @@ export class Session {
   @Column({ type: "boolean", default: true })
   is_active: boolean;
 
+  @Index()
   @ManyToOne(() => UserAccount, (ua) => ua.sessions)
   @JoinColumn({ name: "user_id" })
   user: UserAccount;

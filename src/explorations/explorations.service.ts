@@ -370,37 +370,48 @@ export class ExplorationsService {
 
     const persons = await this.personRepo.find({
       where: { id: In(normalizedIds) },
+      relations: ["achievements"],
     });
 
     for (const person of persons) {
       const achievements = Array.isArray(person.achievements)
-        ? person.achievements
+        ? person.achievements.map((pa: any) => pa.achievement_name)
         : [];
 
       let newExpPoints = person.experience_points + 50; // 50 XP por expedicion
       let newLevel = person.experience_level;
-
-      // Cada 100 XP se sube un nivel
       if (newExpPoints >= 100) {
         newLevel += Math.floor(newExpPoints / 100);
         newExpPoints = newExpPoints % 100;
       }
-      const newAchievements = [...achievements];
+      let addedAchievements = false;
+      if (!person.achievements) person.achievements = [];
       if (
         person.expeditionsSurvived === 5 &&
         !achievements.includes("VETERANO_PARAMO")
       ) {
-        newAchievements.push("VETERANO_PARAMO");
+        person.achievements.push({
+          achievement_name: "VETERANO_PARAMO",
+        } as any);
+        addedAchievements = true;
       }
       if (newLevel >= 5 && !achievements.includes("SOBREVIVIENTE_ELITE")) {
-        newAchievements.push("SOBREVIVIENTE_ELITE");
+        person.achievements.push({
+          achievement_name: "SOBREVIVIENTE_ELITE",
+        } as any);
+        addedAchievements = true;
       }
 
-      await this.personRepo.update(person.id, {
-        experience_points: newExpPoints,
-        experience_level: newLevel,
-        achievements: newAchievements,
-      });
+      if (addedAchievements) {
+        person.experience_points = newExpPoints;
+        person.experience_level = newLevel;
+        await this.personRepo.save(person);
+      } else {
+        await this.personRepo.update(person.id, {
+          experience_points: newExpPoints,
+          experience_level: newLevel,
+        });
+      }
     }
   }
 
@@ -573,7 +584,9 @@ export class ExplorationsService {
       role: ep.is_leader ? "leader" : "member",
       health_status: this.resolveHealthStatus(ep.person),
       achievements: Array.isArray(ep.person?.achievements)
-        ? ep.person.achievements
+        ? ep.person.achievements.map((pa: any) =>
+            typeof pa === "string" ? pa : pa.achievement_name,
+          )
         : [],
     }));
 

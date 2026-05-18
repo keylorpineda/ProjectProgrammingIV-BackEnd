@@ -35,7 +35,7 @@ export class Asset {
   @Column({ type: "int", nullable: true })
   rarity: number;
 
-  @Column({ type: "json", nullable: true })
+  @Column({ type: "jsonb", nullable: true })
   metadata: object;
 
   @Column({ type: "boolean", default: true })

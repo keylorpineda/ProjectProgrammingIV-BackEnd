@@ -1,4 +1,5 @@
 import {
+  Index,
   Entity,
   PrimaryColumn,
   Column,
@@ -30,10 +31,12 @@ export class Inventory {
   @Column({ type: "timestamptz", nullable: true })
   last_update: Date;
 
+  @Index()
   @ManyToOne(() => Camp)
   @JoinColumn({ name: "camp_id" })
   camp: Camp;
 
+  @Index()
   @ManyToOne(() => Resource, (r) => r.inventories)
   @JoinColumn({ name: "resource_id" })
   resource: Resource;

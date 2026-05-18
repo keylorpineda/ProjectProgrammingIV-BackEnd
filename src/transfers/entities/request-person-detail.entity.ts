@@ -1,4 +1,5 @@
 ﻿import {
+  Index,
   Entity,
   PrimaryColumn,
   Column,
@@ -24,10 +25,12 @@ export class RequestPersonDetail {
   @Column({ type: "text", default: "pending" })
   transfer_status: string;
 
+  @Index()
   @ManyToOne(() => IntercampRequest, (r) => r.personDetails)
   @JoinColumn({ name: "request_id" })
   request: IntercampRequest;
 
+  @Index()
   @ManyToOne(() => Person)
   @JoinColumn({ name: "person_id" })
   person: Person;

@@ -119,6 +119,7 @@ test.describe("Personas — Admision IA y Gestion Humana", () => {
           decision: "ACCEPTED",
           admin_notes:
             "Medico con buenas credenciales, necesario para el campamento",
+          override_profession_id: 1,
         },
       },
     );

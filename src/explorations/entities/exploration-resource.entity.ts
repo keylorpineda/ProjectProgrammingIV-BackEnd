@@ -1,4 +1,5 @@
 ﻿import {
+  Index,
   Entity,
   PrimaryColumn,
   Column,
@@ -24,10 +25,12 @@ export class ExplorationResource {
   @Column({ type: "decimal", precision: 12, scale: 3 })
   quantity!: number;
 
+  @Index()
   @ManyToOne(() => Exploration, (e) => e.explorationResources)
   @JoinColumn({ name: "exploration_id" })
   exploration!: Exploration;
 
+  @Index()
   @ManyToOne(() => Resource)
   @JoinColumn({ name: "resource_id" })
   resource!: Resource;

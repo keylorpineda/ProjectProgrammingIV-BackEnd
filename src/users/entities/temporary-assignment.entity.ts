@@ -1,4 +1,5 @@
 ﻿import {
+  Index,
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -36,18 +37,22 @@ export class TemporaryAssignment {
   @Column({ type: "bigint", nullable: true })
   user_approve_id: number;
 
+  @Index()
   @ManyToOne(() => UserAccount, (ua) => ua.approvedAssignments)
   @JoinColumn({ name: "user_account_id" })
   userAccount: UserAccount;
 
+  @Index()
   @ManyToOne(() => Profession, (p) => p.originAssignments)
   @JoinColumn({ name: "profession_origin_id" })
   professionOrigin: Profession;
 
+  @Index()
   @ManyToOne(() => Profession, (p) => p.temporaryAssignments)
   @JoinColumn({ name: "profession_temporary_id" })
   professionTemporary: Profession;
 
+  @Index()
   @ManyToOne(() => UserAccount)
   @JoinColumn({ name: "user_approve_id" })
   userApprove: UserAccount;

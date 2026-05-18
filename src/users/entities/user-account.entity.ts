@@ -1,4 +1,5 @@
 ﻿import {
+  Index,
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -48,6 +49,7 @@ export class UserAccount {
   @Column({ type: "text", nullable: true })
   avatar_public_id: string;
 
+  @Index()
   @ManyToOne(() => Camp, (c) => c.userAccounts)
   @JoinColumn({ name: "camp_id" })
   camp: Camp;
@@ -56,6 +58,7 @@ export class UserAccount {
   @JoinColumn({ name: "person_id" })
   person: Person;
 
+  @Index()
   @ManyToOne(() => Role)
   @JoinColumn({ name: "role_id" })
   role: Role;

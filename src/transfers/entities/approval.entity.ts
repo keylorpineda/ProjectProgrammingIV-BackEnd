@@ -1,4 +1,5 @@
 ﻿import {
+  Index,
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -30,10 +31,12 @@ export class Approval {
   @Column({ type: "text" })
   status: string;
 
+  @Index()
   @ManyToOne(() => UserAccount)
   @JoinColumn({ name: "user_id" })
   user: UserAccount;
 
+  @Index()
   @ManyToOne(() => IntercampRequest, (r) => r.approvals, { nullable: true })
   @JoinColumn({ name: "entity_id" })
   intercampRequest: IntercampRequest;

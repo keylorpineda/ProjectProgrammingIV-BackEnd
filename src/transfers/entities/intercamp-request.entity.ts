@@ -1,4 +1,5 @@
 import {
+  Index,
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -45,10 +46,12 @@ export class IntercampRequest {
   @Column({ type: "timestamptz", nullable: true })
   arrival_date: Date;
 
+  @Index()
   @ManyToOne(() => Camp)
   @JoinColumn({ name: "camp_origin_id" })
   campOrigin: Camp;
 
+  @Index()
   @ManyToOne(() => Camp)
   @JoinColumn({ name: "camp_destination_id" })
   campDestination: Camp;

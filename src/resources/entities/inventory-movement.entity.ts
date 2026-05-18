@@ -1,4 +1,5 @@
 ﻿import {
+  Index,
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -37,14 +38,17 @@ export class InventoryMovement {
   @Column({ type: "bigint", nullable: true })
   user_id: number;
 
+  @Index()
   @ManyToOne(() => Resource, (r) => r.movements)
   @JoinColumn({ name: "resource_id" })
   resource: Resource;
 
+  @Index()
   @ManyToOne(() => UserAccount)
   @JoinColumn({ name: "user_id" })
   user: UserAccount;
 
+  @Index()
   @ManyToOne(() => Camp)
   @JoinColumn({ name: "camp_id" })
   camp: Camp;

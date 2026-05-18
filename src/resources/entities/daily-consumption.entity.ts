@@ -1,4 +1,5 @@
 ﻿import {
+  Index,
   Column,
   Entity,
   JoinColumn,
@@ -30,14 +31,17 @@ export class DailyConsumption {
   @Column({ type: "decimal", precision: 12, scale: 3, default: 0 })
   daily_ration!: number;
 
+  @Index()
   @ManyToOne(() => Camp)
   @JoinColumn({ name: "camp_id" })
   camp!: Camp;
 
+  @Index()
   @ManyToOne(() => Person)
   @JoinColumn({ name: "person_id" })
   person!: Person;
 
+  @Index()
   @ManyToOne(() => Resource)
   @JoinColumn({ name: "resource_id" })
   resource!: Resource;

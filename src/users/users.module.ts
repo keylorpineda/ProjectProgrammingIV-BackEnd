@@ -9,6 +9,7 @@ import { UserAccount } from "./entities/user-account.entity";
 import { TemporaryAssignment } from "./entities/temporary-assignment.entity";
 import { Asset } from "./entities/asset.entity";
 import { UserAsset } from "./entities/user-asset.entity";
+import { PersonAchievement } from "./entities/person-achievement.entity";
 import { ProfessionsSeeder } from "./seeders/professions.seeder";
 import { RolesSeeder } from "./seeders/roles.seeder";
 import { AdminSeeder } from "./seeders/admin.seeder";
@@ -27,6 +28,7 @@ import { ProductionService } from "./services/production.service";
       TemporaryAssignment,
       Asset,
       UserAsset,
+      PersonAchievement,
     ]),
   ],
   controllers: [UsersController],

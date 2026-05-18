@@ -1,4 +1,5 @@
 ﻿import {
+  Index,
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -48,10 +49,12 @@ export class Exploration {
   @Column({ type: "bigint", nullable: true })
   user_create_id!: number;
 
+  @Index()
   @ManyToOne(() => Camp)
   @JoinColumn({ name: "camp_id" })
   camp!: Camp;
 
+  @Index()
   @ManyToOne(() => UserAccount)
   @JoinColumn({ name: "user_create_id" })
   userCreate!: UserAccount;

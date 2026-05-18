@@ -1,4 +1,5 @@
 import {
+  Index,
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -26,7 +27,7 @@ export class AiAdmission {
   @Column({ type: "bigint", nullable: true })
   person_id: number | null;
 
-  @Column({ type: "json" })
+  @Column({ type: "jsonb" })
   candidate_data: object;
 
   @Column({ type: "int", nullable: true })
@@ -44,7 +45,7 @@ export class AiAdmission {
   @Column({ type: "text", nullable: true })
   justification: string;
 
-  @Column({ type: "json", nullable: true })
+  @Column({ type: "jsonb", nullable: true })
   raw_ai_response: object;
 
   @Column({ type: "bigint", nullable: true })
@@ -62,18 +63,22 @@ export class AiAdmission {
   @Column({ type: "timestamptz", nullable: true })
   review_date: Date;
 
+  @Index()
   @ManyToOne(() => Camp)
   @JoinColumn({ name: "camp_id" })
   camp: Camp;
 
+  @Index()
   @ManyToOne(() => Person, (p) => p.aiAdmissions, { nullable: true })
   @JoinColumn({ name: "person_id" })
   person: Person;
 
+  @Index()
   @ManyToOne(() => Profession, { nullable: true })
   @JoinColumn({ name: "suggested_profession_id" })
   suggestedProfession: Profession;
 
+  @Index()
   @ManyToOne(() => UserAccount, { nullable: true })
   @JoinColumn({ name: "reviewed_by_user_id" })
   reviewedBy: UserAccount;

@@ -1,4 +1,5 @@
 import {
+  Index,
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -12,6 +13,7 @@ import {
 import { Profession } from "./profession.entity";
 import { UserAccount } from "./user-account.entity";
 import { AiAdmission } from "../../ai/entities/ai-admission.entity";
+import { PersonAchievement } from "./person-achievement.entity";
 
 @Entity("person")
 export class Person {
@@ -54,8 +56,8 @@ export class Person {
   @Column({ name: "expeditions_survived", type: "int", default: 0 })
   expeditionsSurvived: number;
 
-  @Column({ type: "text", array: true, default: () => "'{}'" })
-  achievements: string[];
+  @OneToMany(() => PersonAchievement, (pa) => pa.person, { cascade: true })
+  achievements: PersonAchievement[];
 
   @Column({ type: "text", nullable: true })
   photo_url: string;
@@ -66,12 +68,13 @@ export class Person {
   @Column({ type: "text", nullable: true })
   previous_skills: string;
 
-  @Column({ type: "json", nullable: true })
+  @Column({ type: "jsonb", nullable: true })
   ai_admission_result: object;
 
   @Column({ type: "text", nullable: true })
   notes: string;
 
+  @Index()
   @ManyToOne(() => Profession, (p) => p.persons)
   @JoinColumn({ name: "profession_id" })
   profession: Profession;

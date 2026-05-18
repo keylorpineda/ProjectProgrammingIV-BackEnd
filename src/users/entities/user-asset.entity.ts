@@ -1,4 +1,5 @@
 ﻿import {
+  Index,
   Entity,
   PrimaryGeneratedColumn,
   Column,
@@ -30,13 +31,15 @@ export class UserAsset {
   @Column({ type: "boolean", default: false })
   is_displayed: boolean;
 
-  @Column({ type: "json", nullable: true })
+  @Column({ type: "jsonb", nullable: true })
   context_data: object;
 
+  @Index()
   @ManyToOne(() => UserAccount, (ua) => ua.userAssets)
   @JoinColumn({ name: "user_account_id" })
   userAccount: UserAccount;
 
+  @Index()
   @ManyToOne(() => Asset)
   @JoinColumn({ name: "asset_id" })
   asset: Asset;

@@ -4,7 +4,11 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
 } from "typeorm";
+import { UserAccount } from "../../users/entities/user-account.entity";
 
 @Entity("login_attempt")
 export class LoginAttempt {
@@ -14,6 +18,7 @@ export class LoginAttempt {
   @Column({ type: "text" })
   username: string;
 
+  @Index()
   @Column({ type: "text" })
   ip_address: string;
 
@@ -28,6 +33,11 @@ export class LoginAttempt {
 
   @Column({ type: "bigint", nullable: true })
   user_id: number;
+
+  @Index()
+  @ManyToOne(() => UserAccount, { nullable: true, onDelete: "SET NULL" })
+  @JoinColumn({ name: "user_id" })
+  user: UserAccount;
 
   @Column({ type: "timestamptz", default: () => "CURRENT_TIMESTAMP" })
   attempted_at: Date;

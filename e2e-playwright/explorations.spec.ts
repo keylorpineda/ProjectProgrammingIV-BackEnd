@@ -98,6 +98,7 @@ test.describe("Exploraciones — Ciclo completo", () => {
       },
     });
 
+    console.log(await response.text());
     expect([200, 201]).toContain(response.status());
     const body = await response.json();
     expect(body).toHaveProperty("id");
