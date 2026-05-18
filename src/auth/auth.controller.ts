@@ -9,12 +9,7 @@ import {
   Ip,
   Headers,
 } from "@nestjs/common";
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiHeader,
-} from "@nestjs/swagger";
+import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
@@ -31,11 +26,6 @@ export class AuthController {
   @Post("login")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Iniciar sesión con credenciales" })
-  @ApiHeader({
-    name: "user-agent",
-    required: false,
-    description: "Navegador/cliente (Opcional, se llena automático)",
-  })
   async login(
     @Body() dto: LoginDto,
     @Ip() ipAddress: string,
