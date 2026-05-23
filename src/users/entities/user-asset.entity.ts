@@ -1,4 +1,4 @@
-﻿import {
+import {
   Index,
   Entity,
   PrimaryGeneratedColumn,
@@ -7,6 +7,7 @@
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  BeforeInsert,
 } from "typeorm";
 import { UserAccount } from "./user-account.entity";
 import { Asset } from "./asset.entity";
@@ -25,8 +26,15 @@ export class UserAsset {
   @Column({ type: "text", nullable: true })
   relation_type: string;
 
-  @CreateDateColumn({ type: "timestamptz" })
+  @Column({ type: "timestamptz", nullable: true })
   acquired_at: Date;
+
+  @BeforeInsert()
+  setAcquiredAt() {
+    if (!this.acquired_at) {
+      this.acquired_at = new Date();
+    }
+  }
 
   @Column({ type: "boolean", default: false })
   is_displayed: boolean;

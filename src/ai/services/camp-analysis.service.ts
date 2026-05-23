@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Camp } from "../../camps/entities/camp.entity";
@@ -29,7 +29,7 @@ export class CampAnalysisService {
   async analyzeCampContext(campId: number): Promise<CampContext> {
     const camp = await this.campRepo.findOne({ where: { id: campId } });
     if (!camp) {
-      throw new Error(`Camp ${campId} not found`);
+      throw new NotFoundException(`Camp with ID ${campId} not found`);
     }
 
     const population = await this.personsService.countPersonsByCamp(
