@@ -12,7 +12,7 @@ export class Role {
   id: number;
 
   /**
-   * Values: "admin" | "worker" | "resource_manager" | "travel_comms"
+   * Values: "admin" | "worker" | "resource_manager" | "travel_manager" | "camp_leader"
    */
   @Column({ type: "text", unique: true })
   name: string;

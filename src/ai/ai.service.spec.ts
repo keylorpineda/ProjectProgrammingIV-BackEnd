@@ -356,7 +356,7 @@ describe("AiService", () => {
 
   describe("reviewAdmission - Review & Decision", () => {
     it("should review an admission and pass to review service", async () => {
-      const reviewDto = { decision: "ACCEPTED" };
+      const reviewDto = { decision: "accepted" };
       const result = await service.reviewAdmission(1, reviewDto as any, 1);
       expect(result).toBeDefined();
     });
@@ -365,7 +365,7 @@ describe("AiService", () => {
       const reviewService = module.get(AdmissionReviewService);
       const reviewSpy = reviewService.reviewAdmission as jest.Mock;
 
-      const reviewDto = { decision: "REJECTED" };
+      const reviewDto = { decision: "rejected" };
       await service.reviewAdmission(1, reviewDto as any, 5);
 
       expect(reviewSpy).toHaveBeenCalledWith(1, reviewDto, 5);

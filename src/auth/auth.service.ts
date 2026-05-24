@@ -18,7 +18,7 @@ import { REDIS_CLIENT } from "../redis/redis.constants";
 import { Redis } from "ioredis";
 
 const SALT_ROUNDS = 12;
-const MAX_LOGIN_ATTEMPTS = 1000;
+const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 
 @Injectable()
@@ -45,11 +45,11 @@ export class AuthService {
     access_token: string;
     refresh_token: string;
     user: {
-      id: number;
+      id: string;
       username: string;
       email: string;
       role: string;
-      camp_id: number;
+      camp_id: string | null;
     };
   }> {
     const recentFailures = await this.countRecentFailures(ipAddress);
@@ -66,10 +66,16 @@ export class AuthService {
       );
     }
 
-    const user = await this.userRepo.findOne({
-      where: { username: dto.username },
-      relations: ["role", "camp", "person"],
-    });
+    // `password_hash` is `select: false`; QueryBuilder + addSelect opts back in
+    // just for the credential check. Default responses elsewhere stay scrubbed.
+    const user = await this.userRepo
+      .createQueryBuilder("u")
+      .addSelect("u.password_hash")
+      .leftJoinAndSelect("u.role", "role")
+      .leftJoinAndSelect("u.camp", "camp")
+      .leftJoinAndSelect("u.person", "person")
+      .where("u.username = :username", { username: dto.username })
+      .getOne();
 
     if (!user) {
       await this.logLoginAttempt({
@@ -104,7 +110,7 @@ export class AuthService {
       username: user.username,
       email: user.email,
       role: user.role?.name,
-      campId: user.camp_id,
+      camp_id: user.camp_id,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -143,20 +149,23 @@ export class AuthService {
       access_token: accessToken,
       refresh_token: refreshToken,
       user: {
-        id: Number(user.id),
+        id: String(user.id),
         username: user.username,
         email: user.email,
         role: user.role?.name ?? "unknown",
-        camp_id: Number(user.camp_id),
+        camp_id: user.camp_id == null ? null : String(user.camp_id),
       },
     };
   }
 
   async logout(userId: number, refreshToken?: string): Promise<void> {
     if (refreshToken) {
-      const sessions = await this.sessionRepo.find({
-        where: { user_id: userId, is_active: true },
-      });
+      const sessions = await this.sessionRepo
+        .createQueryBuilder("s")
+        .addSelect("s.token_hash")
+        .where("s.user_id = :userId", { userId })
+        .andWhere("s.is_active = true")
+        .getMany();
 
       for (const session of sessions) {
         const isMatch = await this.verifyPassword(
@@ -193,9 +202,12 @@ export class AuthService {
       throw new UnauthorizedException("Refresh token inv�lido o expirado");
     }
 
-    const sessions = await this.sessionRepo.find({
-      where: { user_id: payload.sub, is_active: true },
-    });
+    const sessions = await this.sessionRepo
+      .createQueryBuilder("s")
+      .addSelect("s.token_hash")
+      .where("s.user_id = :userId", { userId: payload.sub })
+      .andWhere("s.is_active = true")
+      .getMany();
 
     let validSession: Session | null = null;
 
@@ -265,11 +277,11 @@ export class AuthService {
     access_token: string;
     refresh_token: string;
     user: {
-      id: number;
+      id: string;
       username: string;
       email: string;
       role: string;
-      camp_id: number;
+      camp_id: string;
     };
   }> {
     const user = await this.userRepo.findOne({
@@ -289,16 +301,20 @@ export class AuthService {
       throw new NotFoundException(`Campamento con ID ${campId} no encontrado`);
     }
 
+    // Update only the touched columns; using save() on an entity loaded without
+    // password_hash (select:false) risks TypeORM nulling the hash column.
+    await this.userRepo.update(
+      { id: userId },
+      { camp_id: campId, last_access: new Date() },
+    );
     user.camp_id = campId;
-    user.last_access = new Date();
-    await this.userRepo.save(user);
 
     const payload = {
       sub: user.id,
       username: user.username,
       email: user.email,
       role: user.role?.name,
-      campId,
+      camp_id: campId,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -331,11 +347,11 @@ export class AuthService {
       access_token: accessToken,
       refresh_token: refreshToken,
       user: {
-        id: Number(user.id),
+        id: String(user.id),
         username: user.username,
         email: user.email,
         role: user.role?.name ?? "unknown",
-        camp_id: Number(campId),
+        camp_id: String(campId),
       },
     };
   }

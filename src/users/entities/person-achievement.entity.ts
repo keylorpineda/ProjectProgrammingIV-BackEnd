@@ -25,7 +25,9 @@ export class PersonAchievement {
   obtained_at: Date;
 
   @Index()
-  @ManyToOne(() => Person, (person) => person.achievements, { onDelete: "CASCADE" })
+  @ManyToOne(() => Person, (person) => person.achievements, {
+    onDelete: "CASCADE",
+  })
   @JoinColumn({ name: "person_id" })
   person: Person;
 

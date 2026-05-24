@@ -155,70 +155,70 @@ describe("DashboardService", () => {
       where: { camp_id: 3 },
     });
     expect(result).toMatchObject({
-      campId: 3,
+      camp_id: 3,
       role: "admin",
       camp: {
-        totalPeople: 15,
-        activeWorkers: 10,
-        unavailablePeople: 5,
-        campCapacity: 20,
-        occupancyRate: 75.5,
-        activeExplorations: 2,
-        emptyProfessions: ["Medico"],
+        total_people: 15,
+        active_workers: 10,
+        unavailable_people: 5,
+        camp_capacity: 20,
+        occupancy_rate: 75.5,
+        active_explorations: 2,
+        empty_professions: ["Medico"],
       },
       warehouse: {
-        totalResourceTypes: 2,
-        resourcesWithAlerts: 1,
-        inventoryTotalQuantity: 12,
-        criticalResources: [
+        total_resource_types: 2,
+        resources_with_alerts: 1,
+        inventory_total_quantity: 12,
+        critical_resources: [
           {
-            resourceId: 2,
-            resourceName: "Agua",
-            currentQuantity: 4,
-            minimumRequired: 6,
+            resource_id: 2,
+            resource_name: "Agua",
+            current_quantity: 4,
+            minimum_required: 6,
           },
         ],
       },
       transfers: {
-        pendingTransfers: 3,
-        approvedTransfers: 1,
-        completedTransfers: 7,
+        pending_transfers: 3,
+        approved_transfers: 1,
+        completed_transfers: 7,
       },
     });
     expect(cacheManager.set).toHaveBeenCalledWith(
       "dashboard:metrics:3:admin",
       expect.objectContaining({
-        campId: 3,
+        camp_id: 3,
         role: "admin",
       }),
     );
-    expect(result.generatedAt).toBeInstanceOf(Date);
+    expect(result.generated_at).toBeInstanceOf(Date);
   });
 
   it("should return cached dashboard metrics when available", async () => {
     const cached = {
-      campId: 99,
+      camp_id: 99,
       role: "admin",
-      generatedAt: new Date("2026-03-24T00:00:00.000Z"),
+      generated_at: new Date("2026-03-24T00:00:00.000Z"),
       camp: {
-        totalPeople: 12,
-        activeWorkers: 8,
-        unavailablePeople: 4,
-        campCapacity: 30,
-        occupancyRate: 40,
-        activeExplorations: 1,
-        emptyProfessions: [],
+        total_people: 12,
+        active_workers: 8,
+        unavailable_people: 4,
+        camp_capacity: 30,
+        occupancy_rate: 40,
+        active_explorations: 1,
+        empty_professions: [],
       },
       warehouse: {
-        totalResourceTypes: 2,
-        resourcesWithAlerts: 0,
-        inventoryTotalQuantity: 100,
-        criticalResources: [],
+        total_resource_types: 2,
+        resources_with_alerts: 0,
+        inventory_total_quantity: 100,
+        critical_resources: [],
       },
       transfers: {
-        pendingTransfers: 1,
-        approvedTransfers: 0,
-        completedTransfers: 2,
+        pending_transfers: 1,
+        approved_transfers: 0,
+        completed_transfers: 2,
       },
     };
     cacheManager.get.mockResolvedValue(cached);
@@ -249,7 +249,7 @@ describe("DashboardService", () => {
     professionStatsView.find.mockResolvedValue([]);
 
     await expect(service.getMetricsByCamp(5, "admin")).resolves.toMatchObject({
-      campId: 5,
+      camp_id: 5,
       role: "admin",
     });
   });
@@ -269,27 +269,27 @@ describe("DashboardService", () => {
     transferSummaryView.findOne.mockResolvedValue(null);
     professionStatsView.find.mockResolvedValue([]);
 
-    const result = await service.getMetricsByCamp(9, "gestor_recursos");
+    const result = await service.getMetricsByCamp(9, "resource_manager");
 
     expect(result.camp).toEqual({
-      totalPeople: 4,
-      activeWorkers: 1,
-      unavailablePeople: 3,
-      campCapacity: null,
-      occupancyRate: null,
-      activeExplorations: 0,
-      emptyProfessions: [],
+      total_people: 4,
+      active_workers: 1,
+      unavailable_people: 3,
+      camp_capacity: null,
+      occupancy_rate: null,
+      active_explorations: 0,
+      empty_professions: [],
     });
     expect(result.warehouse).toEqual({
-      totalResourceTypes: 0,
-      resourcesWithAlerts: 0,
-      inventoryTotalQuantity: 0,
-      criticalResources: [],
+      total_resource_types: 0,
+      resources_with_alerts: 0,
+      inventory_total_quantity: 0,
+      critical_resources: [],
     });
     expect(result.transfers).toEqual({
-      pendingTransfers: 0,
-      approvedTransfers: 0,
-      completedTransfers: 0,
+      pending_transfers: 0,
+      approved_transfers: 0,
+      completed_transfers: 0,
     });
   });
 
@@ -330,17 +330,17 @@ describe("DashboardService", () => {
     expect(personStatusStatsView.find).toHaveBeenCalled();
     expect(leaderboard).toHaveLength(10);
     expect(leaderboard[0]).toMatchObject({
-      campId: 1,
-      campName: "Camp 1",
-      survivalScore: 660,
-      resources: { foodRations: 100, waterRations: 80 },
+      camp_id: 1,
+      camp_name: "Camp 1",
+      survival_score: 660,
+      resources: { food_rations: 100, water_rations: 80 },
       population: { healthy: 10, sick: 1, deceased: 0 },
     });
     expect(leaderboard[1]).toMatchObject({
-      campId: 2,
-      survivalScore: 45,
+      camp_id: 2,
+      survival_score: 45,
     });
-    expect(leaderboard.some((camp) => camp.campId === 12)).toBe(false);
+    expect(leaderboard.some((camp) => camp.camp_id === 12)).toBe(false);
   });
 
   it("should throw NotFoundException when the camp summary does not exist", async () => {

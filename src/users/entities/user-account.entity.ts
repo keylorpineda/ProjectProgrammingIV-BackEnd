@@ -37,7 +37,10 @@ export class UserAccount {
   @Column({ type: "text", unique: true })
   email: string;
 
-  @Column({ type: "text" })
+  // `select: false` keeps this column out of every default response (see
+  // docs/ALIGNMENT_SPEC.md P2-1). Auth flows that need the hash for bcrypt
+  // comparison must opt-in via QueryBuilder + addSelect("u.password_hash").
+  @Column({ type: "text", select: false })
   password_hash: string;
 
   @Column({ type: "timestamptz", nullable: true })

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { IntercampRequest } from "./entities/intercamp-request.entity";
@@ -76,7 +76,12 @@ export class TransfersService {
     userId: number,
   ): Promise<IntercampRequest> {
     const user = await this.userRepo.findOne({ where: { id: userId } });
-    return this.requestsService.cancelRequest(requestId, userId, user!.camp_id);
+    if (!user || user.camp_id == null) {
+      throw new UnauthorizedException(
+        "Usuario sin campamento asignado; no puede cancelar la solicitud",
+      );
+    }
+    return this.requestsService.cancelRequest(requestId, userId, user.camp_id);
   }
 
   async getTransferStatistics(campId: number): Promise<{

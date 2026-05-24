@@ -60,13 +60,13 @@ describe("Users support files", () => {
         "view_all_camps",
       );
       expect(roleHasPermission(UserRole.ADMIN, "manage_admissions")).toBe(true);
-      expect(roleHasPermission(UserRole.TRABAJADOR, "manage_admissions")).toBe(
+      expect(roleHasPermission(UserRole.WORKER, "manage_admissions")).toBe(
         false,
       );
       expect(
         roleHasPermission("unknown" as UserRole, "manage_admissions"),
       ).toBe(false);
-      expect(getRolePermissions(UserRole.GESTOR_RECURSOS)).toContain(
+      expect(getRolePermissions(UserRole.RESOURCE_MANAGER)).toContain(
         "manage_inventory",
       );
       expect(getRolePermissions("unknown" as UserRole)).toEqual([]);

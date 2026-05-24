@@ -8,7 +8,10 @@ import { Repository } from "typeorm";
 import { AiAdmission } from "../entities/ai-admission.entity";
 import { Person } from "../../users/entities/person.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
-import { ReviewAdmissionDto } from "../dto/review-admission.dto";
+import {
+  AdmissionDecision,
+  ReviewAdmissionDto,
+} from "../dto/review-admission.dto";
 import { CreateUserAccountDto } from "../dto/create-user-account.dto";
 import { PersonStatus } from "../../users/constants/professions.constants";
 import * as bcrypt from "bcrypt";
@@ -44,7 +47,7 @@ export class AdmissionReviewService {
 
     const candidateData: any = admission.candidate_data;
 
-    if (dto.decision === "ACCEPTED") {
+    if (dto.decision === AdmissionDecision.ACCEPTED) {
       const professionId =
         dto.override_profession_id || admission.suggested_profession_id;
 
@@ -77,7 +80,7 @@ export class AdmissionReviewService {
       admission.status = "ACCEPTED";
       admission.final_human_decision = "ACCEPTED";
       admission.reviewed_by_user_id = adminUserId;
-      admission.admin_notes = dto.admin_notes || "";
+      admission.admin_notes = dto.notes || "";
       admission.review_date = new Date();
 
       await this.admissionRepo.save(admission);
@@ -88,7 +91,7 @@ export class AdmissionReviewService {
     admission.status = "REJECTED";
     admission.final_human_decision = "REJECTED";
     admission.reviewed_by_user_id = adminUserId;
-    admission.admin_notes = dto.admin_notes || "";
+    admission.admin_notes = dto.notes || "";
     admission.review_date = new Date();
 
     await this.admissionRepo.save(admission);

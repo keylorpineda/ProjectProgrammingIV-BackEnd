@@ -153,7 +153,7 @@ describe("AiController", () => {
         .spyOn(service, "reviewAdmission")
         .mockResolvedValueOnce(mockAdmission);
 
-      const dto = { decision: "ACCEPTED", admin_notes: "Approved" } as any;
+      const dto = { decision: "accepted", notes: "Approved" } as any;
       const result = await controller.reviewAdmission(1, dto, { id: 1 });
 
       expect(result).toEqual(mockAdmission);

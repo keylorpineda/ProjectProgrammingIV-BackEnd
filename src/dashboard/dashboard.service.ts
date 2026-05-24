@@ -14,49 +14,49 @@ import {
 } from "../database/views";
 
 interface CampMetrics {
-  totalPeople: number;
-  activeWorkers: number;
-  unavailablePeople: number;
-  campCapacity: number | null;
-  occupancyRate: number | null;
-  activeExplorations: number;
-  emptyProfessions: string[];
+  total_people: number;
+  active_workers: number;
+  unavailable_people: number;
+  camp_capacity: number | null;
+  occupancy_rate: number | null;
+  active_explorations: number;
+  empty_professions: string[];
 }
 
 interface WarehouseMetrics {
-  totalResourceTypes: number;
-  resourcesWithAlerts: number;
-  inventoryTotalQuantity: number;
-  criticalResources: Array<{
-    resourceId: number;
-    resourceName: string;
-    currentQuantity: number;
-    minimumRequired: number;
+  total_resource_types: number;
+  resources_with_alerts: number;
+  inventory_total_quantity: number;
+  critical_resources: Array<{
+    resource_id: number;
+    resource_name: string;
+    current_quantity: number;
+    minimum_required: number;
   }>;
 }
 
 interface TransfersMetrics {
-  pendingTransfers: number;
-  approvedTransfers: number;
-  completedTransfers: number;
+  pending_transfers: number;
+  approved_transfers: number;
+  completed_transfers: number;
 }
 
 export interface DashboardMetricsResponse {
-  campId: number;
+  camp_id: number;
   role: string;
-  generatedAt: Date;
+  generated_at: Date;
   camp: CampMetrics;
   warehouse: WarehouseMetrics | null;
   transfers: TransfersMetrics;
 }
 
 export interface CampLeaderboardEntry {
-  campId: number;
-  campName: string;
-  survivalScore: number;
+  camp_id: number;
+  camp_name: string;
+  survival_score: number;
   resources: {
-    foodRations: number;
-    waterRations: number;
+    food_rations: number;
+    water_rations: number;
   };
   population: {
     healthy: number;
@@ -168,17 +168,17 @@ export class DashboardService {
           population.deceased * 100;
 
         return {
-          campId,
-          campName: camp.camp_name,
-          survivalScore,
+          camp_id: campId,
+          camp_name: camp.camp_name,
+          survival_score: survivalScore,
           resources: {
-            foodRations: resources.food,
-            waterRations: resources.water,
+            food_rations: resources.food,
+            water_rations: resources.water,
           },
           population,
         };
       })
-      .sort((a, b) => b.survivalScore - a.survivalScore)
+      .sort((a, b) => b.survival_score - a.survival_score)
       .slice(0, 10);
   }
 
@@ -212,9 +212,9 @@ export class DashboardService {
     const transfers = await this.buildTransferMetrics(campId);
 
     const metrics: DashboardMetricsResponse = {
-      campId,
+      camp_id: campId,
       role,
-      generatedAt: new Date(),
+      generated_at: new Date(),
       camp: campMetrics,
       warehouse,
       transfers,
@@ -248,15 +248,15 @@ export class DashboardService {
       .map((p) => p.profession_name);
 
     return {
-      totalPeople: Number(campPopulation.total_people),
-      activeWorkers: Number(campPopulation.active_workers),
-      unavailablePeople: Number(campPopulation.unavailable_people),
-      campCapacity: campPopulation.max_capacity,
-      occupancyRate: campPopulation.occupancy_rate
+      total_people: Number(campPopulation.total_people),
+      active_workers: Number(campPopulation.active_workers),
+      unavailable_people: Number(campPopulation.unavailable_people),
+      camp_capacity: campPopulation.max_capacity,
+      occupancy_rate: campPopulation.occupancy_rate
         ? Number(campPopulation.occupancy_rate)
         : null,
-      activeExplorations,
-      emptyProfessions,
+      active_explorations: activeExplorations,
+      empty_professions: emptyProfessions,
     };
   }
 
@@ -276,10 +276,10 @@ export class DashboardService {
     });
 
     const criticalResources = criticalResourcesView.map((item) => ({
-      resourceId: Number(item.resource_id),
-      resourceName: item.resource_name,
-      currentQuantity: Number(item.current_quantity),
-      minimumRequired: Number(item.minimum_stock_required),
+      resource_id: Number(item.resource_id),
+      resource_name: item.resource_name,
+      current_quantity: Number(item.current_quantity),
+      minimum_required: Number(item.minimum_stock_required),
     }));
 
     const inventoryTotalQuantity = inventoryItems.reduce(
@@ -288,10 +288,10 @@ export class DashboardService {
     );
 
     return {
-      totalResourceTypes: inventoryItems.length,
-      resourcesWithAlerts: criticalResources.length,
-      inventoryTotalQuantity,
-      criticalResources,
+      total_resource_types: inventoryItems.length,
+      resources_with_alerts: criticalResources.length,
+      inventory_total_quantity: inventoryTotalQuantity,
+      critical_resources: criticalResources,
     };
   }
 
@@ -304,16 +304,16 @@ export class DashboardService {
 
     if (!transferSummary) {
       return {
-        pendingTransfers: 0,
-        approvedTransfers: 0,
-        completedTransfers: 0,
+        pending_transfers: 0,
+        approved_transfers: 0,
+        completed_transfers: 0,
       };
     }
 
     return {
-      pendingTransfers: Number(transferSummary.pending),
-      approvedTransfers: Number(transferSummary.approved),
-      completedTransfers: Number(transferSummary.completed),
+      pending_transfers: Number(transferSummary.pending),
+      approved_transfers: Number(transferSummary.approved),
+      completed_transfers: Number(transferSummary.completed),
     };
   }
 }

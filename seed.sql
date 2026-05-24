@@ -19,12 +19,12 @@ INSERT INTO "camp" ("name", "location_description", "latitude", "longitude", "ma
 -- ==========================================================
 -- 2. ROLES (Para RBAC y endpoints de Auth/Roles)
 -- ==========================================================
-INSERT INTO "role" ("name", "description") VALUES 
+INSERT INTO "role" ("name", "description") VALUES
     ('admin', 'Administrador Global del Fin del Mundo'),
     ('worker', 'Trabajador regular del campamento'),
     ('resource_manager', 'Especialista en administración de inventarios y logística'),
-    ('travel_comms', 'Coordinador responsable de expediciones y de traslados entre bases'),
-    ('medic', 'Personal encargado de actualizar estados de salud y reportes de infección');
+    ('travel_manager', 'Coordinador responsable de expediciones y de traslados entre bases'),
+    ('camp_leader', 'Líder responsable de un campamento específico (alcance local)');
 
 -- ==========================================================
 -- 3. PROFESIONES (Para GET /users/professions, GET /users/professions/alerts/needing-workers)

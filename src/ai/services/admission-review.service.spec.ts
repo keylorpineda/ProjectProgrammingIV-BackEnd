@@ -65,19 +65,19 @@ describe("AdmissionReviewService", () => {
   });
 
   it("should review an admission as accepted", async () => {
-    const dto = { decision: "ACCEPTED", admin_notes: "Approved" };
+    const dto = { decision: "accepted", notes: "Approved" };
     const result = await service.reviewAdmission(1, dto as any, 1);
     expect(result).toBeDefined();
   });
 
   it("should review an admission as rejected", async () => {
-    const dto = { decision: "REJECTED", admin_notes: "Not qualified" };
+    const dto = { decision: "rejected", notes: "Not qualified" };
     const result = await service.reviewAdmission(1, dto as any, 1);
     expect(result).toBeDefined();
   });
 
   it("should throw when admission not found", async () => {
-    const dto = { decision: "ACCEPTED" };
+    const dto = { decision: "accepted" };
     try {
       await service.reviewAdmission(999, dto as any, 1);
     } catch (error: any) {
@@ -86,7 +86,7 @@ describe("AdmissionReviewService", () => {
   });
 
   it("should throw when admission already reviewed", async () => {
-    const dto = { decision: "ACCEPTED" };
+    const dto = { decision: "accepted" };
     try {
       await service.reviewAdmission(2, dto as any, 1);
     } catch (error) {
@@ -156,19 +156,19 @@ describe("AdmissionReviewService", () => {
   });
 
   it("should include override profession in review", async () => {
-    const dto = { decision: "ACCEPTED", override_profession_id: 5 };
+    const dto = { decision: "accepted", override_profession_id: 5 };
     const result = await service.reviewAdmission(1, dto as any, 1);
     expect(result).toBeDefined();
   });
 
   it("should generate survivor code for accepted admission", async () => {
-    const dto = { decision: "ACCEPTED" };
+    const dto = { decision: "accepted" };
     const result = await service.reviewAdmission(1, dto as any, 1);
     expect(result).toBeDefined();
   });
 
   it("should create person in camp if not exists", async () => {
-    const dto = { decision: "ACCEPTED" };
+    const dto = { decision: "accepted" };
     const result = await service.reviewAdmission(1, dto as any, 1);
     if (result?.person) {
       expect(result.person).toBeDefined();
@@ -227,7 +227,7 @@ describe("AdmissionReviewService extra coverage", () => {
     admissionRepo.findOne.mockResolvedValue(null);
 
     await expect(
-      service.reviewAdmission(404, { decision: "ACCEPTED" } as any, 1),
+      service.reviewAdmission(404, { decision: "accepted" } as any, 1),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -235,7 +235,7 @@ describe("AdmissionReviewService extra coverage", () => {
     admissionRepo.findOne.mockResolvedValue({ id: 1, status: "REJECTED" });
 
     await expect(
-      service.reviewAdmission(1, { decision: "ACCEPTED" } as any, 7),
+      service.reviewAdmission(1, { decision: "accepted" } as any, 7),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -253,7 +253,7 @@ describe("AdmissionReviewService extra coverage", () => {
     });
 
     await expect(
-      service.reviewAdmission(1, { decision: "ACCEPTED" } as any, 3),
+      service.reviewAdmission(1, { decision: "accepted" } as any, 3),
     ).rejects.toThrow("Profession ID required");
   });
 
@@ -276,7 +276,7 @@ describe("AdmissionReviewService extra coverage", () => {
 
     const result = await service.reviewAdmission(
       10,
-      { decision: "ACCEPTED", admin_notes: "Looks good" } as any,
+      { decision: "accepted", notes: "Looks good" } as any,
       44,
     );
 
@@ -322,7 +322,7 @@ describe("AdmissionReviewService extra coverage", () => {
 
     const result = await service.reviewAdmission(
       22,
-      { decision: "REJECTED" } as any,
+      { decision: "rejected" } as any,
       91,
     );
 

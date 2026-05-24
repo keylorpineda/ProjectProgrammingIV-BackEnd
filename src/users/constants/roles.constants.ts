@@ -1,24 +1,23 @@
-﻿/**
- * Roles del sistema segun el enunciado del proyecto
+/**
+ * Canonical role vocabulary. These five strings are the ONLY allowed role
+ * values. They must match the `role.name` seed data, every `@Roles(...)`
+ * decorator, the frontend route guards, and login routing.
  *
- * ROLES OBLIGATORIOS (enunciado):
- * 5.1 - Administrador sistema: Tiene acceso a ver todo el sistema, pero solo gestiona los ingresos de personas
- * 5.2 - Trabajador: Solo puede hacer cambios de inventario, autorizados por el gestionador de los recursos
- * 5.3 - Gestion recursos: Encargado general de realizar traslados y envios de recursos
- * 5.4 - Encargado de viajes y comunicacion: Realiza las expediciones y negociaciones con los otros campamentos
- *
- * ROLES ADICIONALES (justificados):
- * 6 - Lider de Campamento: Administra un campamento especifico (sistema multi-campamento)
- * 7 - Supervisor: Audita operaciones del sistema (requerimiento de auditoria del enunciado)
+ * 5.1 - admin: Administrador del sistema. Acceso global, gestiona admisiones.
+ * 5.2 - worker: Trabajador. Cambios de inventario autorizados por resource_manager.
+ * 5.3 - resource_manager: Gestión de recursos. Traslados y envíos de recursos.
+ * 5.4 - travel_manager: Encargado de viajes y comunicación. Expediciones y
+ *       negociaciones con otros campamentos.
+ * 5.5 - camp_leader: Líder de un campamento específico (alcance local), con
+ *       vistas dedicadas en `/campleader/*` en el frontend.
  */
 
 export enum UserRole {
   ADMIN = "admin",
-  TRABAJADOR = "trabajador",
-  GESTOR_RECURSOS = "gestor_recursos",
-  ENCARGADO_VIAJES = "encargado_viajes",
-  LIDER_CAMPAMENTO = "lider_campamento",
-  SUPERVISOR = "supervisor",
+  WORKER = "worker",
+  RESOURCE_MANAGER = "resource_manager",
+  TRAVEL_MANAGER = "travel_manager",
+  CAMP_LEADER = "camp_leader",
 }
 
 export const ROLES_CONFIG = {
@@ -35,10 +34,10 @@ export const ROLES_CONFIG = {
       "create_camps",
     ],
   },
-  [UserRole.TRABAJADOR]: {
+  [UserRole.WORKER]: {
     name: "Trabajador",
     description:
-      "Realiza cambios de inventario autorizados por gestion de recursos",
+      "Realiza cambios de inventario autorizados por resource_manager",
     permissions: [
       "view_inventory",
       "adjust_daily_production",
@@ -46,10 +45,10 @@ export const ROLES_CONFIG = {
       "view_camp_info",
     ],
   },
-  [UserRole.GESTOR_RECURSOS]: {
-    name: "Gestion de Recursos",
+  [UserRole.RESOURCE_MANAGER]: {
+    name: "Gestión de Recursos",
     description:
-      "Encargado de traslados y envios de recursos entre campamentos",
+      "Encargado de traslados y envíos de recursos entre campamentos",
     permissions: [
       "manage_inventory",
       "create_transfers",
@@ -60,8 +59,8 @@ export const ROLES_CONFIG = {
       "authorize_worker_changes",
     ],
   },
-  [UserRole.ENCARGADO_VIAJES]: {
-    name: "Encargado de Viajes y Comunicacion",
+  [UserRole.TRAVEL_MANAGER]: {
+    name: "Encargado de Viajes",
     description: "Realiza expediciones y negociaciones con otros campamentos",
     permissions: [
       "create_explorations",
@@ -72,9 +71,9 @@ export const ROLES_CONFIG = {
       "manage_travel_groups",
     ],
   },
-  [UserRole.LIDER_CAMPAMENTO]: {
-    name: "Lider de Campamento",
-    description: "Administra su campamento especifico (scope local, no global)",
+  [UserRole.CAMP_LEADER]: {
+    name: "Líder de Campamento",
+    description: "Administra un campamento específico (scope local, no global)",
     permissions: [
       "manage_own_camp_people",
       "approve_own_camp_admissions",
@@ -85,32 +84,12 @@ export const ROLES_CONFIG = {
       "view_own_camp_reports",
     ],
   },
-  [UserRole.SUPERVISOR]: {
-    name: "Supervisor/Auditor",
-    description:
-      "Supervisa y audita todas las operaciones del sistema (solo lectura)",
-    permissions: [
-      "view_all_audit_logs",
-      "view_all_transfers",
-      "view_all_explorations",
-      "view_all_inventory_movements",
-      "view_all_camps_readonly",
-      "generate_audit_reports",
-      "view_all_admissions",
-    ],
-  },
 };
 
-/**
- * Verifica si un rol tiene un permiso especifico
- */
 export function roleHasPermission(role: UserRole, permission: string): boolean {
   return ROLES_CONFIG[role]?.permissions.includes(permission) ?? false;
 }
 
-/**
- * Obtiene todos los permisos de un rol
- */
 export function getRolePermissions(role: UserRole): string[] {
   return ROLES_CONFIG[role]?.permissions ?? [];
 }

@@ -10,11 +10,11 @@ describe("AuthController", () => {
     access_token: "access_token_value",
     refresh_token: "refresh_token_value",
     user: {
-      id: 1,
+      id: "1",
       username: "testuser",
       email: "test@example.com",
       role: "USER",
-      camp_id: 1,
+      camp_id: "1",
     },
   };
 
@@ -253,7 +253,7 @@ describe("AuthController", () => {
       const mockResponse = {
         access_token: "access_token_value",
         refresh_token: "refresh_token_value",
-        user: { id: 1, username: "testuser", camp_id: 2 },
+        user: { id: "1", username: "testuser", camp_id: "2" },
       };
 
       authService.switchCamp.mockResolvedValueOnce(mockResponse as any);

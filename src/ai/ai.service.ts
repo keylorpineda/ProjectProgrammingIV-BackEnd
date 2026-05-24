@@ -146,7 +146,7 @@ export class AiService {
     return {
       tracking_code: admission.tracking_code,
       status: admission.status,
-      camp_name: admission.camp.name,
+      camp_name: admission.camp?.name ?? null,
       candidate_name: [
         candidateData.first_name,
         candidateData.last_name,

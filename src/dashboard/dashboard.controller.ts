@@ -15,7 +15,7 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get("leaderboard")
-  @Roles("admin", "gestor_recursos")
+  @Roles("admin", "resource_manager")
   @ApiOperation({
     summary: "Get top 10 camps by survival score",
   })
@@ -24,7 +24,7 @@ export class DashboardController {
   }
 
   @Get(":campId")
-  @Roles("admin", "gestor_recursos")
+  @Roles("admin", "resource_manager")
   @ApiOperation({
     summary: "Get dashboard metrics by camp and role visibility",
   })

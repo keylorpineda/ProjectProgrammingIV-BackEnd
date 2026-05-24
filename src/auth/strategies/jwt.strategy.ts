@@ -17,8 +17,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: { sub: number; username: string; role: string }) {
-    const user = await this.usersService.findUserById(payload.sub);
+  async validate(payload: {
+    sub: number | string;
+    username: string;
+    role: string;
+    email?: string;
+    camp_id?: number | string | null;
+  }) {
+    const userId = Number(payload.sub);
+    const user = await this.usersService.findUserById(userId);
 
     if (!user) {
       throw new UnauthorizedException(
@@ -26,10 +33,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       );
     }
 
+    const campId = payload.camp_id == null ? null : Number(payload.camp_id);
+
     return {
-      userId: payload.sub,
+      id: userId,
+      userId,
       username: payload.username,
+      email: payload.email,
       role: payload.role,
+      camp_id: campId,
     };
   }
 }

@@ -1,20 +1,20 @@
-﻿import { IsEnum, IsOptional, IsString, IsInt } from "class-validator";
+import { IsEnum, IsOptional, IsString, IsInt } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
-enum AdmissionDecision {
-  ACCEPTED = "ACCEPTED",
-  REJECTED = "REJECTED",
+export enum AdmissionDecision {
+  ACCEPTED = "accepted",
+  REJECTED = "rejected",
 }
 
 export class ReviewAdmissionDto {
-  @ApiProperty({ enum: AdmissionDecision, example: "ACCEPTED" })
+  @ApiProperty({ enum: AdmissionDecision, example: AdmissionDecision.ACCEPTED })
   @IsEnum(AdmissionDecision)
   decision: AdmissionDecision;
 
   @ApiPropertyOptional({ example: "Approved - Camp needs medics" })
   @IsOptional()
   @IsString()
-  admin_notes?: string;
+  notes?: string;
 
   @ApiPropertyOptional({
     example: 5,

@@ -47,7 +47,7 @@ export class AiController {
 
   @ApiBearerAuth()
   @Get("admissions/pending")
-  @Roles("admin", "gestor_recursos")
+  @Roles("admin", "resource_manager")
   @ApiOperation({ summary: "Get pending admissions for review" })
   @ApiQuery({ name: "campId", required: false, description: "Filter by camp" })
   @ApiQuery({ name: "page", required: false, description: "Page number" })
@@ -66,7 +66,7 @@ export class AiController {
 
   @ApiBearerAuth()
   @Get("admissions/:id")
-  @Roles("admin", "gestor_recursos")
+  @Roles("admin", "resource_manager")
   @ApiOperation({ summary: "Get admission detail" })
   @ApiParam({ name: "id", description: "Admission ID" })
   async getAdmissionDetail(@Param("id", ParseIntPipe) id: number) {

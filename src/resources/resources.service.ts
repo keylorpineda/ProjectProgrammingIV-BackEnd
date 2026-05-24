@@ -133,7 +133,7 @@ export class ResourcesService implements OnModuleInit {
     await this.refreshAlertFlags(campId);
     return this.inventoryRepo.find({
       where: { camp_id: campId },
-      relations: ["resource"],
+      relations: ["resource", "camp"],
     });
   }
 
@@ -284,7 +284,21 @@ export class ResourcesService implements OnModuleInit {
       }),
     );
 
-    return { movement: saved, inventory };
+    // Re-fetch movement + inventory with their relations so the response
+    // includes user/camp/resource (see docs/ALIGNMENT_SPEC.md P2-6).
+    const movementWithRelations = await this.movementRepo.findOne({
+      where: { id: saved.id },
+      relations: ["resource", "user", "camp"],
+    });
+    const inventoryWithRelations = await this.inventoryRepo.findOne({
+      where: { camp_id: dto.camp_id, resource_id: dto.resource_id },
+      relations: ["resource", "camp"],
+    });
+
+    return {
+      movement: movementWithRelations ?? saved,
+      inventory: inventoryWithRelations ?? inventory,
+    };
   }
 
   async executeDailyProcess(campId: number): Promise<{
