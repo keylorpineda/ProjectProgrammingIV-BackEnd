@@ -28,12 +28,17 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
-# Install only production dependencies
+# Install all dependencies (needed for migration CLI)
 COPY --chown=nestjs:nodejs package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+
+# Copy TypeScript source for migration CLI
+COPY --from=builder --chown=nestjs:nodejs /app/src ./src
+COPY --from=builder --chown=nestjs:nodejs /app/tsconfig.json ./tsconfig.json
+COPY --from=builder --chown=nestjs:nodejs /app/tsconfig.build.json ./tsconfig.build.json
 
 # Run as non-root user
 USER nestjs
@@ -44,5 +49,5 @@ RUN ls -R dist | head -n 20
 # Expose port (Render defaults to 10000 or uses $PORT)
 EXPOSE 3000
 
-# Start the application using relative path
-CMD ["node", "dist/main.js"]
+# Run migrations then start the app
+CMD ["sh", "-c", "npx typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts && node dist/main.js"]
