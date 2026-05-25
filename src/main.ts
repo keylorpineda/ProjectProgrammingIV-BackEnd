@@ -25,14 +25,11 @@ async function bootstrap() {
 
   app.useWebSocketAdapter(new RedisIoAdapter(app));
 
-  const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3000")
-    .split(",")
-    .map((o) => o.trim());
   app.enableCors({
-    origin: allowedOrigins,
+    origin: true, // Permitir explícitamente todos los orígenes para no bloquear comunicación del frontend
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: false,
+    credentials: true,
   });
 
   // API versionada v1 — requerimiento no funcional del enunciado
