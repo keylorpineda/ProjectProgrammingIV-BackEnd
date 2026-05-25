@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from "@nestjs/common";
@@ -21,6 +22,8 @@ import { MailService } from "../../mail/mail.service";
 
 @Injectable()
 export class AdmissionReviewService {
+  private readonly logger = new Logger(AdmissionReviewService.name);
+
   constructor(
     @InjectRepository(AiAdmission)
     private readonly admissionRepo: Repository<AiAdmission>,
@@ -105,13 +108,19 @@ export class AdmissionReviewService {
       await this.admissionRepo.save(admission);
 
       if (candidateEmail) {
-        await this.mailService.sendAdmissionDecision(
-          candidateEmail,
-          "accepted",
-          admission.justification || "Aprobado satisfactoriamente.",
-          admission.camp?.name || "Campamento Refugio",
-          admission.registration_token || undefined,
-        );
+        this.mailService
+          .sendAdmissionDecision(
+            candidateEmail,
+            "accepted",
+            admission.justification || "Aprobado satisfactoriamente.",
+            admission.camp?.name || "Campamento Refugio",
+            admission.registration_token || undefined,
+          )
+          .catch((err) =>
+            this.logger.error(
+              `[AdmissionReview] Email de aceptación no pudo enviarse a ${candidateEmail}: ${String(err?.message ?? err)}`,
+            ),
+          );
       }
 
       return { admission, person: savedPerson };
@@ -127,13 +136,19 @@ export class AdmissionReviewService {
 
     const candidateEmail = candidateData?.contact_email;
     if (candidateEmail) {
-      await this.mailService.sendAdmissionDecision(
-        candidateEmail,
-        "rejected",
-        admission.justification ||
-          "Tu solicitud ha sido denegada por motivos de seguridad.",
-        admission.camp?.name || "Campamento Refugio",
-      );
+      this.mailService
+        .sendAdmissionDecision(
+          candidateEmail,
+          "rejected",
+          admission.justification ||
+            "Tu solicitud ha sido denegada por motivos de seguridad.",
+          admission.camp?.name || "Campamento Refugio",
+        )
+        .catch((err) =>
+          this.logger.error(
+            `[AdmissionReview] Email de rechazo no pudo enviarse a ${candidateEmail}: ${String(err?.message ?? err)}`,
+          ),
+        );
     }
 
     return { admission };

@@ -29,7 +29,21 @@ export class MailService {
           pass: smtpPass,
         },
       });
-      this.logger.log(`SMTP account configured with host: ${smtpHost}`);
+      this.logger.log(
+        `SMTP configurado: ${smtpHost}:${smtpPort} usuario=${smtpUser}`,
+      );
+      // Verificar conexión al arrancar para detectar credenciales inválidas
+      this.transporter.verify((err) => {
+        if (err) {
+          this.logger.error(
+            `[MailService] SMTP verify FALLÓ — los correos no se enviarán. Error: ${String(err?.message ?? err)}`,
+          );
+        } else {
+          this.logger.log(
+            `[MailService] SMTP verify OK — servidor listo para enviar correos.`,
+          );
+        }
+      });
     } else {
       // Generar cuenta de prueba Ethereal en tiempo de ejecución para el desarrollo si no hay variables
       try {
