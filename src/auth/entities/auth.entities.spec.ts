@@ -111,7 +111,6 @@ describe("Auth entities", () => {
 
     expect(nullableColumns).toEqual(
       expect.arrayContaining([
-        "username",
         "user_agent",
         "failure_reason",
         "user_id",

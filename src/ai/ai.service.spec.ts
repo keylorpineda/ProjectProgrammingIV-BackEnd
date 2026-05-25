@@ -64,6 +64,7 @@ describe("AiService", () => {
             findOne: jest
               .fn()
               .mockResolvedValue({ id: 1, nombre: "Test Camp" }),
+            find: jest.fn().mockResolvedValue([{ id: 1, nombre: "Test Camp" }]),
           },
         },
         {
@@ -141,6 +142,7 @@ describe("AiService", () => {
             provide: getRepositoryToken(Camp),
             useValue: {
               findOne: jest.fn().mockResolvedValue(null),
+              find: jest.fn().mockResolvedValue([]),
             },
           },
           {

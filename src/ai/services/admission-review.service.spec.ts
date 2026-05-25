@@ -7,6 +7,7 @@ import { AiAdmission } from "../entities/ai-admission.entity";
 import { Person } from "../../users/entities/person.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
 import { PersonStatus } from "../../users/constants/professions.constants";
+import { MailService } from "../../mail/mail.service";
 
 describe("AdmissionReviewService", () => {
   let service: AdmissionReviewService;
@@ -40,6 +41,7 @@ describe("AdmissionReviewService", () => {
             create: jest.fn().mockReturnValue({ id: 1, first_name: "John" }),
             save: jest.fn().mockResolvedValue({ id: 1, first_name: "John" }),
             findOne: jest.fn().mockResolvedValue({ id: 1 }),
+            manager: { findOne: jest.fn().mockResolvedValue({ id: 1 }) },
           },
         },
         {
@@ -48,6 +50,13 @@ describe("AdmissionReviewService", () => {
             create: jest.fn().mockReturnValue({}),
             save: jest.fn().mockResolvedValue({ id: 1, username: "johndoe" }),
             findOne: jest.fn().mockResolvedValue(null),
+          },
+        },
+        {
+          provide: MailService,
+          useValue: {
+            sendAdmissionDecision: jest.fn().mockResolvedValue(true),
+            sendAccountCredentials: jest.fn().mockResolvedValue(true),
           },
         },
       ],
@@ -185,6 +194,7 @@ describe("AdmissionReviewService extra coverage", () => {
   let personRepo: {
     create: jest.Mock;
     save: jest.Mock;
+    manager?: { findOne: jest.Mock };
   };
   let userAccountRepo: {
     findOne: jest.Mock;
@@ -200,6 +210,7 @@ describe("AdmissionReviewService extra coverage", () => {
     personRepo = {
       create: jest.fn((entity) => entity),
       save: jest.fn(async (entity) => ({ id: 99, ...entity })),
+      manager: { findOne: jest.fn().mockResolvedValue({ id: 1 }) },
     };
     userAccountRepo = {
       findOne: jest.fn(),
@@ -213,6 +224,13 @@ describe("AdmissionReviewService extra coverage", () => {
         { provide: getRepositoryToken(AiAdmission), useValue: admissionRepo },
         { provide: getRepositoryToken(Person), useValue: personRepo },
         { provide: getRepositoryToken(UserAccount), useValue: userAccountRepo },
+        {
+          provide: MailService,
+          useValue: {
+            sendAdmissionDecision: jest.fn().mockResolvedValue(true),
+            sendAccountCredentials: jest.fn().mockResolvedValue(true),
+          },
+        },
       ],
     }).compile();
 
@@ -239,7 +257,7 @@ describe("AdmissionReviewService extra coverage", () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it("should throw BadRequestException when an accepted admission has no profession", async () => {
+  it("should fallback to a default profession when an accepted admission has no profession", async () => {
     admissionRepo.findOne.mockResolvedValue({
       id: 1,
       status: "PENDING_REVIEW",
@@ -252,9 +270,11 @@ describe("AdmissionReviewService extra coverage", () => {
       },
     });
 
-    await expect(
-      service.reviewAdmission(1, { decision: "accepted" } as any, 3),
-    ).rejects.toThrow("Profession ID required");
+    await service.reviewAdmission(1, { decision: "accepted" } as any, 3);
+    
+    expect(personRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ profession_id: 1 })
+    );
   });
 
   it("should create a person with the expected mapped fields when an admission is accepted", async () => {

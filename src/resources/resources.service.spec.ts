@@ -256,7 +256,7 @@ describe("ResourcesService", () => {
       expect(refreshSpy).toHaveBeenCalledWith(1);
       expect(inventoryRepo.find).toHaveBeenCalledWith({
         where: { camp_id: 1 },
-        relations: ["resource"],
+        relations: ["resource", "camp"],
       });
       expect(result).toEqual([mockInventory]);
     });

@@ -312,6 +312,16 @@ export class UsersController {
     return this.usersService.calculateDailyBalance(campId);
   }
 
+  @Get("me/profile")
+  @ApiOperation({
+    summary:
+      "Obtener perfil completo del usuario autenticado (incluye persona y profesión)",
+  })
+  async getMyProfile(@CurrentUser() user: any) {
+    const userId = user?.userId ?? user?.id;
+    return this.usersService.findUserById(Number(userId));
+  }
+
   @Get("me/assigned-resources")
   @Roles("worker", "travel_manager", "camp_manager")
   @ApiOperation({

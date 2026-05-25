@@ -334,7 +334,7 @@ describe("CampAnalysisService extra coverage", () => {
     campRepo.findOne.mockResolvedValue(null);
 
     await expect(service.analyzeCampContext(999)).rejects.toThrow(
-      "Camp 999 not found",
+      "Camp with ID 999 not found",
     );
   });
 
@@ -346,7 +346,7 @@ describe("CampAnalysisService extra coverage", () => {
       fail("Expected analyzeCampContext to throw");
     } catch (error) {
       expect(error).toBeInstanceOf(Error);
-      expect((error as Error).message).toBe("Camp 321 not found");
+      expect((error as Error).message).toBe("Camp with ID 321 not found");
     }
   });
 

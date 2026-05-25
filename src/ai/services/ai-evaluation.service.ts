@@ -218,9 +218,10 @@ export class AiEvaluationService {
 
     if (score === 0) {
       const hasUsefulSkills = candidate.skills.some((s) =>
-        ["medicine", "agriculture", "security", "engineering"].includes(
-          s.toLowerCase(),
-        ),
+        [
+          "medicine", "agriculture", "security", "engineering",
+          "medicina", "agricultura", "seguridad", "ingeniería", "armas", "cocina",
+        ].includes(s.toLowerCase()),
       );
       score = hasUsefulSkills ? 15 : 5;
       detail = hasUsefulSkills
@@ -303,16 +304,46 @@ export class AiEvaluationService {
     professionName: string,
   ): boolean {
     const skillMap: Record<string, string[]> = {
-      Explorador: ["exploration", "scouting", "navigation", "survival"],
-      Guardia: ["security", "combat", "defense", "weapons"],
-      Medico: ["medicine", "medical", "first aid", "healthcare", "nursing"],
-      Granjero: ["agriculture", "farming", "cultivation", "gardening"],
-      Cazador: ["hunting", "tracking", "weapons", "marksmanship"],
-      "Recolector de Agua": ["water collection", "engineering", "plumbing"],
-      Ingeniero: ["engineering", "mechanics", "repair", "construction"],
-      Cocinero: ["cooking", "culinary", "food preparation"],
-      Constructor: ["construction", "carpentry", "building", "masonry"],
-      Investigador: ["research", "science", "analysis", "laboratory"],
+      Explorador: [
+        "exploration", "scouting", "navigation", "survival",
+        "exploración", "explorar", "reconocimiento", "supervivencia", "navegación", "rastreo de rutas",
+      ],
+      Guardia: [
+        "security", "combat", "defense", "weapons",
+        "seguridad", "combate", "defensa", "armas", "vigilancia", "guardia", "protección",
+      ],
+      Medico: [
+        "medicine", "medical", "first aid", "healthcare", "nursing",
+        "medicina", "médico", "primeros auxilios", "enfermería", "salud", "cirugía", "farmacia",
+      ],
+      Granjero: [
+        "agriculture", "farming", "cultivation", "gardening",
+        "agricultura", "cultivo", "granja", "jardinería", "cosecha", "siembra", "ganadería",
+      ],
+      Cazador: [
+        "hunting", "tracking", "weapons", "marksmanship",
+        "caza", "cazar", "rastreo", "armas", "puntería", "trampas", "supervivencia en campo",
+      ],
+      "Recolector de Agua": [
+        "water collection", "engineering", "plumbing",
+        "recolección de agua", "agua", "plomería", "fontanería", "hidráulica", "ingeniería",
+      ],
+      Ingeniero: [
+        "engineering", "mechanics", "repair", "construction",
+        "ingeniería", "mecánica", "reparación", "electricidad", "mantenimiento", "técnico",
+      ],
+      Cocinero: [
+        "cooking", "culinary", "food preparation",
+        "cocina", "cocinero", "gastronomía", "preparación de alimentos", "alimentación",
+      ],
+      Constructor: [
+        "construction", "carpentry", "building", "masonry",
+        "construcción", "carpintería", "albañilería", "obras", "arquitectura", "plomería",
+      ],
+      Investigador: [
+        "research", "science", "analysis", "laboratory",
+        "investigación", "ciencia", "análisis", "laboratorio", "química", "biología", "tecnología",
+      ],
     };
 
     const requiredSkills = skillMap[professionName] || [];

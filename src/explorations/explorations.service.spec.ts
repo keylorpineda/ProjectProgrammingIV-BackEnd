@@ -838,7 +838,7 @@ describe("ExplorationsService", () => {
             },
           },
         ],
-      } as Exploration;
+      } as unknown as Exploration;
 
       explorationRepo.findOne.mockResolvedValue(exploration);
       explorationRepo.save.mockResolvedValue(exploration);

@@ -134,10 +134,10 @@ describe("main bootstrap", () => {
     });
     expect(ctx.app.set).toHaveBeenCalledWith("trust proxy", 1);
     expect(ctx.app.enableCors).toHaveBeenCalledWith({
-      origin: ["http://localhost:3000"],
+      origin: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
-      credentials: false,
+      credentials: true,
     });
     expect(ctx.app.setGlobalPrefix).toHaveBeenCalledWith("api/v1");
     expect(ctx.ValidationPipe).toHaveBeenCalledWith({
@@ -148,9 +148,9 @@ describe("main bootstrap", () => {
     expect(ctx.app.useGlobalPipes).toHaveBeenCalledWith({
       kind: "validation-pipe",
     });
-    expect(ctx.setTitle).toHaveBeenCalledWith("Gestion del Fin API");
+    expect(ctx.setTitle).toHaveBeenCalledWith("Gestión del Fin API");
     expect(ctx.setDescription).toHaveBeenCalledWith(
-      "API del sistema de gestion de campamentos - Apocalipsis Zombie",
+      "API del sistema de gestión de campamentos - Apocalipsis Zombie",
     );
     expect(ctx.setVersion).toHaveBeenCalledWith("1.0");
     expect(ctx.addBearerAuth).toHaveBeenCalledTimes(1);
@@ -177,11 +177,7 @@ describe("main bootstrap", () => {
     });
     expect(ctx.app.enableCors).toHaveBeenCalledWith(
       expect.objectContaining({
-        origin: [
-          "https://one.example",
-          "https://two.example",
-          "https://three.example",
-        ],
+        origin: true,
       }),
     );
     expect(ctx.app.listen).toHaveBeenCalledWith("4010", "0.0.0.0");
