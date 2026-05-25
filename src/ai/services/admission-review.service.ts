@@ -216,18 +216,23 @@ export class AdmissionReviewService {
 
     // Enviar correo con credenciales al email registrado
     if (dto.email) {
-      this.mailService
-        .sendAccountCredentials(
+      try {
+        await this.mailService.sendAccountCredentials(
           dto.email,
           dto.username,
           dto.password,
           admission.camp?.name || "Campamento Refugio",
-        )
-        .catch((err) =>
-          this.logger.error(
-            `[AdmissionReview] Email de credenciales no pudo enviarse a ${dto.email}: ${String(err?.message ?? err)}`,
-          ),
         );
+      } catch (mailErr) {
+        this.logger.error(
+          `[AdmissionReview] Email de credenciales no pudo enviarse a ${dto.email}: ${String((mailErr as any)?.message ?? mailErr)}`,
+        );
+        // La cuenta fue creada exitosamente pero el correo falló.
+        // Lanzamos un error descriptivo para que el admin sepa que debe enviar las credenciales manualmente.
+        throw new BadRequestException(
+          `La cuenta fue creada correctamente, pero el correo no pudo enviarse a ${dto.email}. Verifica la configuración SMTP o contacta al candidato directamente.`,
+        );
+      }
     }
 
     return savedAccount;

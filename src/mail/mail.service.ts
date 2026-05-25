@@ -63,7 +63,10 @@ export class MailService {
           `[MailService] ⚠ Usando Ethereal (emails de prueba, NO llegan a destinatarios reales). Configura RESEND_API_KEY o SMTP_HOST/USER/PASS para producción.`,
         );
       } catch (error) {
-        this.logger.error("[MailService] No se pudo inicializar ningún transporte de correo.", error);
+        this.logger.error(
+          "[MailService] No se pudo inicializar ningún transporte de correo.",
+          error,
+        );
       }
     }
   }
@@ -71,7 +74,7 @@ export class MailService {
   private getFromAddress(): string {
     return (
       this.configService.get<string>("SMTP_FROM") ||
-      '"Sistema Gestión del Fin" <noreply@doomsday-system-api.onrender.com>'
+      "Sistema Gestión del Fin <noreply@doomsday-system-api.onrender.com>"
     );
   }
 
@@ -155,7 +158,8 @@ export class MailService {
 
     if (isAccepted && registrationToken) {
       const frontendUrl =
-        this.configService.get<string>("FRONTEND_URL") || "http://localhost:5173";
+        this.configService.get<string>("FRONTEND_URL") ||
+        "http://localhost:5173";
       const registrationLink = `${frontendUrl}/register?token=${registrationToken}`;
       body += `
           <div style="margin-top:40px;border-top:2px dashed #b5a990;padding-top:30px;">
