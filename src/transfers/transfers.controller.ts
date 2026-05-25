@@ -27,7 +27,7 @@ export class TransfersController {
   constructor(private readonly transfersService: TransfersService) {}
 
   @Post("requests")
-  @Roles("admin", "resource_manager", "travel_manager")
+  @Roles("admin", "resource_manager", "travel_manager", "camp_leader")
   @ApiOperation({
     summary: "Crear solicitud de transferencia inter-campamento",
   })
@@ -46,7 +46,7 @@ export class TransfersController {
   }
 
   @Get("requests/camp/:campId")
-  @Roles("admin", "resource_manager", "travel_manager")
+  @Roles("admin", "resource_manager", "travel_manager", "camp_leader")
   @ApiOperation({ summary: "Listar solicitudes de un campamento" })
   @ApiQuery({
     name: "role",
@@ -76,14 +76,14 @@ export class TransfersController {
   }
 
   @Get("requests/camp/:campId/pending")
-  @Roles("admin", "resource_manager", "travel_manager")
+  @Roles("admin", "resource_manager", "travel_manager", "camp_leader")
   @ApiOperation({ summary: "Solicitudes pendientes de aprobacion" })
   async getPendingRequests(@Param("campId", ParseIntPipe) campId: number) {
     return this.transfersService.findPendingRequestsByCamp(campId);
   }
 
   @Patch("requests/:id/approval")
-  @Roles("admin", "resource_manager", "travel_manager")
+  @Roles("admin", "resource_manager", "travel_manager", "camp_leader")
   @ApiOperation({ summary: "Aprobar o rechazar solicitud de transferencia" })
   async approveOrReject(
     @Param("id", ParseIntPipe) id: number,
@@ -94,7 +94,7 @@ export class TransfersController {
   }
 
   @Patch("requests/:id/cancel")
-  @Roles("admin", "resource_manager", "travel_manager")
+  @Roles("admin", "resource_manager", "travel_manager", "camp_leader")
   @ApiOperation({
     summary: "Cancelar solicitud pendiente (solo campamento origen)",
   })
@@ -118,7 +118,7 @@ export class TransfersController {
   }
 
   @Get("statistics/:campId")
-  @Roles("admin", "resource_manager")
+  @Roles("admin", "resource_manager", "camp_leader")
   @ApiOperation({ summary: "Estadisticas de transferencias del campamento" })
   async getStatistics(@Param("campId", ParseIntPipe) campId: number) {
     return this.transfersService.getTransferStatistics(campId);

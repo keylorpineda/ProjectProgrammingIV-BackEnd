@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Param, ParseIntPipe } from "@nestjs/common";
+import { Controller, Get, Param, ParseIntPipe } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import {
   DashboardService,
@@ -15,7 +15,7 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get("leaderboard")
-  @Roles("admin", "resource_manager")
+  @Roles("admin", "resource_manager", "camp_leader")
   @ApiOperation({
     summary: "Get top 10 camps by survival score",
   })
@@ -24,7 +24,7 @@ export class DashboardController {
   }
 
   @Get(":campId")
-  @Roles("admin", "resource_manager")
+  @Roles("admin", "resource_manager", "camp_leader")
   @ApiOperation({
     summary: "Get dashboard metrics by camp and role visibility",
   })

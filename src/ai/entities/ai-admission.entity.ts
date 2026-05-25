@@ -63,6 +63,12 @@ export class AiAdmission {
   @Column({ type: "timestamptz", nullable: true })
   review_date: Date;
 
+  @Column({ type: "text", nullable: true })
+  registration_token: string | null;
+
+  @Column({ type: "timestamptz", nullable: true })
+  token_expires_at: Date | null;
+
   @Index()
   @ManyToOne(() => Camp)
   @JoinColumn({ name: "camp_id" })

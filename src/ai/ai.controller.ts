@@ -15,6 +15,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
   ApiParam,
+  ApiBody,
 } from "@nestjs/swagger";
 import { AiService } from "./ai.service";
 import { SubmitAdmissionDto } from "./dto/submit-admission.dto";
@@ -47,7 +48,7 @@ export class AiController {
 
   @ApiBearerAuth()
   @Get("admissions/pending")
-  @Roles("admin", "resource_manager")
+  @Roles("admin", "resource_manager", "camp_leader")
   @ApiOperation({ summary: "Get pending admissions for review" })
   @ApiQuery({ name: "campId", required: false, description: "Filter by camp" })
   @ApiQuery({ name: "page", required: false, description: "Page number" })
@@ -66,7 +67,7 @@ export class AiController {
 
   @ApiBearerAuth()
   @Get("admissions/:id")
-  @Roles("admin", "resource_manager")
+  @Roles("admin", "resource_manager", "camp_leader")
   @ApiOperation({ summary: "Get admission detail" })
   @ApiParam({ name: "id", description: "Admission ID" })
   async getAdmissionDetail(@Param("id", ParseIntPipe) id: number) {
@@ -75,7 +76,7 @@ export class AiController {
 
   @ApiBearerAuth()
   @Post("admissions/:id/review")
-  @Roles("admin")
+  @Roles("admin", "camp_leader")
   @ApiOperation({ summary: "Review and accept/reject admission" })
   @ApiParam({ name: "id", description: "Admission ID" })
   async reviewAdmission(
@@ -88,7 +89,7 @@ export class AiController {
 
   @ApiBearerAuth()
   @Post("admissions/:id/create-account")
-  @Roles("admin")
+  @Roles("admin", "camp_leader")
   @ApiOperation({ summary: "Create user account for accepted person" })
   @ApiParam({ name: "id", description: "Admission ID" })
   async createUserAccount(
@@ -96,5 +97,29 @@ export class AiController {
     @Body() dto: CreateUserAccountDto,
   ) {
     return this.aiService.createUserAccountForPerson(id, dto);
+  }
+
+  @Post("admissions/complete-registration")
+  @ApiOperation({ summary: "Complete registration using email token" })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        token: { type: "string" },
+        username: { type: "string" },
+        password: { type: "string" },
+        email: { type: "string" },
+      },
+    },
+  })
+  async completeRegistration(
+    @Body() body: { token: string; username: string; password: string; email: string },
+  ) {
+    const dto = new CreateUserAccountDto();
+    dto.username = body.username;
+    dto.password = body.password;
+    dto.email = body.email;
+    dto.role_id = 2; // Default worker role
+    return this.aiService.completeRegistrationFromToken(body.token, dto);
   }
 }

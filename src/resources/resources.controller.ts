@@ -40,7 +40,7 @@ export class ResourcesController {
   }
 
   @Get("inventory/:campId/alerts")
-  @Roles("admin", "resource_manager")
+  @Roles("admin", "resource_manager", "camp_leader")
   @ApiOperation({ summary: "Alertas de recursos por debajo del m�nimo" })
   async getAlerts(@Param("campId", ParseIntPipe) campId: number) {
     return this.resourcesService.getInventoryAlerts(campId);
@@ -103,7 +103,7 @@ export class ResourcesController {
   }
 
   @Post("daily-process/:campId")
-  @Roles("admin", "resource_manager")
+  @Roles("admin", "resource_manager", "camp_leader")
   @ApiOperation({
     summary: "Ejecutar proceso diario manualmente (produccion + consumo)",
   })

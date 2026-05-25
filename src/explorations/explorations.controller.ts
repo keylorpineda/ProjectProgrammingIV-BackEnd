@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Get,
   Post,
@@ -29,7 +29,7 @@ export class ExplorationsController {
   }
 
   @Get()
-  @Roles("admin", "travel_manager", "resource_manager")
+  @Roles("admin", "travel_manager", "resource_manager", "camp_leader")
   @ApiOperation({ summary: "Listar exploraciones con filtros opcionales" })
   findAll(@Query("campId") campId?: string, @Query("status") status?: string) {
     return this.explorationsService.findAll(
@@ -39,7 +39,7 @@ export class ExplorationsController {
   }
 
   @Get(":id")
-  @Roles("admin", "travel_manager", "resource_manager")
+  @Roles("admin", "travel_manager", "resource_manager", "camp_leader")
   @ApiOperation({ summary: "Obtener detalle de una exploracion" })
   findById(@Param("id", ParseIntPipe) id: number) {
     return this.explorationsService.findById(id);

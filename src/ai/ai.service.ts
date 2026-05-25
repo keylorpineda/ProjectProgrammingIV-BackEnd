@@ -227,6 +227,13 @@ export class AiService {
     return this.reviewService.createUserAccountForPerson(admissionId, dto);
   }
 
+  async completeRegistrationFromToken(
+    token: string,
+    dto: CreateUserAccountDto,
+  ) {
+    return this.reviewService.completeRegistrationFromToken(token, dto);
+  }
+
   private generateTrackingCode(): string {
     const year = new Date().getFullYear();
     const random = Math.random().toString(36).substring(2, 8).toUpperCase();

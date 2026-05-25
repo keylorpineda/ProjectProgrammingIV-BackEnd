@@ -15,6 +15,8 @@ import {
 import { CreateUserAccountDto } from "../dto/create-user-account.dto";
 import { PersonStatus } from "../../users/constants/professions.constants";
 import * as bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
+import { MailService } from "../../mail/mail.service";
 
 @Injectable()
 export class AdmissionReviewService {
@@ -25,6 +27,7 @@ export class AdmissionReviewService {
     private readonly personRepo: Repository<Person>,
     @InjectRepository(UserAccount)
     private readonly userAccountRepo: Repository<UserAccount>,
+    private readonly mailService: MailService,
   ) {}
 
   async reviewAdmission(
@@ -83,7 +86,25 @@ export class AdmissionReviewService {
       admission.admin_notes = dto.notes || "";
       admission.review_date = new Date();
 
+      const candidateEmail = candidateData.contact_email;
+      if (candidateEmail) {
+        admission.registration_token = randomUUID();
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 48); // Token válido por 48 horas
+        admission.token_expires_at = expiresAt;
+      }
+
       await this.admissionRepo.save(admission);
+
+      if (candidateEmail) {
+        await this.mailService.sendAdmissionDecision(
+          candidateEmail,
+          'accepted',
+          admission.justification || 'Aprobado satisfactoriamente.',
+          admission.camp?.name || 'Campamento Refugio',
+          admission.registration_token || undefined
+        );
+      }
 
       return { admission, person: savedPerson };
     }
@@ -95,6 +116,16 @@ export class AdmissionReviewService {
     admission.review_date = new Date();
 
     await this.admissionRepo.save(admission);
+
+    const candidateEmail = candidateData?.contact_email;
+    if (candidateEmail) {
+      await this.mailService.sendAdmissionDecision(
+        candidateEmail,
+        'rejected',
+        admission.justification || 'Tu solicitud ha sido denegada por motivos de seguridad.',
+        admission.camp?.name || 'Campamento Refugio'
+      );
+    }
 
     return { admission };
   }
@@ -136,6 +167,63 @@ export class AdmissionReviewService {
     });
 
     return this.userAccountRepo.save(userAccount);
+  }
+
+  async completeRegistrationFromToken(
+    token: string,
+    dto: CreateUserAccountDto,
+  ): Promise<UserAccount> {
+    const admission = await this.admissionRepo.findOne({
+      where: { registration_token: token },
+      relations: ["person", "camp"],
+    });
+
+    if (!admission || !admission.person_id) {
+      throw new BadRequestException("Invalid or expired registration token");
+    }
+
+    if (
+      !admission.token_expires_at ||
+      new Date() > new Date(admission.token_expires_at)
+    ) {
+      throw new BadRequestException("Registration token has expired");
+    }
+
+    if (admission.status !== "ACCEPTED") {
+      throw new BadRequestException("Admission not accepted");
+    }
+
+    // Role ID 2 is usually "worker". We will use the provided role_id or default to 2.
+    // However, the dto requires role_id.
+    const finalRoleId = dto.role_id || 2; 
+
+    const existingAccount = await this.userAccountRepo.findOne({
+      where: { person_id: admission.person_id },
+    });
+
+    if (existingAccount) {
+      throw new BadRequestException("User account already exists");
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+
+    const userAccount = this.userAccountRepo.create({
+      person_id: admission.person_id,
+      camp_id: admission.camp_id,
+      role_id: finalRoleId,
+      username: dto.username,
+      email: dto.email,
+      password_hash: passwordHash,
+    });
+
+    const savedAccount = await this.userAccountRepo.save(userAccount);
+
+    // Invalidate token
+    admission.registration_token = null;
+    admission.token_expires_at = null;
+    await this.admissionRepo.save(admission);
+
+    return savedAccount;
   }
 
   private generateSurvivorCode(): string {

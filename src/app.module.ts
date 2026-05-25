@@ -23,6 +23,7 @@ import { DatabaseModule } from "./database/database.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { RedisModule } from "./redis/redis.module";
 import { BullModule } from "@nestjs/bullmq";
+import { MailModule } from "./mail/mail.module";
 import Redis from "ioredis";
 
 @Module({
@@ -100,6 +101,7 @@ import Redis from "ioredis";
     UploadModule,
     DatabaseModule,
     NotificationsModule,
+    MailModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

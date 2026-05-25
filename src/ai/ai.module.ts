@@ -12,6 +12,7 @@ import { CampAnalysisService } from "./services/camp-analysis.service";
 import { AiEvaluationService } from "./services/ai-evaluation.service";
 import { AdmissionReviewService } from "./services/admission-review.service";
 import { PythonAiService } from "./services/python-ai.service";
+import { MailModule } from "../mail/mail.module";
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { PythonAiService } from "./services/python-ai.service";
       UserAccount,
     ]),
     UsersModule,
+    MailModule,
   ],
   controllers: [AiController],
   providers: [
