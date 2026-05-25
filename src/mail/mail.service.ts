@@ -179,4 +179,89 @@ export class MailService {
       throw error;
     }
   }
+
+  async sendAccountCredentials(
+    email: string,
+    username: string,
+    password: string,
+    campName: string,
+  ) {
+    if (!this.transporter) {
+      this.logger.warn("Transporter not initialized yet. Skipping email send.");
+      return;
+    }
+
+    const frontendUrl =
+      this.configService.get<string>("FRONTEND_URL") || "http://localhost:5173";
+
+    const subject = `[TRANSMISIÓN SEGURA] Credenciales de acceso — ${campName}`;
+
+    const body = `
+      <div style="background-color: #e5e0d8; padding: 40px 20px; font-family: 'Courier New', Courier, monospace; color: #1a1a1a; min-height: 100vh;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #f4f1ea; padding: 40px; border: 1px solid #d0c9b4; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+
+          <div style="text-align: center; border-bottom: 2px dashed #b5a990; padding-bottom: 20px; margin-bottom: 30px;">
+            <div style="font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #2a2a2a; font-family: Impact, sans-serif;">GESTIÓN DEL FIN</div>
+            <div style="font-size: 12px; font-weight: bold; letter-spacing: 2px; color: #5a5a5a;">SISTEMA OFICIAL DE ADMISIONES</div>
+            <div style="display: inline-block; border: 2px solid #0f5132; color: #0f5132; font-weight: bold; padding: 4px 12px; margin-top: 15px; font-family: 'Courier New', monospace; letter-spacing: 2px;">
+              [ ACCESO AUTORIZADO ]
+            </div>
+          </div>
+
+          <div style="font-size: 14px; line-height: 1.8; color: #2d2d2d;">
+            <p><strong>FECHA:</strong> ${new Date().toLocaleDateString()}</p>
+            <p><strong>CAMPAMENTO:</strong> ${campName}</p>
+            <br/>
+            <p>Sus credenciales de acceso al sistema han sido generadas. Guárdelas en lugar seguro y no las comparta con ningún otro residente.</p>
+
+            <div style="background-color: #fffdf7; border: 2px solid #5a5a5a; border-left: 8px solid #0f5132; padding: 24px; margin: 30px 0; font-family: 'Courier New', monospace;">
+              <div style="font-weight: 900; font-size: 14px; letter-spacing: 2px; margin-bottom: 16px; text-transform: uppercase;">CREDENCIALES DE ACCESO</div>
+              <div style="margin-bottom: 10px;">
+                <span style="font-size: 11px; color: #666; text-transform: uppercase; display: block;">Usuario</span>
+                <span style="font-size: 18px; font-weight: bold; color: #1a1a1a; letter-spacing: 1px;">${username}</span>
+              </div>
+              <div style="margin-top: 14px; margin-bottom: 10px;">
+                <span style="font-size: 11px; color: #666; text-transform: uppercase; display: block;">Contraseña temporal</span>
+                <span style="font-size: 18px; font-weight: bold; color: #8b0000; letter-spacing: 2px; font-family: monospace;">${password}</span>
+              </div>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${frontendUrl}/login" style="display: inline-block; background-color: #2a2a2a; color: #fff; font-weight: bold; padding: 14px 30px; text-decoration: none; text-transform: uppercase; letter-spacing: 2px; font-size: 14px;">
+                INGRESAR AL SISTEMA
+              </a>
+            </div>
+
+            <p style="font-size: 12px; color: #666;">Se recomienda cambiar la contraseña tras el primer inicio de sesión.</p>
+          </div>
+
+          <div style="margin-top: 40px; font-size: 11px; color: #5a5a5a; border-top: 1px solid #d0c9b4; padding-top: 10px; text-align: right;">
+            <p>___________________________</p>
+            <p>OFICIAL A CARGO — ${campName}</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    try {
+      const info = await this.transporter.sendMail({
+        from:
+          this.configService.get<string>("SMTP_FROM") ||
+          '"Sistema de Gestión del Fin" <system@doomsday.local>',
+        to: email,
+        subject,
+        html: body,
+      });
+      this.logger.log(
+        `[MailService] Credenciales enviadas a ${email}: ${info.messageId}`,
+      );
+      return info;
+    } catch (error) {
+      this.logger.error(
+        `[MailService] Error al enviar credenciales a ${email}`,
+        error,
+      );
+      throw error;
+    }
+  }
 }

@@ -190,7 +190,25 @@ export class AdmissionReviewService {
       password_hash: passwordHash,
     });
 
-    return this.userAccountRepo.save(userAccount);
+    const savedAccount = await this.userAccountRepo.save(userAccount);
+
+    // Enviar correo con credenciales al email registrado
+    if (dto.email) {
+      this.mailService
+        .sendAccountCredentials(
+          dto.email,
+          dto.username,
+          dto.password,
+          admission.camp?.name || "Campamento Refugio",
+        )
+        .catch((err) =>
+          this.logger.error(
+            `[AdmissionReview] Email de credenciales no pudo enviarse a ${dto.email}: ${String(err?.message ?? err)}`,
+          ),
+        );
+    }
+
+    return savedAccount;
   }
 
   async completeRegistrationFromToken(
