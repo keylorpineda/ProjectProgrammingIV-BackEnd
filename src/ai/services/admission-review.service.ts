@@ -7,6 +7,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { AiAdmission } from "../entities/ai-admission.entity";
 import { Person } from "../../users/entities/person.entity";
+import { Profession } from "../../users/entities/profession.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
 import {
   AdmissionDecision,
@@ -51,11 +52,15 @@ export class AdmissionReviewService {
     const candidateData: any = admission.candidate_data;
 
     if (dto.decision === AdmissionDecision.ACCEPTED) {
-      const professionId =
+      let professionId =
         dto.override_profession_id || admission.suggested_profession_id;
 
       if (!professionId) {
-        throw new BadRequestException("Profession ID required");
+        // Buscar una profesión por defecto si la IA no sugirió ninguna
+        const defaultProf = await this.personRepo.manager.findOne(Profession, {
+          where: {},
+        });
+        professionId = defaultProf ? defaultProf.id : 1;
       }
 
       const person = this.personRepo.create({
