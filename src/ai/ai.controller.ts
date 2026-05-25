@@ -48,7 +48,13 @@ export class AiController {
 
   @ApiBearerAuth()
   @Get("admissions/pending")
-  @Roles("admin", "resource_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Get pending admissions for review" })
   @ApiQuery({ name: "campId", required: false, description: "Filter by camp" })
   @ApiQuery({ name: "page", required: false, description: "Page number" })
@@ -67,7 +73,13 @@ export class AiController {
 
   @ApiBearerAuth()
   @Get("admissions/:id")
-  @Roles("admin", "resource_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Get admission detail" })
   @ApiParam({ name: "id", description: "Admission ID" })
   async getAdmissionDetail(@Param("id", ParseIntPipe) id: number) {
@@ -76,7 +88,7 @@ export class AiController {
 
   @ApiBearerAuth()
   @Post("admissions/:id/review")
-  @Roles("admin", "camp_leader")
+  @Roles("admin", "camp_leader", "travel_manager", "camp_manager")
   @ApiOperation({ summary: "Review and accept/reject admission" })
   @ApiParam({ name: "id", description: "Admission ID" })
   async reviewAdmission(
@@ -89,7 +101,7 @@ export class AiController {
 
   @ApiBearerAuth()
   @Post("admissions/:id/create-account")
-  @Roles("admin", "camp_leader")
+  @Roles("admin", "camp_leader", "travel_manager", "camp_manager")
   @ApiOperation({ summary: "Create user account for accepted person" })
   @ApiParam({ name: "id", description: "Admission ID" })
   async createUserAccount(

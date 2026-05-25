@@ -33,7 +33,13 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get("persons")
-  @Roles("admin", "resource_manager", "travel_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "travel_manager",
+    "camp_leader",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Obtener todas las personas del campamento" })
   @ApiQuery({
     name: "campId",
@@ -70,21 +76,34 @@ export class UsersController {
   }
 
   @Get("persons/:id")
-  @Roles("admin", "resource_manager", "travel_manager", "worker", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "travel_manager",
+    "worker",
+    "camp_leader",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Obtener una persona por ID" })
   async getPersonById(@Param("id", ParseIntPipe) id: number) {
     return this.usersService.findPersonById(id);
   }
 
   @Post("persons")
-  @Roles("admin", "camp_leader")
+  @Roles("admin", "camp_leader", "travel_manager", "camp_manager")
   @ApiOperation({ summary: "Crear una nueva persona (despues de admision)" })
   async createPerson(@Body() dto: CreatePersonDto) {
     return this.usersService.createPerson(dto);
   }
 
   @Put("persons/:id")
-  @Roles("admin", "resource_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Actualizar informacion de una persona" })
   async updatePerson(
     @Param("id", ParseIntPipe) id: number,
@@ -94,7 +113,13 @@ export class UsersController {
   }
 
   @Put("persons/:id/status")
-  @Roles("admin", "resource_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({
     summary: "Cambiar estado de una persona (enfermo, herido, etc.)",
   })
@@ -106,7 +131,7 @@ export class UsersController {
   }
 
   @Delete("persons/:id")
-  @Roles("admin")
+  @Roles("admin", "travel_manager", "camp_manager")
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Eliminar una persona" })
   async deletePerson(@Param("id", ParseIntPipe) id: number) {
@@ -114,7 +139,13 @@ export class UsersController {
   }
 
   @Get("persons/stats/by-status")
-  @Roles("admin", "resource_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Estadisticas de personas por estado" })
   @ApiQuery({
     name: "campId",
@@ -128,7 +159,13 @@ export class UsersController {
   }
 
   @Get("persons/stats/by-profession")
-  @Roles("admin", "resource_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Estadisticas de personas por profesi�n" })
   @ApiQuery({
     name: "campId",
@@ -154,14 +191,20 @@ export class UsersController {
   }
 
   @Post("professions")
-  @Roles("admin")
+  @Roles("admin", "travel_manager", "camp_manager")
   @ApiOperation({ summary: "Crear una nueva profesion" })
   async createProfession(@Body() dto: CreateProfessionDto) {
     return this.usersService.createProfession(dto);
   }
 
   @Get("professions/alerts/needing-workers")
-  @Roles("admin", "resource_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({
     summary: "Obtener profesiones que necesitan trabajadores urgentemente",
   })
@@ -170,14 +213,26 @@ export class UsersController {
   }
 
   @Get("professions/alerts/with-excess")
-  @Roles("admin", "resource_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Obtener profesiones con exceso de trabajadores" })
   async getProfessionsWithExcess() {
     return this.usersService.getProfessionsWithExcess();
   }
 
   @Post("temporary-assignments")
-  @Roles("admin", "resource_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({
     summary: "Crear asignacion temporal (debe ser aprobada despu�s)",
   })
@@ -189,7 +244,13 @@ export class UsersController {
   }
 
   @Get("temporary-assignments")
-  @Roles("admin", "resource_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Obtener asignaciones temporales activas" })
   @ApiQuery({
     name: "campId",
@@ -203,7 +264,7 @@ export class UsersController {
   }
 
   @Put("temporary-assignments/:id/end")
-  @Roles("admin", "resource_manager")
+  @Roles("admin", "resource_manager", "travel_manager", "camp_manager")
   @ApiOperation({
     summary: "Finalizar asignacion temporal (devolver a profesion original)",
   })
@@ -212,28 +273,47 @@ export class UsersController {
   }
 
   @Get("camp/:campId/production")
-  @Roles("admin", "resource_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Calcular produccion diaria del campamento" })
   async getDailyProduction(@Param("campId", ParseIntPipe) campId: number) {
     return this.usersService.calculateDailyProduction(campId);
   }
 
   @Get("camp/:campId/consumption")
-  @Roles("admin", "resource_manager", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Calcular consumo diario del campamento" })
   async getDailyConsumption(@Param("campId", ParseIntPipe) campId: number) {
     return this.usersService.calculateDailyConsumption(campId);
   }
 
   @Get("camp/:campId/balance")
-  @Roles("admin", "resource_manager", "worker", "camp_leader")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "worker",
+    "camp_leader",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Calcular balance diario (produccion - consumo)" })
   async getDailyBalance(@Param("campId", ParseIntPipe) campId: number) {
     return this.usersService.calculateDailyBalance(campId);
   }
 
   @Get("me/assigned-resources")
-  @Roles("worker", "travel_manager")
+  @Roles("worker", "travel_manager", "camp_manager")
   @ApiOperation({
     summary: "Obtener recursos asignados al usuario autenticado",
   })
@@ -243,7 +323,13 @@ export class UsersController {
   }
 
   @Get("assets")
-  @Roles("admin", "resource_manager", "worker", "travel_manager")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "worker",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Listar todos los assets/insignias del sistema" })
   @ApiQuery({
     name: "type",
@@ -255,7 +341,13 @@ export class UsersController {
   }
 
   @Get("me/badges")
-  @Roles("admin", "resource_manager", "worker", "travel_manager")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "worker",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Obtener insignias ganadas por el usuario actual" })
   async getMyBadges(@CurrentUser() user: any) {
     const userId = user?.userId ?? user?.id;
@@ -263,7 +355,13 @@ export class UsersController {
   }
 
   @Post("me/badges/:id/display")
-  @Roles("admin", "resource_manager", "worker", "travel_manager")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "worker",
+    "travel_manager",
+    "camp_manager",
+  )
   @ApiOperation({ summary: "Mostrar u ocultar una insignia en el perfil" })
   async toggleBadgeDisplay(
     @Param("id", ParseIntPipe) badgeId: number,

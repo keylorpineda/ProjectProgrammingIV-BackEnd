@@ -29,7 +29,7 @@ export class CampsController {
   constructor(private readonly campsService: CampsService) {}
 
   @Post()
-  @Roles("admin")
+  @Roles("admin", "travel_manager", "camp_manager")
   @ApiOperation({
     summary: "Crear campamento",
     description:
@@ -66,7 +66,7 @@ export class CampsController {
   }
 
   @Patch(":id")
-  @Roles("admin")
+  @Roles("admin", "travel_manager", "camp_manager")
   @ApiOperation({
     summary: "Actualizar campamento",
     description: "Actualiza los datos de un campamento existente.",
@@ -79,7 +79,7 @@ export class CampsController {
   }
 
   @Delete(":id")
-  @Roles("admin")
+  @Roles("admin", "travel_manager", "camp_manager")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Desactivar campamento",
