@@ -99,10 +99,10 @@ export class AdmissionReviewService {
       if (candidateEmail) {
         await this.mailService.sendAdmissionDecision(
           candidateEmail,
-          'accepted',
-          admission.justification || 'Aprobado satisfactoriamente.',
-          admission.camp?.name || 'Campamento Refugio',
-          admission.registration_token || undefined
+          "accepted",
+          admission.justification || "Aprobado satisfactoriamente.",
+          admission.camp?.name || "Campamento Refugio",
+          admission.registration_token || undefined,
         );
       }
 
@@ -121,9 +121,10 @@ export class AdmissionReviewService {
     if (candidateEmail) {
       await this.mailService.sendAdmissionDecision(
         candidateEmail,
-        'rejected',
-        admission.justification || 'Tu solicitud ha sido denegada por motivos de seguridad.',
-        admission.camp?.name || 'Campamento Refugio'
+        "rejected",
+        admission.justification ||
+          "Tu solicitud ha sido denegada por motivos de seguridad.",
+        admission.camp?.name || "Campamento Refugio",
       );
     }
 
@@ -195,7 +196,7 @@ export class AdmissionReviewService {
 
     // Role ID 2 is usually "worker". We will use the provided role_id or default to 2.
     // However, the dto requires role_id.
-    const finalRoleId = dto.role_id || 2; 
+    const finalRoleId = dto.role_id || 2;
 
     const existingAccount = await this.userAccountRepo.findOne({
       where: { person_id: admission.person_id },

@@ -113,7 +113,13 @@ export class AiController {
     },
   })
   async completeRegistration(
-    @Body() body: { token: string; username: string; password: string; email: string },
+    @Body()
+    body: {
+      token: string;
+      username: string;
+      password: string;
+      email: string;
+    },
   ) {
     const dto = new CreateUserAccountDto();
     dto.username = body.username;
