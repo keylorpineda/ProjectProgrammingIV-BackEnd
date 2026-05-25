@@ -83,20 +83,43 @@ export class MailService {
     subject: string;
     html: string;
   }): Promise<void> {
-    if (this.resend) {
-      const from =
-        this.configService.get<string>("RESEND_FROM") ||
-        "Sistema Admisiones <onboarding@resend.dev>";
-      const result = await this.resend.emails.send({
-        from,
-        to: opts.to,
-        subject: opts.subject,
-        html: opts.html,
-      });
-      this.logger.log(
-        `[MailService] Resend: correo enviado a ${opts.to} — id=${result.data?.id ?? "?"}`,
-      );
-      return;
+    const brevoApiKey = this.configService.get<string>("BREVO_API_KEY");
+    if (brevoApiKey) {
+      try {
+        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "api-key": brevoApiKey,
+          },
+          body: JSON.stringify({
+            sender: {
+              name: "Sistema Admisiones",
+              email: "sistemareservaspz@gmail.com",
+            },
+            to: [{ email: opts.to }],
+            subject: opts.subject,
+            htmlContent: opts.html,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`Brevo API Error: ${response.status} - ${errorBody}`);
+        }
+
+        const result = await response.json();
+        this.logger.log(
+          `[MailService] Brevo HTTP API: correo enviado a ${opts.to} — id=${result.messageId ?? "?"}`,
+        );
+        return;
+      } catch (error) {
+        this.logger.error(
+          `[MailService] Error enviando correo con Brevo a ${opts.to}`,
+          error,
+        );
+        throw error;
+      }
     }
 
     if (this.transporter) {
