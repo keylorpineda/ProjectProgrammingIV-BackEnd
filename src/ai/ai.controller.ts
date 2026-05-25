@@ -111,6 +111,7 @@ export class AiController {
     return this.aiService.createUserAccountForPerson(id, dto);
   }
 
+  @Public()
   @Post("admissions/complete-registration")
   @ApiOperation({ summary: "Complete registration using email token" })
   @ApiBody({

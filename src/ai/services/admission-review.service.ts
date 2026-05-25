@@ -221,7 +221,10 @@ export class AdmissionReviewService {
       camp_id: admission.camp_id,
       role_id: finalRoleId,
       username: dto.username,
-      email: dto.email,
+      email:
+        dto.email ||
+        (admission.candidate_data as any).contact_email ||
+        `${dto.username}@camp.local`,
       password_hash: passwordHash,
     });
 
