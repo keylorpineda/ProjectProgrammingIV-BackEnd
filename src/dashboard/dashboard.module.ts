@@ -45,19 +45,21 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
                 password: configService.get<string>("REDIS_PASSWORD"),
                 ttl: 300000,
               };
-          
+
           const store = await redisStore(storeOptions);
-          
+
           // Handle errors gracefully so they don't crash the entire NestJS app
           if (store && (store as any).client) {
-            (store as any).client.on('error', (err: any) => {
-              console.error('Cache Redis Error (Ignored):', err.message);
+            (store as any).client.on("error", (err: any) => {
+              console.error("Cache Redis Error (Ignored):", err.message);
             });
           }
 
           return { store };
         } catch (err) {
-          console.warn('Could not connect to Redis Cache, falling back to memory cache.');
+          console.warn(
+            "Could not connect to Redis Cache, falling back to memory cache.",
+          );
           return { ttl: 300000 };
         }
       },
