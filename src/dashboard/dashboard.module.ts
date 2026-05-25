@@ -35,20 +35,29 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
           const { redisStore } = await import("cache-manager-redis-yet");
           const redisUrl = configService.get<string>("REDIS_URL");
           const storeOptions = redisUrl
-            ? { url: redisUrl, ttl: 300000 }
+            ? { url: redisUrl, socket: { family: 4 }, ttl: 300000 }
             : {
                 socket: {
                   host: configService.get<string>("REDIS_HOST", "localhost"),
                   port: configService.get<number>("REDIS_PORT", 6379),
+                  family: 4,
                 },
                 password: configService.get<string>("REDIS_PASSWORD"),
                 ttl: 300000,
               };
-          return {
-            store: await redisStore(storeOptions),
-          };
-        } catch {
-          // Fallback to default in-memory store to avoid startup failures.
+          
+          const store = await redisStore(storeOptions);
+          
+          // Handle errors gracefully so they don't crash the entire NestJS app
+          if (store && (store as any).client) {
+            (store as any).client.on('error', (err: any) => {
+              console.error('Cache Redis Error (Ignored):', err.message);
+            });
+          }
+
+          return { store };
+        } catch (err) {
+          console.warn('Could not connect to Redis Cache, falling back to memory cache.');
           return { ttl: 300000 };
         }
       },
