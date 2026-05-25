@@ -18,6 +18,7 @@ import { CreateUserAccountDto } from "../dto/create-user-account.dto";
 import { PersonStatus } from "../../users/constants/professions.constants";
 import * as bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
+import { QueryFailedError } from "typeorm";
 import { MailService } from "../../mail/mail.service";
 
 @Injectable()
@@ -190,7 +191,28 @@ export class AdmissionReviewService {
       password_hash: passwordHash,
     });
 
-    const savedAccount = await this.userAccountRepo.save(userAccount);
+    let savedAccount: UserAccount;
+    try {
+      savedAccount = await this.userAccountRepo.save(userAccount);
+    } catch (err) {
+      if (err instanceof QueryFailedError) {
+        const detail = (err as any).detail as string | undefined;
+        if (detail?.includes("username")) {
+          throw new BadRequestException(
+            `El nombre de usuario "${dto.username}" ya está en uso. Elige otro.`,
+          );
+        }
+        if (detail?.includes("email")) {
+          throw new BadRequestException(
+            `El correo "${dto.email}" ya está registrado en el sistema.`,
+          );
+        }
+        throw new BadRequestException(
+          "No se pudo crear la cuenta: conflicto de datos únicos.",
+        );
+      }
+      throw err;
+    }
 
     // Enviar correo con credenciales al email registrado
     if (dto.email) {
