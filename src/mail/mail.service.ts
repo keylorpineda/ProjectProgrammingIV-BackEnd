@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import * as nodemailer from "nodemailer";
 
 @Injectable()
@@ -6,17 +7,16 @@ export class MailService {
   private readonly logger = new Logger(MailService.name);
   private transporter: nodemailer.Transporter;
 
-  constructor() {
+  constructor(private configService: ConfigService) {
     this.init();
   }
 
   private async init() {
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = process.env.SMTP_PORT
-      ? parseInt(process.env.SMTP_PORT, 10)
-      : 587;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
+    const smtpHost = this.configService.get<string>("SMTP_HOST");
+    const smtpPortStr = this.configService.get<string>("SMTP_PORT");
+    const smtpPort = smtpPortStr ? parseInt(smtpPortStr, 10) : 587;
+    const smtpUser = this.configService.get<string>("SMTP_USER");
+    const smtpPass = this.configService.get<string>("SMTP_PASS");
 
     if (smtpHost && smtpUser && smtpPass) {
       // Usar proveedor SMTP real (Render/Produccion)
@@ -108,7 +108,9 @@ export class MailService {
     `;
 
     if (isAccepted && registrationToken) {
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+      const frontendUrl =
+        this.configService.get<string>("FRONTEND_URL") ||
+        "http://localhost:5173";
       const registrationLink = `${frontendUrl}/register?token=${registrationToken}`;
 
       body += `
@@ -144,7 +146,7 @@ export class MailService {
     try {
       const info = await this.transporter.sendMail({
         from:
-          process.env.SMTP_FROM ||
+          this.configService.get<string>("SMTP_FROM") ||
           '"Sistema de Gestión del Fin" <system@doomsday.local>',
         to: email,
         subject: subject,
@@ -154,7 +156,7 @@ export class MailService {
       this.logger.log(`Message sent: ${info.messageId}`);
 
       // Mostrar la URL de prueba solo si no estamos usando un SMTP de producción real
-      if (!process.env.SMTP_HOST) {
+      if (!this.configService.get<string>("SMTP_HOST")) {
         this.logger.log(`Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
       }
       return info;

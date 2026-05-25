@@ -79,6 +79,9 @@ export class AdmissionReviewService {
 
       const savedPerson = await this.personRepo.save(person);
 
+      if (dto.assign_to_camp_id) {
+        admission.camp_id = dto.assign_to_camp_id;
+      }
       admission.person_id = savedPerson.id;
       admission.status = "ACCEPTED";
       admission.final_human_decision = "ACCEPTED";

@@ -31,63 +31,79 @@ export class AiService {
   ) {}
 
   async submitAdmission(dto: SubmitAdmissionDto): Promise<AiAdmission> {
-    const camp = await this.campRepo.findOne({ where: { id: dto.camp_id } });
-    if (!camp) {
-      throw new NotFoundException(`Camp ${dto.camp_id} not found`);
+    const allCamps = await this.campRepo.find();
+    if (allCamps.length === 0) {
+      throw new NotFoundException("No camps found in the system");
     }
 
-    const campContext = await this.campAnalysisService.analyzeCampContext(
-      dto.camp_id,
-    );
-    const criticalRule = this.evaluationService.checkCriticalRules(
-      dto,
-      campContext,
-    );
+    let bestScore = -1;
+    let bestEvaluation: EvaluationResult | null = null;
+    let bestCampContext = null;
+    let bestSuggestedProfession: Profession | null = null;
+    let bestCampId = dto.camp_id || allCamps[0].id;
 
-    let evaluation: EvaluationResult;
-    let suggestedProfession: Profession | null = null;
-
-    if (criticalRule.applies) {
-      evaluation = {
-        score: criticalRule.decision === "ACCEPT" ? 100 : 0,
-        decision: criticalRule.decision || "REJECT",
-        confidence: "CRITICAL",
-        factors: [
-          {
-            category: "Critical Rule",
-            score: 100,
-            maxScore: 100,
-            detail: criticalRule.reason || "",
-          },
-        ],
-      };
-    } else {
-      evaluation = await this.evaluationService.calculateAdmissionScore(
+    for (const camp of allCamps) {
+      const campContext = await this.campAnalysisService.analyzeCampContext(
+        camp.id,
+      );
+      const criticalRule = this.evaluationService.checkCriticalRules(
         dto,
         campContext,
       );
-      suggestedProfession = await this.evaluationService.matchProfession(
-        dto.skills,
-        campContext,
-      );
+
+      let evaluation: EvaluationResult;
+      let suggestedProfession: Profession | null = null;
+
+      if (criticalRule.applies) {
+        evaluation = {
+          score: criticalRule.decision === "ACCEPT" ? 100 : 0,
+          decision: criticalRule.decision || "REJECT",
+          confidence: "CRITICAL",
+          factors: [
+            {
+              category: "Critical Rule",
+              score: 100,
+              maxScore: 100,
+              detail: criticalRule.reason || "",
+            },
+          ],
+        };
+      } else {
+        evaluation = await this.evaluationService.calculateAdmissionScore(
+          dto,
+          campContext,
+        );
+        suggestedProfession = await this.evaluationService.matchProfession(
+          dto.skills,
+          campContext,
+        );
+      }
+
+      if (evaluation.score > bestScore) {
+        bestScore = evaluation.score;
+        bestEvaluation = evaluation;
+        bestCampContext = campContext;
+        bestSuggestedProfession = suggestedProfession;
+        bestCampId = camp.id;
+      }
     }
 
     const trackingCode = this.generateTrackingCode();
     const justification = this.evaluationService.generateJustification(
-      evaluation,
-      campContext,
+      bestEvaluation!,
+      bestCampContext!,
     );
 
     // -- Llamar al microservicio Python (NLP + Caja de Cristal) -------------
     const pythonResult = await this.pythonAiService.analyzeAdmission(dto);
 
-    let finalScore = evaluation.score;
-    let finalDecision: string = evaluation.decision;
+    let finalScore = bestEvaluation!.score;
+    let finalDecision: string = bestEvaluation!.decision;
     let finalJustification = justification;
 
     if (pythonResult) {
       finalScore = Math.round(
-        evaluation.score * 0.6 + pythonResult.nlp_percentage * 0.4,
+        bestEvaluation!.score * 0.6 + pythonResult.nlp_percentage * 0.4,
       );
 
       if (pythonResult.infection_detected) {
@@ -99,7 +115,7 @@ export class AiService {
         pythonResult.nlp_decision_hint === "RECOMMEND_ACCEPT" &&
         finalScore >= 60
       ) {
-        finalDecision = evaluation.decision;
+        finalDecision = bestEvaluation!.decision;
       }
 
       finalJustification = `${justification}\n\n${"-".repeat(64)}\nANALISIS IA (CAJA DE CRISTAL):\n${pythonResult.transparency_report}`;
@@ -111,15 +127,15 @@ export class AiService {
 
     const admission = this.admissionRepo.create({
       tracking_code: trackingCode,
-      camp_id: dto.camp_id,
+      camp_id: bestCampId,
       candidate_data: dto,
       score: finalScore,
       status: "PENDING_REVIEW",
       suggested_decision: finalDecision,
-      suggested_profession_id: suggestedProfession?.id || null,
+      suggested_profession_id: bestSuggestedProfession?.id || null,
       justification: finalJustification,
       raw_ai_response: {
-        nestjs_evaluation: evaluation,
+        nestjs_evaluation: bestEvaluation,
         python_nlp: pythonResult ?? null,
         combined_score: finalScore,
         scoring_method: pythonResult

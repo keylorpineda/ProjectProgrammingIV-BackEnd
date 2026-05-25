@@ -23,4 +23,12 @@ export class ReviewAdmissionDto {
   @IsOptional()
   @IsInt()
   override_profession_id?: number;
+
+  @ApiPropertyOptional({
+    example: 2,
+    description: "Assign candidate to this camp ID instead of default",
+  })
+  @IsOptional()
+  @IsInt()
+  assign_to_camp_id?: number;
 }
