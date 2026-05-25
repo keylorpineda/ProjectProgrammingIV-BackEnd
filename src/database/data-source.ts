@@ -12,7 +12,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME,
   entities: ["src/**/*.entity.ts"],
   migrations: ["src/database/migrations/*.ts"],
-  synchronize: false,
+  synchronize: true,
   ssl:
     process.env.NODE_ENV === "production"
       ? { rejectUnauthorized: false }
