@@ -5,9 +5,10 @@ module.exports = {
     tsconfigRootDir: __dirname,
     sourceType: 'module',
   },
-  plugins: ['@typescript-eslint/eslint-plugin'],
+  plugins: ['@typescript-eslint/eslint-plugin', 'security'],
   extends: [
     'plugin:@typescript-eslint/recommended',
+    'plugin:security/recommended-legacy',
     'plugin:prettier/recommended',
   ],
   root: true,
@@ -18,5 +19,18 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-explicit-any': 'off',
+
+    // Reglas de seguridad — warn en vez de error para no bloquear el flujo actual,
+    // pero sí visibilizar problemas de seguridad reales.
+    'security/detect-object-injection': 'warn',
+    'security/detect-non-literal-regexp': 'warn',
+    'security/detect-non-literal-fs-filename': 'warn',
+    'security/detect-possible-timing-attacks': 'error',
+
+    // Buenas prácticas TS adicionales
+    // warn: hay instancias existentes; se irán corrigiendo progresivamente
+    '@typescript-eslint/no-floating-promises': 'warn',
+    '@typescript-eslint/no-misused-promises': 'error',
+    '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
   },
 };

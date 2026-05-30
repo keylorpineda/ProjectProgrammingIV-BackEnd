@@ -1,7 +1,7 @@
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
-import { NestExpressApplication } from "@nestjs/platform-express";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { json, urlencoded } from "express";
 import helmet from "helmet";
 import * as cookieParser from "cookie-parser";
@@ -67,4 +67,4 @@ async function bootstrap() {
   console.log(`API corriendo en: ${baseUrl}/api/v1`);
   console.log(`Swagger docs:     ${baseUrl}/api/v1/docs`);
 }
-bootstrap();
+void bootstrap();
