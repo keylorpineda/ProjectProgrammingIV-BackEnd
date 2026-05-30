@@ -7,16 +7,16 @@ module.exports = {
       2,
       "always",
       [
-        "feat",     // nueva funcionalidad
-        "fix",      // corrección de bug
+        "feat", // nueva funcionalidad
+        "fix", // corrección de bug
         "refactor", // refactor sin cambio funcional
-        "test",     // añadir o corregir tests
-        "docs",     // sólo documentación
-        "chore",    // tareas de mantenimiento (deps, config)
-        "perf",     // mejora de rendimiento
-        "style",    // formato, espacios (sin cambio lógico)
-        "ci",       // cambios en CI/CD
-        "revert",   // revertir commit anterior
+        "test", // añadir o corregir tests
+        "docs", // sólo documentación
+        "chore", // tareas de mantenimiento (deps, config)
+        "perf", // mejora de rendimiento
+        "style", // formato, espacios (sin cambio lógico)
+        "ci", // cambios en CI/CD
+        "revert", // revertir commit anterior
       ],
     ],
     "subject-case": [0, "always", "lower-case"],

@@ -104,10 +104,13 @@
     "typescript": "^5.1.3"
   },
   "lint-staged": {
-    "*.ts": [
+    "*.{ts,js,cjs}": [
       "eslint --fix",
       "prettier --write",
       "cspell --no-must-find-files --config cspell.json"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
     ]
   },
   "jest": {
