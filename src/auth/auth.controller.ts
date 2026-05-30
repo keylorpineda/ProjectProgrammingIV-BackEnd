@@ -8,14 +8,25 @@ import {
   HttpStatus,
   Ip,
   Headers,
+  Req,
+  Res,
+  UnauthorizedException,
 } from "@nestjs/common";
+import { Request, Response } from "express";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
-import { RefreshDto } from "./dto/refresh.dto";
 import { SwitchCampDto } from "./dto/switch-camp.dto";
 import { Public } from "./decorators/public.decorator";
 import { CurrentUser } from "./decorators/current-user.decorator";
+
+const REFRESH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict" as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: "/api/v1/auth",
+};
 
 @ApiTags("Auth")
 @Controller("auth")
@@ -30,8 +41,16 @@ export class AuthController {
     @Body() dto: LoginDto,
     @Ip() ipAddress: string,
     @Headers("user-agent") userAgent?: string,
+    @Res({ passthrough: true }) res?: Response,
   ) {
-    return this.authService.login(dto, ipAddress, userAgent);
+    const result = await this.authService.login(dto, ipAddress, userAgent);
+
+    res?.cookie("refresh_token", result.refresh_token, REFRESH_COOKIE_OPTIONS);
+
+    return {
+      access_token: result.access_token,
+      user: result.user,
+    };
   }
 
   @Post("logout")
@@ -40,17 +59,32 @@ export class AuthController {
   @ApiOperation({ summary: "Cerrar sesión del usuario actual" })
   async logout(
     @CurrentUser() user: any,
-    @Body() body?: { refresh_token?: string },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    await this.authService.logout(user.userId, body?.refresh_token);
+    const refreshToken = (req as any).cookies?.refresh_token;
+    await this.authService.logout(user.userId, refreshToken);
+    res.clearCookie("refresh_token", { path: "/api/v1/auth" });
   }
 
   @Public()
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Renovar access token usando refresh token" })
-  async refresh(@Body() dto: RefreshDto) {
-    return this.authService.refresh(dto.refresh_token);
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = (req as any).cookies?.refresh_token;
+    if (!refreshToken) {
+      throw new UnauthorizedException("No refresh token provided");
+    }
+
+    const result = await this.authService.refresh(refreshToken);
+
+    res.cookie("refresh_token", result.refresh_token, REFRESH_COOKIE_OPTIONS);
+
+    return { access_token: result.access_token };
   }
 
   @Get("session-status")
@@ -69,7 +103,18 @@ export class AuthController {
   @ApiOperation({
     summary: "Cambiar campamento activo del usuario autenticado",
   })
-  async switchCamp(@CurrentUser() user: any, @Body() dto: SwitchCampDto) {
-    return this.authService.switchCamp(user.userId, dto.camp_id);
+  async switchCamp(
+    @CurrentUser() user: any,
+    @Body() dto: SwitchCampDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.switchCamp(user.userId, dto.camp_id);
+
+    res.cookie("refresh_token", result.refresh_token, REFRESH_COOKIE_OPTIONS);
+
+    return {
+      access_token: result.access_token,
+      user: result.user,
+    };
   }
 }

@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { json, urlencoded } from "express";
 import helmet from "helmet";
+import * as cookieParser from "cookie-parser";
 import { AppModule } from "./app.module";
 import { SanitizeInterceptor } from "./common/interceptors/sanitize.interceptor";
 import { RedisIoAdapter } from "./notifications/redis-io.adapter";
@@ -19,6 +20,7 @@ async function bootstrap() {
 
   app.set("trust proxy", 1);
 
+  app.use(cookieParser());
   app.use(helmet());
 
   app.useGlobalInterceptors(new SanitizeInterceptor());

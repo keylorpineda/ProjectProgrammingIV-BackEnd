@@ -1,4 +1,5 @@
 import { Test, TestingModule } from "@nestjs/testing";
+import { UnauthorizedException } from "@nestjs/common";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 
@@ -30,6 +31,15 @@ describe("AuthController", () => {
     willExpireSoon: false,
   };
 
+  const makeMockRes = () => ({
+    cookie: jest.fn(),
+    clearCookie: jest.fn(),
+  });
+
+  const makeMockReq = (refreshToken?: string) => ({
+    cookies: refreshToken ? { refresh_token: refreshToken } : {},
+  });
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
@@ -52,67 +62,55 @@ describe("AuthController", () => {
   });
 
   describe("login", () => {
-    it("should login successfully with valid credentials", async () => {
+    it("should login successfully and set cookie + return access_token/user", async () => {
       const loginDto = { username: "testuser", password: "password123" };
       const ipAddress = "192.168.1.1";
       const userAgent = "Mozilla/5.0";
+      const mockRes = makeMockRes();
 
       authService.login.mockResolvedValueOnce(mockLoginResponse);
 
-      const result = await controller.login(loginDto, ipAddress, userAgent);
+      const result = await controller.login(loginDto, ipAddress, userAgent, mockRes as any);
 
-      expect(result).toEqual(mockLoginResponse);
-      expect(authService.login).toHaveBeenCalledWith(
-        loginDto,
-        ipAddress,
-        userAgent,
+      expect(result).toEqual({ access_token: mockLoginResponse.access_token, user: mockLoginResponse.user });
+      expect(mockRes.cookie).toHaveBeenCalledWith(
+        "refresh_token",
+        "refresh_token_value",
+        expect.objectContaining({ httpOnly: true, path: "/api/v1/auth" }),
       );
+      expect(authService.login).toHaveBeenCalledWith(loginDto, ipAddress, userAgent);
     });
 
     it("should login without user agent", async () => {
       const loginDto = { username: "testuser", password: "password123" };
       const ipAddress = "192.168.1.1";
+      const mockRes = makeMockRes();
 
       authService.login.mockResolvedValueOnce(mockLoginResponse);
 
-      const result = await controller.login(loginDto, ipAddress);
+      const result = await controller.login(loginDto, ipAddress, undefined, mockRes as any);
 
-      expect(result).toEqual(mockLoginResponse);
-      expect(authService.login).toHaveBeenCalledWith(
-        loginDto,
-        ipAddress,
-        undefined,
-      );
+      expect(result).toHaveProperty("access_token");
+      expect(result).not.toHaveProperty("refresh_token");
+      expect(authService.login).toHaveBeenCalledWith(loginDto, ipAddress, undefined);
     });
 
     it("should reject login with invalid credentials", async () => {
       const loginDto = { username: "testuser", password: "wrongpassword" };
       const ipAddress = "192.168.1.1";
 
-      const error = new Error("Invalid credentials");
-      authService.login.mockRejectedValueOnce(error);
+      authService.login.mockRejectedValueOnce(new Error("Invalid credentials"));
 
       await expect(controller.login(loginDto, ipAddress)).rejects.toThrow(
         "Invalid credentials",
       );
     });
 
-    it("should reject login with empty username", async () => {
-      const loginDto = { username: "", password: "password123" };
-      const ipAddress = "192.168.1.1";
-
-      const error = new Error("Invalid credentials");
-      authService.login.mockRejectedValueOnce(error);
-
-      await expect(controller.login(loginDto, ipAddress)).rejects.toThrow();
-    });
-
     it("should handle too many login attempts", async () => {
       const loginDto = { username: "testuser", password: "password123" };
       const ipAddress = "192.168.1.1";
 
-      const error = new Error("Too many login attempts");
-      authService.login.mockRejectedValueOnce(error);
+      authService.login.mockRejectedValueOnce(new Error("Too many login attempts"));
 
       await expect(controller.login(loginDto, ipAddress)).rejects.toThrow(
         "Too many login attempts",
@@ -121,80 +119,90 @@ describe("AuthController", () => {
   });
 
   describe("logout", () => {
-    it("should logout successfully", async () => {
+    it("should logout successfully and clear cookie", async () => {
       const mockUser = { userId: 1 };
-      const body = undefined;
+      const mockReq = makeMockReq("refresh_token_value");
+      const mockRes = makeMockRes();
 
       authService.logout.mockResolvedValueOnce(undefined);
 
-      await controller.logout(mockUser, body);
-
-      expect(authService.logout).toHaveBeenCalledWith(1, undefined);
-    });
-
-    it("should logout with specific refresh token", async () => {
-      const mockUser = { userId: 1 };
-      const body = { refresh_token: "refresh_token_value" };
-
-      authService.logout.mockResolvedValueOnce(undefined);
-
-      await controller.logout(mockUser, body);
+      await controller.logout(mockUser, mockReq as any, mockRes as any);
 
       expect(authService.logout).toHaveBeenCalledWith(1, "refresh_token_value");
+      expect(mockRes.clearCookie).toHaveBeenCalledWith("refresh_token", { path: "/api/v1/auth" });
+    });
+
+    it("should logout even when no refresh_token cookie present", async () => {
+      const mockUser = { userId: 1 };
+      const mockReq = makeMockReq();
+      const mockRes = makeMockRes();
+
+      authService.logout.mockResolvedValueOnce(undefined);
+
+      await controller.logout(mockUser, mockReq as any, mockRes as any);
+
+      expect(authService.logout).toHaveBeenCalledWith(1, undefined);
+      expect(mockRes.clearCookie).toHaveBeenCalled();
     });
 
     it("should handle logout for different user IDs", async () => {
       const mockUser = { userId: 5 };
+      const mockReq = makeMockReq();
+      const mockRes = makeMockRes();
 
       authService.logout.mockResolvedValueOnce(undefined);
 
-      await controller.logout(mockUser);
+      await controller.logout(mockUser, mockReq as any, mockRes as any);
 
       expect(authService.logout).toHaveBeenCalledWith(5, undefined);
     });
   });
 
   describe("refresh", () => {
-    it("should refresh tokens successfully", async () => {
-      const refreshDto = { refresh_token: "refresh_token_value" };
+    it("should refresh tokens from cookie and set new cookie", async () => {
+      const mockReq = makeMockReq("refresh_token_value");
+      const mockRes = makeMockRes();
 
       authService.refresh.mockResolvedValueOnce(mockRefreshResponse);
 
-      const result = await controller.refresh(refreshDto);
+      const result = await controller.refresh(mockReq as any, mockRes as any);
 
-      expect(result).toEqual(mockRefreshResponse);
+      expect(result).toEqual({ access_token: "new_access_token" });
       expect(authService.refresh).toHaveBeenCalledWith("refresh_token_value");
+      expect(mockRes.cookie).toHaveBeenCalledWith(
+        "refresh_token",
+        "new_refresh_token",
+        expect.objectContaining({ httpOnly: true }),
+      );
     });
 
-    it("should return new access and refresh tokens", async () => {
-      const refreshDto = { refresh_token: "valid_token" };
+    it("should throw UnauthorizedException when no refresh_token cookie", async () => {
+      const mockReq = makeMockReq();
+      const mockRes = makeMockRes();
 
-      authService.refresh.mockResolvedValueOnce(mockRefreshResponse);
-
-      const result = await controller.refresh(refreshDto);
-
-      expect(result).toHaveProperty("access_token");
-      expect(result).toHaveProperty("refresh_token");
+      await expect(controller.refresh(mockReq as any, mockRes as any)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it("should reject invalid refresh token", async () => {
-      const refreshDto = { refresh_token: "invalid_token" };
+      const mockReq = makeMockReq("invalid_token");
+      const mockRes = makeMockRes();
 
-      const error = new Error("Invalid refresh token");
-      authService.refresh.mockRejectedValueOnce(error);
+      authService.refresh.mockRejectedValueOnce(new Error("Invalid refresh token"));
 
-      await expect(controller.refresh(refreshDto)).rejects.toThrow(
+      await expect(controller.refresh(mockReq as any, mockRes as any)).rejects.toThrow(
         "Invalid refresh token",
       );
     });
 
     it("should reject expired refresh token", async () => {
-      const refreshDto = { refresh_token: "expired_token" };
+      const mockReq = makeMockReq("expired_token");
+      const mockRes = makeMockRes();
 
-      const error = new Error("Token expired");
-      authService.refresh.mockRejectedValueOnce(error);
+      authService.refresh.mockRejectedValueOnce(new Error("Token expired"));
 
-      await expect(controller.refresh(refreshDto)).rejects.toThrow(
+      await expect(controller.refresh(mockReq as any, mockRes as any)).rejects.toThrow(
         "Token expired",
       );
     });
@@ -246,9 +254,10 @@ describe("AuthController", () => {
   });
 
   describe("switchCamp", () => {
-    it("should switch camp and return tokens + user", async () => {
+    it("should switch camp, set cookie, and return access_token + user", async () => {
       const mockUser = { userId: 1 } as any;
       const dto = { camp_id: 2 } as any;
+      const mockRes = makeMockRes();
 
       const mockResponse = {
         access_token: "access_token_value",
@@ -258,9 +267,15 @@ describe("AuthController", () => {
 
       authService.switchCamp.mockResolvedValueOnce(mockResponse as any);
 
-      const result = await controller.switchCamp(mockUser, dto);
+      const result = await controller.switchCamp(mockUser, dto, mockRes as any);
 
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({ access_token: "access_token_value", user: mockResponse.user });
+      expect(result).not.toHaveProperty("refresh_token");
+      expect(mockRes.cookie).toHaveBeenCalledWith(
+        "refresh_token",
+        "refresh_token_value",
+        expect.objectContaining({ httpOnly: true }),
+      );
       expect(authService.switchCamp).toHaveBeenCalledWith(1, 2);
     });
   });
