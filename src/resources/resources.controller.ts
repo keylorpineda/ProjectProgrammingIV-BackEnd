@@ -39,6 +39,7 @@ export class ResourcesController {
     "worker",
     "travel_manager",
     "camp_manager",
+    "camp_leader",
   )
   @ApiOperation({ summary: "Consultar inventario completo del campamento" })
   async getInventory(@Param("campId", ParseIntPipe) campId: number) {
@@ -88,6 +89,7 @@ export class ResourcesController {
     "worker",
     "travel_manager",
     "camp_manager",
+    "camp_leader",
   )
   @ApiOperation({
     summary: "Historial de movimientos de inventario del campamento",
@@ -171,6 +173,7 @@ export class ResourcesController {
     "worker",
     "travel_manager",
     "camp_manager",
+    "camp_leader",
   )
   @ApiOperation({ summary: "Listar todos los recursos disponibles" })
   @ApiQuery({
