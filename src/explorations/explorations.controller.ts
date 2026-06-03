@@ -35,6 +35,7 @@ export class ExplorationsController {
     "resource_manager",
     "camp_leader",
     "camp_manager",
+    "worker"
   )
   @ApiOperation({ summary: "Listar exploraciones con filtros opcionales" })
   findAll(@Query("campId") campId?: string, @Query("status") status?: string) {
@@ -51,6 +52,7 @@ export class ExplorationsController {
     "resource_manager",
     "camp_leader",
     "camp_manager",
+    "worker"
   )
   @ApiOperation({ summary: "Obtener detalle de una exploracion" })
   findById(@Param("id", ParseIntPipe) id: number) {
