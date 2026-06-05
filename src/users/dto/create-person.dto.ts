@@ -5,6 +5,10 @@ export class CreatePersonDto {
   @IsInt()
   profession_id?: number;
 
+  @IsOptional()
+  @IsInt()
+  camp_id?: number;
+
   @IsString()
   first_name: string;
 

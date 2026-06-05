@@ -14,6 +14,7 @@ import { Profession } from "./profession.entity";
 import { UserAccount } from "./user-account.entity";
 import { AiAdmission } from "../../ai/entities/ai-admission.entity";
 import { PersonAchievement } from "./person-achievement.entity";
+import { Camp } from "../../camps/entities/camp.entity";
 
 @Entity("person")
 export class Person {
@@ -22,6 +23,9 @@ export class Person {
 
   @Column({ type: "bigint", nullable: true })
   profession_id: number;
+
+  @Column({ type: "bigint", nullable: true })
+  camp_id: number;
 
   @Column({ type: "text" })
   first_name: string;
@@ -78,6 +82,11 @@ export class Person {
   @ManyToOne(() => Profession, (p) => p.persons)
   @JoinColumn({ name: "profession_id" })
   profession: Profession;
+
+  @Index()
+  @ManyToOne(() => Camp, { nullable: true })
+  @JoinColumn({ name: "camp_id" })
+  camp: Camp;
 
   @OneToOne(() => UserAccount, (ua) => ua.person)
   userAccount: UserAccount;
