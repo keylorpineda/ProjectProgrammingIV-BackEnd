@@ -13,7 +13,7 @@ import { LoginAttempt } from "./entities/login-attempt.entity";
 import { Session } from "./entities/session.entity";
 import { UserAccount } from "../users/entities/user-account.entity";
 import { Camp } from "../camps/entities/camp.entity";
-import { LoginDto } from "./dto/login.dto";
+import type { LoginDto } from "./dto/login.dto";
 import { REDIS_CLIENT } from "../redis/redis.constants";
 import { Redis } from "ioredis";
 
@@ -131,8 +131,10 @@ export class AuthService {
       }),
     );
 
-    // Guardar sesin en Redis para timeout de inactividad de 20 mins (1200 seg)
-    await this.redis.setex(`session:${user.id}`, 1200, "active");
+    // Guardar sesión en Redis para timeout de inactividad de 20 mins (1200 seg)
+    await this.safeRedis(() =>
+      this.redis.setex(`session:${user.id}`, 1200, "active"),
+    );
 
     user.last_access = new Date();
     await this.userRepo.save(user);
@@ -186,8 +188,8 @@ export class AuthService {
       { is_active: false, auto_logout: false },
     );
 
-    // Eliminar sesin de Redis
-    await this.redis.del(`session:${userId}`);
+    // Eliminar sesión de Redis
+    await this.safeRedis(() => this.redis.del(`session:${userId}`));
   }
 
   async refresh(refreshToken: string): Promise<{
@@ -261,8 +263,10 @@ export class AuthService {
     validSession.expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await this.sessionRepo.save(validSession);
 
-    // Actualizar sesin en Redis
-    await this.redis.setex(`session:${user.id}`, 1200, "active");
+    // Actualizar sesión en Redis
+    await this.safeRedis(() =>
+      this.redis.setex(`session:${user.id}`, 1200, "active"),
+    );
 
     return {
       access_token: newAccessToken,
@@ -340,8 +344,10 @@ export class AuthService {
       }),
     );
 
-    // Actualizar sesin en Redis
-    await this.redis.setex(`session:${userId}`, 1200, "active");
+    // Actualizar sesión en Redis
+    await this.safeRedis(() =>
+      this.redis.setex(`session:${userId}`, 1200, "active"),
+    );
 
     return {
       access_token: accessToken,
@@ -396,6 +402,18 @@ export class AuthService {
     return bcrypt.compare(plain, hash);
   }
 
+  private async safeRedis<T>(fn: () => Promise<T>): Promise<T | null> {
+    try {
+      return await fn();
+    } catch (err) {
+      console.warn(
+        "Redis operation failed, continuing without session tracking:",
+        (err as Error).message,
+      );
+      return null;
+    }
+  }
+
   /**
    * Verifica el estado de la sesi�n del usuario
    * Retorna informaci�n sobre actividad y tiempo restante antes del auto-logout
@@ -406,24 +424,34 @@ export class AuthService {
     minutesUntilExpiration: number;
     willExpireSoon: boolean;
   }> {
-    const sessionExists = await this.redis.exists(`session:${userId}`);
-    if (!sessionExists) {
+    try {
+      const sessionExists = await this.redis.exists(`session:${userId}`);
+      if (!sessionExists) {
+        return {
+          isActive: false,
+          lastActivity: new Date(),
+          minutesUntilExpiration: 0,
+          willExpireSoon: false,
+        };
+      }
+
+      const ttl = await this.redis.ttl(`session:${userId}`);
+      const minutesRemaining = Math.max(0, Math.floor(ttl / 60));
+
       return {
-        isActive: false,
+        isActive: true,
         lastActivity: new Date(),
-        minutesUntilExpiration: 0,
+        minutesUntilExpiration: minutesRemaining,
+        willExpireSoon: minutesRemaining <= 2,
+      };
+    } catch {
+      // Redis unavailable — report session as active to avoid false logouts
+      return {
+        isActive: true,
+        lastActivity: new Date(),
+        minutesUntilExpiration: 20,
         willExpireSoon: false,
       };
     }
-
-    const ttl = await this.redis.ttl(`session:${userId}`);
-    const minutesRemaining = Math.max(0, Math.floor(ttl / 60));
-
-    return {
-      isActive: true,
-      lastActivity: new Date(),
-      minutesUntilExpiration: minutesRemaining,
-      willExpireSoon: minutesRemaining <= 2,
-    };
   }
 }

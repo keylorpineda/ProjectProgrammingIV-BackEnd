@@ -1,11 +1,11 @@
-import {
-  Injectable,
+import type {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
 } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { Inject } from "@nestjs/common";
-import { Observable } from "rxjs";
+import type { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
@@ -43,7 +43,9 @@ export class SessionActivityInterceptor implements NestInterceptor {
         const userId = payload.sub;
 
         // Actualizar TTL de inactividad en Redis en cada request (1200s = 20m)
-        await this.redis.expire(`session:${userId}`, 1200);
+        await this.redis.expire(`session:${userId}`, 1200).catch(() => {
+          // Redis unavailable — session tracking degraded, continue normally
+        });
 
         // Opcional: Actualizar last_activity en BD solo una vez cada cierto tiempo
         // para no sobrecargar PostgreSQL con UPDATEs en cada request.

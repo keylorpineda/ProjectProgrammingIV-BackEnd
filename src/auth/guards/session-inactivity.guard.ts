@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  UnauthorizedException,
-} from "@nestjs/common";
+import type { CanActivate, ExecutionContext } from "@nestjs/common";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { Inject } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
@@ -53,19 +49,23 @@ export class SessionInactivityGuard implements CanActivate {
       const payload = this.jwtService.verify(token);
       const userId = payload.sub;
 
-      // Verificar en Redis si la sesin an est activa (no ha expirado el TTL)
-      const sessionExists = await this.redis.exists(`session:${userId}`);
+      // Verificar en Redis si la sesión aún está activa (no ha expirado el TTL)
+      let sessionExists: number;
+      try {
+        sessionExists = await this.redis.exists(`session:${userId}`);
+      } catch {
+        // Redis unavailable — allow the request through; JWT validity is enough
+        return true;
+      }
 
       if (!sessionExists) {
-        // La llave expir o fue eliminada (logout)
-        // Actualizamos BD histricamente si es necesario (opcional)
         await this.sessionRepo.update(
           { user_id: userId, is_active: true },
           { is_active: false, auto_logout: true },
         );
 
         throw new UnauthorizedException(
-          "Su sesin ha expirado por inactividad o no existe. Por favor, inicie sesin nuevamente",
+          "Su sesión ha expirado por inactividad o no existe. Por favor, inicie sesión nuevamente",
         );
       }
 
