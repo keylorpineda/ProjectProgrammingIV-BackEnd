@@ -1,4 +1,4 @@
-import { AppDataSource } from "./data-source";
+﻿import { AppDataSource } from "./data-source";
 import { Role } from "../users/entities/role.entity";
 import { UserAccount } from "../users/entities/user-account.entity";
 import { Camp } from "../camps/entities/camp.entity";
@@ -19,7 +19,6 @@ async function seed() {
     "resource_manager",
     "travel_manager",
     "camp_leader",
-    "camp_manager",
   ];
   const roles: Role[] = [];
 
@@ -84,7 +83,7 @@ async function seed() {
     {
       username: "manager",
       email: "manager@doomsday.com",
-      roleName: "camp_manager",
+      roleName: "resource_manager",
       camp: undefined,
     },
     {

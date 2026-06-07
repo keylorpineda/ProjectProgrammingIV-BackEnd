@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -38,7 +38,7 @@ export class UsersController {
     "resource_manager",
     "travel_manager",
     "camp_leader",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Obtener todas las personas del campamento" })
   @ApiQuery({
@@ -82,7 +82,7 @@ export class UsersController {
     "travel_manager",
     "worker",
     "camp_leader",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Obtener una persona por ID" })
   async getPersonById(@Param("id", ParseIntPipe) id: number) {
@@ -90,7 +90,7 @@ export class UsersController {
   }
 
   @Post("persons")
-  @Roles("admin", "camp_leader", "travel_manager", "camp_manager")
+  @Roles("admin", "camp_leader", "travel_manager", "resource_manager")
   @ApiOperation({ summary: "Crear una nueva persona (despues de admision)" })
   async createPerson(@Body() dto: CreatePersonDto) {
     return this.usersService.createPerson(dto);
@@ -102,7 +102,7 @@ export class UsersController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Actualizar informacion de una persona" })
   async updatePerson(
@@ -118,7 +118,7 @@ export class UsersController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({
     summary: "Cambiar estado de una persona (enfermo, herido, etc.)",
@@ -131,7 +131,7 @@ export class UsersController {
   }
 
   @Delete("persons/:id")
-  @Roles("admin", "travel_manager", "camp_manager")
+  @Roles("admin", "travel_manager", "resource_manager")
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Eliminar una persona" })
   async deletePerson(@Param("id", ParseIntPipe) id: number) {
@@ -144,7 +144,7 @@ export class UsersController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Estadisticas de personas por estado" })
   @ApiQuery({
@@ -164,9 +164,9 @@ export class UsersController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
-  @ApiOperation({ summary: "Estadisticas de personas por profesi�n" })
+  @ApiOperation({ summary: "Estadisticas de personas por profesiï¿½n" })
   @ApiQuery({
     name: "campId",
     required: false,
@@ -191,7 +191,7 @@ export class UsersController {
   }
 
   @Post("professions")
-  @Roles("admin", "travel_manager", "camp_manager")
+  @Roles("admin", "travel_manager", "resource_manager")
   @ApiOperation({ summary: "Crear una nueva profesion" })
   async createProfession(@Body() dto: CreateProfessionDto) {
     return this.usersService.createProfession(dto);
@@ -203,7 +203,7 @@ export class UsersController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({
     summary: "Obtener profesiones que necesitan trabajadores urgentemente",
@@ -218,7 +218,7 @@ export class UsersController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Obtener profesiones con exceso de trabajadores" })
   async getProfessionsWithExcess() {
@@ -231,10 +231,10 @@ export class UsersController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({
-    summary: "Crear asignacion temporal (debe ser aprobada despu�s)",
+    summary: "Crear asignacion temporal (debe ser aprobada despuï¿½s)",
   })
   async createTemporaryAssignment(
     @Body() dto: CreateTemporaryAssignmentDto,
@@ -249,7 +249,7 @@ export class UsersController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Obtener asignaciones temporales activas" })
   @ApiQuery({
@@ -264,7 +264,7 @@ export class UsersController {
   }
 
   @Put("temporary-assignments/:id/end")
-  @Roles("admin", "resource_manager", "travel_manager", "camp_manager")
+  @Roles("admin", "resource_manager", "travel_manager", "resource_manager")
   @ApiOperation({
     summary: "Finalizar asignacion temporal (devolver a profesion original)",
   })
@@ -278,7 +278,7 @@ export class UsersController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Calcular produccion diaria del campamento" })
   async getDailyProduction(@Param("campId", ParseIntPipe) campId: number) {
@@ -291,7 +291,7 @@ export class UsersController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Calcular consumo diario del campamento" })
   async getDailyConsumption(@Param("campId", ParseIntPipe) campId: number) {
@@ -305,7 +305,7 @@ export class UsersController {
     "worker",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Calcular balance diario (produccion - consumo)" })
   async getDailyBalance(@Param("campId", ParseIntPipe) campId: number) {
@@ -315,7 +315,7 @@ export class UsersController {
   @Get("me/profile")
   @ApiOperation({
     summary:
-      "Obtener perfil completo del usuario autenticado (incluye persona y profesión)",
+      "Obtener perfil completo del usuario autenticado (incluye persona y profesiÃ³n)",
   })
   async getMyProfile(@CurrentUser() user: any) {
     const userId = user?.userId ?? user?.id;
@@ -323,7 +323,7 @@ export class UsersController {
   }
 
   @Get("me/assigned-resources")
-  @Roles("worker", "travel_manager", "camp_manager")
+  @Roles("worker", "travel_manager", "resource_manager")
   @ApiOperation({
     summary: "Obtener recursos asignados al usuario autenticado",
   })
@@ -338,7 +338,7 @@ export class UsersController {
     "resource_manager",
     "worker",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Listar todos los assets/insignias del sistema" })
   @ApiQuery({
@@ -356,7 +356,7 @@ export class UsersController {
     "resource_manager",
     "worker",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Obtener insignias ganadas por el usuario actual" })
   async getMyBadges(@CurrentUser() user: any) {
@@ -370,7 +370,7 @@ export class UsersController {
     "resource_manager",
     "worker",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Mostrar u ocultar una insignia en el perfil" })
   async toggleBadgeDisplay(
@@ -388,7 +388,7 @@ export class UsersController {
     "resource_manager",
     "worker",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
     "camp_leader",
   )
   @ApiOperation({ summary: "Obtener logros del usuario actual" })
@@ -404,10 +404,10 @@ export class UsersController {
     "resource_manager",
     "worker",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
     "camp_leader",
   )
-  @ApiOperation({ summary: "Registrar logro de primer inicio de sesión" })
+  @ApiOperation({ summary: "Registrar logro de primer inicio de sesiÃ³n" })
   async awardFirstLoginAchievement(@CurrentUser() user: any) {
     const userId = user?.userId ?? user?.id;
     return this.usersService.awardFirstLoginAchievement(userId);

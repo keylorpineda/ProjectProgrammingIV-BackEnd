@@ -28,7 +28,7 @@ async function seedDummyData() {
   const personRepo = AppDataSource.getRepository(Person);
   const resourceRepo = AppDataSource.getRepository(Resource);
   const inventoryRepo = AppDataSource.getRepository(Inventory);
-  const movementRepo = AppDataSource.getRepository(InventoryMovement);
+  AppDataSource.getRepository(InventoryMovement); // reserved for future movement seeding
   const explorationRepo = AppDataSource.getRepository(Exploration);
   const explorationPersonRepo = AppDataSource.getRepository(ExplorationPerson);
   const requestRepo = AppDataSource.getRepository(IntercampRequest);
@@ -67,7 +67,6 @@ async function seedDummyData() {
     "resource_manager",
     "travel_manager",
     "camp_leader",
-    "camp_manager",
   ];
   const roles: Record<string, Role> = {};
   for (const name of roleNames) {
@@ -77,13 +76,14 @@ async function seedDummyData() {
         roleRepo.create({ name, description: `Role ${name}` }),
       );
     }
+    // eslint-disable-next-line security/detect-object-injection
     roles[name] = role;
   }
 
   // 3. Professions
   console.log("Verificando profesiones...");
   const professions: Record<string, Profession> = {};
-  for (const [key, config] of Object.entries(PROFESSIONS_CONFIG)) {
+  for (const [, config] of Object.entries(PROFESSIONS_CONFIG)) {
     let prof = await professionRepo.findOne({ where: { name: config.name } });
     if (!prof) {
       prof = await professionRepo.save(
@@ -113,7 +113,7 @@ async function seedDummyData() {
       description: "Agua lista para beber",
     },
     {
-      name: "Antibióticos",
+      name: "AntibiÃ³ticos",
       unit: "cajas",
       category: "medical",
       description: "Penicilina y amoxicilina",
@@ -122,13 +122,13 @@ async function seedDummyData() {
       name: "Balas 9mm",
       unit: "cartuchos",
       category: "weapons",
-      description: "Munición estándar",
+      description: "MuniciÃ³n estÃ¡ndar",
     },
     {
       name: "Gasolina",
       unit: "galones",
       category: "materials",
-      description: "Para vehículos y generadores",
+      description: "Para vehÃ­culos y generadores",
     },
   ];
   const resources: Record<string, Resource> = {};
@@ -138,7 +138,7 @@ async function seedDummyData() {
     resources[rt.category] = res;
 
     // Inventory para Alfa
-    let invAlfa = await inventoryRepo.findOne({
+    const invAlfa = await inventoryRepo.findOne({
       where: { camp_id: Number(campAlfa.id), resource_id: Number(res.id) },
     });
     if (!invAlfa) {
@@ -154,7 +154,7 @@ async function seedDummyData() {
       );
     }
     // Inventory para Beta
-    let invBeta = await inventoryRepo.findOne({
+    const invBeta = await inventoryRepo.findOne({
       where: { camp_id: Number(campBeta.id), resource_id: Number(res.id) },
     });
     if (!invBeta) {
@@ -257,7 +257,7 @@ async function seedDummyData() {
   // 6. Explorations
   console.log("Generando expediciones...");
   const exps = [
-    { name: "Búsqueda Hospital Centro", status: "COMPLETED", camp: campAlfa },
+    { name: "BÃºsqueda Hospital Centro", status: "COMPLETED", camp: campAlfa },
     { name: "Reconocimiento Zona Este", status: "ONGOING", camp: campAlfa },
     { name: "Patrulla Bosque", status: "SCHEDULED", camp: campBeta },
   ];
@@ -320,7 +320,7 @@ async function seedDummyData() {
             identification_code: `CAND-${i}`,
           },
           score: 70 + Math.floor(Math.random() * 20),
-          justification: "El candidato presenta buenas aptitudes físicas.",
+          justification: "El candidato presenta buenas aptitudes fÃ­sicas.",
           status: i % 2 === 0 ? "ACCEPTED" : "REJECTED",
           final_human_decision: i % 2 === 0 ? "ACCEPTED" : "REJECTED",
           review_date: new Date(),
@@ -350,7 +350,7 @@ async function seedDummyData() {
     );
   }
 
-  console.log("¡Datos generados exitosamente!");
+  console.log("Â¡Datos generados exitosamente!");
   await AppDataSource.destroy();
 }
 

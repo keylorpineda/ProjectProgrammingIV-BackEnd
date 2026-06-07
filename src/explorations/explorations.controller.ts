@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -22,7 +22,7 @@ export class ExplorationsController {
   constructor(private readonly explorationsService: ExplorationsService) {}
 
   @Post()
-  @Roles("admin", "travel_manager", "camp_manager", "camp_leader")
+  @Roles("admin", "travel_manager", "resource_manager", "camp_leader")
   @ApiOperation({ summary: "Crear una nueva exploracion" })
   create(@Body() dto: CreateExplorationDto, @CurrentUser() user: any) {
     return this.explorationsService.create(dto, user?.id);
@@ -34,8 +34,8 @@ export class ExplorationsController {
     "travel_manager",
     "resource_manager",
     "camp_leader",
-    "camp_manager",
-    "worker"
+    "resource_manager",
+    "worker",
   )
   @ApiOperation({ summary: "Listar exploraciones con filtros opcionales" })
   findAll(@Query("campId") campId?: string, @Query("status") status?: string) {
@@ -51,8 +51,8 @@ export class ExplorationsController {
     "travel_manager",
     "resource_manager",
     "camp_leader",
-    "camp_manager",
-    "worker"
+    "resource_manager",
+    "worker",
   )
   @ApiOperation({ summary: "Obtener detalle de una exploracion" })
   findById(@Param("id", ParseIntPipe) id: number) {
@@ -60,14 +60,14 @@ export class ExplorationsController {
   }
 
   @Patch(":id/depart")
-  @Roles("admin", "travel_manager", "camp_manager", "camp_leader")
+  @Roles("admin", "travel_manager", "resource_manager", "camp_leader")
   @ApiOperation({ summary: "Marcar exploracion como en curso (partida)" })
   depart(@Param("id", ParseIntPipe) id: number, @CurrentUser() user: any) {
     return this.explorationsService.depart(id, user?.id);
   }
 
   @Patch(":id/return")
-  @Roles("admin", "travel_manager", "camp_manager", "camp_leader")
+  @Roles("admin", "travel_manager", "resource_manager", "camp_leader")
   @ApiOperation({ summary: "Registrar retorno de exploracion" })
   registerReturn(
     @Param("id", ParseIntPipe) id: number,
@@ -78,7 +78,7 @@ export class ExplorationsController {
   }
 
   @Delete(":id")
-  @Roles("admin", "travel_manager", "camp_manager", "camp_leader")
+  @Roles("admin", "travel_manager", "resource_manager", "camp_leader")
   @ApiOperation({ summary: "Cancelar una exploracion programada" })
   cancel(@Param("id", ParseIntPipe) id: number, @CurrentUser() user: any) {
     return this.explorationsService.cancel(id, user?.id);

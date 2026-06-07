@@ -1,4 +1,11 @@
-import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common";
+import type {
+  NestModule,
+  MiddlewareConsumer,
+  OnApplicationBootstrap,
+} from "@nestjs/common";
+import { Module, Logger } from "@nestjs/common";
+import { InjectDataSource } from "@nestjs/typeorm";
+import { DataSource } from "typeorm";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { CsrfMiddleware } from "./common/middleware/csrf.middleware";
@@ -111,8 +118,28 @@ import Redis from "ioredis";
     { provide: APP_INTERCEPTOR, useClass: SessionActivityInterceptor },
   ],
 })
-export class AppModule implements NestModule {
+export class AppModule implements NestModule, OnApplicationBootstrap {
+  private readonly logger = new Logger(AppModule.name);
+
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(CsrfMiddleware).forRoutes("*");
+  }
+
+  async onApplicationBootstrap() {
+    // Rename legacy camp_manager role to resource_manager if it still exists
+    try {
+      const result = await this.dataSource.query(
+        `UPDATE "role" SET name = 'resource_manager' WHERE name = 'camp_manager'`,
+      );
+      if (result[1] > 0) {
+        this.logger.log(
+          `Migrated ${result[1]} row(s): camp_manager → resource_manager`,
+        );
+      }
+    } catch {
+      // Role table may not exist yet on first boot — safe to ignore
+    }
   }
 }

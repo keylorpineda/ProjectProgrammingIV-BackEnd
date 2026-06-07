@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable,
   Logger,
   NotFoundException,
@@ -300,7 +300,7 @@ export class ResourcesService implements OnModuleInit {
       }),
     );
 
-    // Gamification — wrapped in try/catch so they never break the main flow
+    // Gamification â€” wrapped in try/catch so they never break the main flow
     if (userId) {
       const xpGain = isIncome ? 15 : 5;
       this.grantXp(userId, xpGain).catch((e) =>
@@ -308,7 +308,7 @@ export class ResourcesService implements OnModuleInit {
       );
 
       if (dto.type === "income") {
-        // PRIMER_SUMINISTRO — check after saving; count === 1 means this is the first
+        // PRIMER_SUMINISTRO â€” check after saving; count === 1 means this is the first
         this.movementRepo
           .count({ where: { user_id: userId, type: "income" } })
           .then((count) => {
@@ -321,7 +321,7 @@ export class ResourcesService implements OnModuleInit {
           .catch(() => {});
       }
 
-      // LOGISTICA_PRECISA — replenished a resource that had an active alert
+      // LOGISTICA_PRECISA â€” replenished a resource that had an active alert
       // before it hit zero
       if (
         isIncome &&
@@ -332,7 +332,7 @@ export class ResourcesService implements OnModuleInit {
         this.grantBadgeOnce(
           userId,
           "LOGISTICA_PRECISA",
-          "Reabasteciste un recurso crítico antes de que se agotara por completo.",
+          "Reabasteciste un recurso crÃ­tico antes de que se agotara por completo.",
         ).catch((e) =>
           this.logger.warn(`grantBadgeOnce failed: ${e?.message}`),
         );
@@ -486,7 +486,7 @@ export class ResourcesService implements OnModuleInit {
         resource_id: Number(foodResource.id),
         quantity: totalFoodCons,
         type: "daily_consumption",
-        description: `Consumo diario de comida: ${personsInCamp} personas × ${foodRation} unidades`,
+        description: `Consumo diario de comida: ${personsInCamp} personas Ã— ${foodRation} unidades`,
       });
       consumption["food"] = totalFoodCons;
       movementCount++;
@@ -498,7 +498,7 @@ export class ResourcesService implements OnModuleInit {
         resource_id: Number(waterResource.id),
         quantity: totalWaterCons,
         type: "daily_consumption",
-        description: `Consumo diario de agua: ${personsInCamp} personas × ${waterRation} litros`,
+        description: `Consumo diario de agua: ${personsInCamp} personas Ã— ${waterRation} litros`,
       });
       consumption["water"] = totalWaterCons;
       movementCount++;
@@ -506,7 +506,7 @@ export class ResourcesService implements OnModuleInit {
 
     await this.refreshAlertFlags(campId);
 
-    // PROVEEDOR_CONSISTENTE — award to camp managers if no critical alerts remain
+    // PROVEEDOR_CONSISTENTE â€” award to camp managers if no critical alerts remain
     this.checkProveedorConsistente(campId).catch((e) =>
       this.logger.warn(`checkProveedorConsistente failed: ${e?.message}`),
     );
@@ -568,7 +568,7 @@ export class ResourcesService implements OnModuleInit {
         type: "daily_production",
         description:
           dto.description ||
-          `Ajuste manual de producci�n: ${person.first_name} ${person.last_name}`,
+          `Ajuste manual de producciï¿½n: ${person.first_name} ${person.last_name}`,
       },
       userId,
     );
@@ -592,7 +592,7 @@ export class ResourcesService implements OnModuleInit {
       .execute();
   }
 
-  // ─── Gamification helpers ───────────────────────────────────────────────────
+  // â”€â”€â”€ Gamification helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private async grantXp(userId: number, points: number): Promise<void> {
     const user = await this.userAccountRepo.findOne({
@@ -706,7 +706,7 @@ export class ResourcesService implements OnModuleInit {
       .leftJoinAndSelect("ua.role", "role")
       .where("ua.camp_id = :campId", { campId })
       .andWhere("role.name IN (:...roles)", {
-        roles: ["camp_manager", "resource_manager"],
+        roles: ["resource_manager"],
       })
       .getMany();
 
@@ -718,7 +718,7 @@ export class ResourcesService implements OnModuleInit {
     }
   }
 
-  // ─── Production ranking ──────────────────────────────────────────────────────
+  // â”€â”€â”€ Production ranking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async getProductionRanking(campId: number): Promise<
     {
@@ -784,7 +784,7 @@ export class ResourcesService implements OnModuleInit {
         return {
           person_id: Number(person.id),
           name: `${person.first_name} ${person.last_name}`,
-          profession: person.profession?.name ?? "Sin profesión",
+          profession: person.profession?.name ?? "Sin profesiÃ³n",
           food_production: foodProd,
           water_production: waterProd,
           total_production: foodProd + waterProd,

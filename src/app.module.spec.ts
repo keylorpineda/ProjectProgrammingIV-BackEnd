@@ -1,4 +1,4 @@
-import { MiddlewareConsumer } from "@nestjs/common";
+import type { MiddlewareConsumer } from "@nestjs/common";
 import { MODULE_METADATA } from "@nestjs/common/constants";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
@@ -128,6 +128,7 @@ describe("AppModule", () => {
           DB_NAME: "test_db",
           NODE_ENV: "development",
         };
+        // eslint-disable-next-line security/detect-object-injection
         return values[key];
       }),
     } as unknown as ConfigService;
@@ -142,6 +143,7 @@ describe("AppModule", () => {
           DB_NAME: "prod_db",
           NODE_ENV: "production",
         };
+        // eslint-disable-next-line security/detect-object-injection
         return values[key];
       }),
     } as unknown as ConfigService;
@@ -171,7 +173,7 @@ describe("AppModule", () => {
     const forRoutes = jest.fn();
     const apply = jest.fn().mockReturnValue({ forRoutes });
     const consumer = { apply } as unknown as MiddlewareConsumer;
-    const module = new AppModule();
+    const module = new AppModule({} as any);
 
     module.configure(consumer);
 

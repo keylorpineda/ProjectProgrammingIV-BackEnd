@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -32,7 +32,7 @@ export class TransfersController {
     "resource_manager",
     "travel_manager",
     "camp_leader",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({
     summary: "Crear solicitud de transferencia inter-campamento",
@@ -50,7 +50,7 @@ export class TransfersController {
     "resource_manager",
     "travel_manager",
     "worker",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Obtener detalle de solicitud de transferencia" })
   async getRequest(@Param("id", ParseIntPipe) id: number) {
@@ -63,7 +63,7 @@ export class TransfersController {
     "resource_manager",
     "travel_manager",
     "camp_leader",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Listar solicitudes de un campamento" })
   @ApiQuery({
@@ -99,7 +99,7 @@ export class TransfersController {
     "resource_manager",
     "travel_manager",
     "camp_leader",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Solicitudes pendientes de aprobacion" })
   async getPendingRequests(@Param("campId", ParseIntPipe) campId: number) {
@@ -112,7 +112,7 @@ export class TransfersController {
     "resource_manager",
     "travel_manager",
     "camp_leader",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Aprobar o rechazar solicitud de transferencia" })
   async approveOrReject(
@@ -129,7 +129,7 @@ export class TransfersController {
     "resource_manager",
     "travel_manager",
     "camp_leader",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({
     summary: "Cancelar solicitud pendiente (solo campamento origen)",
@@ -147,7 +147,7 @@ export class TransfersController {
     "resource_manager",
     "travel_manager",
     "worker",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({
     summary: "Registrar llegada de transferencia (solo campamento destino)",
@@ -165,7 +165,7 @@ export class TransfersController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Estadisticas de transferencias del campamento" })
   async getStatistics(@Param("campId", ParseIntPipe) campId: number) {

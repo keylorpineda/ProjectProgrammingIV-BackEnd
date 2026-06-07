@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -38,7 +38,7 @@ export class ResourcesController {
     "resource_manager",
     "worker",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
     "camp_leader",
   )
   @ApiOperation({ summary: "Consultar inventario completo del campamento" })
@@ -52,15 +52,15 @@ export class ResourcesController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
-  @ApiOperation({ summary: "Alertas de recursos por debajo del m�nimo" })
+  @ApiOperation({ summary: "Alertas de recursos por debajo del mï¿½nimo" })
   async getAlerts(@Param("campId", ParseIntPipe) campId: number) {
     return this.resourcesService.getInventoryAlerts(campId);
   }
 
   @Patch("inventory/:campId/:resourceId")
-  @Roles("admin", "resource_manager", "travel_manager", "camp_manager")
+  @Roles("admin", "resource_manager", "travel_manager", "resource_manager")
   @ApiOperation({
     summary:
       "Actualizar configuracion de inventario (minimo requerido, cantidad)",
@@ -74,7 +74,7 @@ export class ResourcesController {
   }
 
   @Post("inventory/initialize/:campId")
-  @Roles("admin", "travel_manager", "camp_manager")
+  @Roles("admin", "travel_manager", "resource_manager")
   @ApiOperation({
     summary: "Inicializar inventario para un campamento con todos los recursos",
   })
@@ -88,7 +88,7 @@ export class ResourcesController {
     "resource_manager",
     "worker",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
     "camp_leader",
   )
   @ApiOperation({
@@ -116,7 +116,7 @@ export class ResourcesController {
     "resource_manager",
     "worker",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({
     summary: "Registrar movimiento de inventario (ingreso/egreso)",
@@ -134,7 +134,7 @@ export class ResourcesController {
     "resource_manager",
     "camp_leader",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({
     summary: "Ejecutar proceso diario manualmente (produccion + consumo)",
@@ -153,13 +153,7 @@ export class ResourcesController {
   }
 
   @Get("production-ranking/:campId")
-  @Roles(
-    "admin",
-    "resource_manager",
-    "camp_manager",
-    "camp_leader",
-    "travel_manager",
-  )
+  @Roles("admin", "resource_manager", "camp_leader", "travel_manager")
   @ApiOperation({
     summary:
       "Ranking de productividad diaria de trabajadores activos en el campamento",
@@ -174,7 +168,7 @@ export class ResourcesController {
     "resource_manager",
     "worker",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({
     summary: "Ajustar produccion diaria de una persona manualmente",
@@ -197,7 +191,7 @@ export class ResourcesController {
     "resource_manager",
     "worker",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
     "camp_leader",
   )
   @ApiOperation({ summary: "Listar todos los recursos disponibles" })
@@ -234,7 +228,7 @@ export class ResourcesController {
     "resource_manager",
     "worker",
     "travel_manager",
-    "camp_manager",
+    "resource_manager",
   )
   @ApiOperation({ summary: "Obtener un recurso por ID" })
   async findById(@Param("id", ParseIntPipe) id: number) {
@@ -242,14 +236,14 @@ export class ResourcesController {
   }
 
   @Post()
-  @Roles("admin", "resource_manager", "travel_manager", "camp_manager")
+  @Roles("admin", "resource_manager", "travel_manager", "resource_manager")
   @ApiOperation({ summary: "Crear un nuevo recurso" })
   async create(@Body() dto: CreateResourceDto) {
     return this.resourcesService.create(dto);
   }
 
   @Patch(":id")
-  @Roles("admin", "resource_manager", "travel_manager", "camp_manager")
+  @Roles("admin", "resource_manager", "travel_manager", "resource_manager")
   @ApiOperation({ summary: "Actualizar un recurso" })
   async update(
     @Param("id", ParseIntPipe) id: number,
@@ -259,7 +253,7 @@ export class ResourcesController {
   }
 
   @Delete(":id")
-  @Roles("admin", "travel_manager", "camp_manager")
+  @Roles("admin", "travel_manager", "resource_manager")
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Eliminar un recurso" })
   async remove(@Param("id", ParseIntPipe) id: number) {

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -29,14 +29,14 @@ export class CampsController {
   constructor(private readonly campsService: CampsService) {}
 
   @Post()
-  @Roles("admin", "travel_manager", "camp_manager")
+  @Roles("admin", "travel_manager", "resource_manager")
   @ApiOperation({
     summary: "Crear campamento",
     description:
-      "Crea un nuevo campamento e inicializa su inventario vac�o con todos los recursos existentes.",
+      "Crea un nuevo campamento e inicializa su inventario vacï¿½o con todos los recursos existentes.",
   })
   @ApiResponse({ status: 201, description: "Campamento creado exitosamente." })
-  @ApiResponse({ status: 400, description: "Datos inv�lidos." })
+  @ApiResponse({ status: 400, description: "Datos invï¿½lidos." })
   @ApiResponse({ status: 401, description: "No autenticado." })
   @ApiResponse({ status: 403, description: "Sin permiso." })
   create(@Body() dto: CreateCampDto) {
@@ -56,7 +56,7 @@ export class CampsController {
   @Get(":id")
   @ApiOperation({
     summary: "Detalle de campamento",
-    description: "Retorna el campamento con sus m�tricas de inventario.",
+    description: "Retorna el campamento con sus mï¿½tricas de inventario.",
   })
   @ApiParam({ name: "id", description: "ID del campamento", type: Number })
   @ApiResponse({ status: 200, description: "Detalle del campamento." })
@@ -66,7 +66,7 @@ export class CampsController {
   }
 
   @Patch(":id")
-  @Roles("admin", "travel_manager", "camp_manager")
+  @Roles("admin", "travel_manager", "resource_manager")
   @ApiOperation({
     summary: "Actualizar campamento",
     description: "Actualiza los datos de un campamento existente.",
@@ -79,7 +79,7 @@ export class CampsController {
   }
 
   @Delete(":id")
-  @Roles("admin", "travel_manager", "camp_manager")
+  @Roles("admin", "travel_manager", "resource_manager")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Desactivar campamento",
