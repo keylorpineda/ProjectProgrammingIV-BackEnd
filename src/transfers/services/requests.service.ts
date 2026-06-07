@@ -13,7 +13,7 @@ import { Person } from "../../users/entities/person.entity";
 import { Inventory } from "../../resources/entities/inventory.entity";
 import { Resource } from "../../resources/entities/resource.entity";
 import { AuditLog } from "../../common/entities/audit-log.entity";
-import { CreateIntercampRequestDto } from "../dto/create-intercamp-request.dto";
+import type { CreateIntercampRequestDto } from "../dto/create-intercamp-request.dto";
 import { NotificationsGateway } from "../../notifications/notifications.gateway";
 
 @Injectable()
@@ -188,7 +188,7 @@ export class RequestsService {
         );
       }
 
-      if (person.userAccount?.camp_id !== dto.camp_origin_id) {
+      if (person.userAccount?.camp_id != dto.camp_origin_id) {
         throw new BadRequestException(
           `La persona ${person.first_name} ${person.last_name} no pertenece al campamento origen`,
         );
