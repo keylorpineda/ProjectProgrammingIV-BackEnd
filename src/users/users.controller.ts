@@ -381,4 +381,35 @@ export class UsersController {
     const userId = user?.userId ?? user?.id;
     return this.usersService.toggleBadgeDisplay(userId, badgeId, isDisplayed);
   }
+
+  @Get("me/achievements")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "worker",
+    "travel_manager",
+    "camp_manager",
+    "camp_leader",
+  )
+  @ApiOperation({ summary: "Obtener logros del usuario actual" })
+  async getMyAchievements(@CurrentUser() user: any) {
+    const userId = user?.userId ?? user?.id;
+    return this.usersService.getMyAchievements(userId);
+  }
+
+  @Post("me/achievements/first-login")
+  @HttpCode(HttpStatus.OK)
+  @Roles(
+    "admin",
+    "resource_manager",
+    "worker",
+    "travel_manager",
+    "camp_manager",
+    "camp_leader",
+  )
+  @ApiOperation({ summary: "Registrar logro de primer inicio de sesión" })
+  async awardFirstLoginAchievement(@CurrentUser() user: any) {
+    const userId = user?.userId ?? user?.id;
+    return this.usersService.awardFirstLoginAchievement(userId);
+  }
 }

@@ -2,19 +2,20 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { UserAccount } from "./entities/user-account.entity";
-import { Person } from "./entities/person.entity";
-import { Profession } from "./entities/profession.entity";
-import { TemporaryAssignment } from "./entities/temporary-assignment.entity";
-import { CreatePersonDto } from "./dto/create-person.dto";
-import { UpdatePersonDto } from "./dto/update-person.dto";
-import { UpdatePersonStatusDto } from "./dto/update-person-status.dto";
-import { CreateTemporaryAssignmentDto } from "./dto/create-temporary-assignment.dto";
+import type { Person } from "./entities/person.entity";
+import type { Profession } from "./entities/profession.entity";
+import type { TemporaryAssignment } from "./entities/temporary-assignment.entity";
+import type { CreatePersonDto } from "./dto/create-person.dto";
+import type { UpdatePersonDto } from "./dto/update-person.dto";
+import type { UpdatePersonStatusDto } from "./dto/update-person-status.dto";
+import type { CreateTemporaryAssignmentDto } from "./dto/create-temporary-assignment.dto";
 import { PersonsService } from "./services/persons.service";
 import { ProfessionsService } from "./services/professions.service";
 import { AssignmentsService } from "./services/assignments.service";
 import { ProductionService } from "./services/production.service";
 import { UserAsset } from "./entities/user-asset.entity";
 import { Asset } from "./entities/asset.entity";
+import { PersonAchievement } from "./entities/person-achievement.entity";
 
 /**
  * Servicio principal de usuarios - Act�a como orquestador
@@ -27,6 +28,8 @@ export class UsersService {
     private readonly userAccountRepo: Repository<UserAccount>,
     @InjectRepository(UserAsset)
     private readonly userAssetRepo: Repository<UserAsset>,
+    @InjectRepository(PersonAchievement)
+    private readonly personAchievementRepo: Repository<PersonAchievement>,
     private readonly personsService: PersonsService,
     private readonly professionsService: ProfessionsService,
     private readonly assignmentsService: AssignmentsService,
@@ -236,5 +239,54 @@ export class UsersService {
 
     badge.is_displayed = isDisplayed;
     return this.userAssetRepo.save(badge);
+  }
+
+  async awardFirstLoginAchievement(
+    userId: number,
+  ): Promise<{ awarded: boolean }> {
+    const user = await this.userAccountRepo.findOne({
+      where: { id: userId },
+      select: ["id", "person_id"],
+    });
+
+    if (!user?.person_id) {
+      return { awarded: false };
+    }
+
+    const personId = Number(user.person_id);
+
+    const existing = await this.personAchievementRepo.findOne({
+      where: { person_id: personId, achievement_name: "PRIMER_TRABAJO" },
+    });
+
+    if (existing) {
+      return { awarded: false };
+    }
+
+    await this.personAchievementRepo.save(
+      this.personAchievementRepo.create({
+        person_id: personId,
+        achievement_name: "PRIMER_TRABAJO",
+        obtained_at: new Date(),
+      }),
+    );
+
+    return { awarded: true };
+  }
+
+  async getMyAchievements(userId: number): Promise<PersonAchievement[]> {
+    const user = await this.userAccountRepo.findOne({
+      where: { id: userId },
+      select: ["id", "person_id"],
+    });
+
+    if (!user?.person_id) {
+      return [];
+    }
+
+    return this.personAchievementRepo.find({
+      where: { person_id: Number(user.person_id) },
+      order: { obtained_at: "ASC" },
+    });
   }
 }
