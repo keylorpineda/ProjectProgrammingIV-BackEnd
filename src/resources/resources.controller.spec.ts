@@ -1,11 +1,12 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { ResourcesController } from "./resources.controller";
 import { ResourcesService } from "./resources.service";
-import { CreateResourceDto } from "./dto/create-resource.dto";
-import { UpdateResourceDto } from "./dto/update-resource.dto";
-import { UpdateInventoryDto } from "./dto/update-inventory.dto";
-import { CreateInventoryMovementDto } from "./dto/create-inventory-movement.dto";
-import { AdjustDailyProductionDto } from "./dto/adjust-daily-production.dto";
+import type { CreateResourceDto } from "./dto/create-resource.dto";
+import type { UpdateResourceDto } from "./dto/update-resource.dto";
+import type { UpdateInventoryDto } from "./dto/update-inventory.dto";
+import type { CreateInventoryMovementDto } from "./dto/create-inventory-movement.dto";
+import type { AdjustDailyProductionDto } from "./dto/adjust-daily-production.dto";
 
 describe("ResourcesController", () => {
   let controller: ResourcesController;
@@ -142,13 +143,24 @@ describe("ResourcesController", () => {
   });
 
   it("should trigger the daily process", async () => {
-    const response = { production: {}, consumption: {}, movementCount: 2 };
-    service.executeDailyProcess.mockResolvedValue(response);
+    service.executeDailyProcess.mockResolvedValue({
+      production: { food: 10, water: 5 },
+      consumption: { food: 8, water: 6 },
+      movementCount: 2,
+    });
 
     const result = await controller.triggerDailyProcess(7);
 
     expect(service.executeDailyProcess).toHaveBeenCalledWith(7);
-    expect(result).toEqual(response);
+    expect(result).toEqual({
+      message: "Proceso diario ejecutado: 2 movimientos registrados",
+      metrics: {
+        foodProduced: 10,
+        foodConsumed: 8,
+        waterProduced: 5,
+        waterConsumed: 6,
+      },
+    });
   });
 
   it("should adjust daily production for a person", async () => {

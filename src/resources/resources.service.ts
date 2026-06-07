@@ -568,7 +568,7 @@ export class ResourcesService implements OnModuleInit {
         type: "daily_production",
         description:
           dto.description ||
-          `Ajuste manual de producciï¿½n: ${person.first_name} ${person.last_name}`,
+          `Ajuste manual de produccion: ${person.first_name} ${person.last_name}`,
       },
       userId,
     );
