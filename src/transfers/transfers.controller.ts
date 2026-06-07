@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Get,
   Post,
@@ -42,19 +42,6 @@ export class TransfersController {
     @CurrentUser() user: any,
   ) {
     return this.transfersService.createRequest(dto, user.userId);
-  }
-
-  @Get("requests/:id")
-  @Roles(
-    "admin",
-    "resource_manager",
-    "travel_manager",
-    "worker",
-    "resource_manager",
-  )
-  @ApiOperation({ summary: "Obtener detalle de solicitud de transferencia" })
-  async getRequest(@Param("id", ParseIntPipe) id: number) {
-    return this.transfersService.findRequestById(id);
   }
 
   @Get("requests/camp/:campId")
@@ -104,6 +91,19 @@ export class TransfersController {
   @ApiOperation({ summary: "Solicitudes pendientes de aprobacion" })
   async getPendingRequests(@Param("campId", ParseIntPipe) campId: number) {
     return this.transfersService.findPendingRequestsByCamp(campId);
+  }
+
+  @Get("requests/:id")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "travel_manager",
+    "worker",
+    "resource_manager",
+  )
+  @ApiOperation({ summary: "Obtener detalle de solicitud de transferencia" })
+  async getRequest(@Param("id", ParseIntPipe) id: number) {
+    return this.transfersService.findRequestById(id);
   }
 
   @Patch("requests/:id/approval")
