@@ -8,7 +8,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, IsNull } from "typeorm";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
-import { OnModuleInit } from "@nestjs/common";
+import type { OnModuleInit } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { Resource } from "./entities/resource.entity";
 import { Inventory } from "./entities/inventory.entity";
@@ -18,11 +18,15 @@ import { DailyConsumption } from "./entities/daily-consumption.entity";
 import { AuditLog } from "../common/entities/audit-log.entity";
 import { Camp } from "../camps/entities/camp.entity";
 import { Person } from "../users/entities/person.entity";
-import { CreateResourceDto } from "./dto/create-resource.dto";
-import { UpdateResourceDto } from "./dto/update-resource.dto";
-import { CreateInventoryMovementDto } from "./dto/create-inventory-movement.dto";
-import { AdjustDailyProductionDto } from "./dto/adjust-daily-production.dto";
-import { UpdateInventoryDto } from "./dto/update-inventory.dto";
+import { PersonAchievement } from "../users/entities/person-achievement.entity";
+import { UserAccount } from "../users/entities/user-account.entity";
+import { UserAsset } from "../users/entities/user-asset.entity";
+import { Asset } from "../users/entities/asset.entity";
+import type { CreateResourceDto } from "./dto/create-resource.dto";
+import type { UpdateResourceDto } from "./dto/update-resource.dto";
+import type { CreateInventoryMovementDto } from "./dto/create-inventory-movement.dto";
+import type { AdjustDailyProductionDto } from "./dto/adjust-daily-production.dto";
+import type { UpdateInventoryDto } from "./dto/update-inventory.dto";
 import {
   PROFESSIONS_CONFIG,
   DAILY_CONSUMPTION,
@@ -57,6 +61,12 @@ export class ResourcesService implements OnModuleInit {
     private readonly campRepo: Repository<Camp>,
     @InjectRepository(Person)
     private readonly personRepo: Repository<Person>,
+    @InjectRepository(PersonAchievement)
+    private readonly personAchievementRepo: Repository<PersonAchievement>,
+    @InjectRepository(UserAccount)
+    private readonly userAccountRepo: Repository<UserAccount>,
+    @InjectRepository(UserAsset)
+    private readonly userAssetRepo: Repository<UserAsset>,
     @InjectQueue("daily-tasks") private readonly dailyTasksQueue: Queue,
   ) {}
 
@@ -229,6 +239,12 @@ export class ResourcesService implements OnModuleInit {
       where: { camp_id: dto.camp_id, resource_id: dto.resource_id },
     });
 
+    // Capture alert state before the movement (for LOGISTICA_PRECISA badge)
+    const wasAlertActive = inventory?.alert_active ?? false;
+    const wasQuantityAboveZero = inventory
+      ? Number(inventory.current_quantity) > 0
+      : false;
+
     if (!inventory) {
       inventory = this.inventoryRepo.create({
         camp_id: dto.camp_id,
@@ -283,6 +299,45 @@ export class ResourcesService implements OnModuleInit {
         date: new Date(),
       }),
     );
+
+    // Gamification — wrapped in try/catch so they never break the main flow
+    if (userId) {
+      const xpGain = isIncome ? 15 : 5;
+      this.grantXp(userId, xpGain).catch((e) =>
+        this.logger.warn(`grantXp failed: ${e?.message}`),
+      );
+
+      if (dto.type === "income") {
+        // PRIMER_SUMINISTRO — check after saving; count === 1 means this is the first
+        this.movementRepo
+          .count({ where: { user_id: userId, type: "income" } })
+          .then((count) => {
+            if (count === 1) {
+              this.grantAchievement(userId, "PRIMER_SUMINISTRO").catch(
+                () => {},
+              );
+            }
+          })
+          .catch(() => {});
+      }
+
+      // LOGISTICA_PRECISA — replenished a resource that had an active alert
+      // before it hit zero
+      if (
+        isIncome &&
+        wasAlertActive &&
+        wasQuantityAboveZero &&
+        !inventory.alert_active
+      ) {
+        this.grantBadgeOnce(
+          userId,
+          "LOGISTICA_PRECISA",
+          "Reabasteciste un recurso crítico antes de que se agotara por completo.",
+        ).catch((e) =>
+          this.logger.warn(`grantBadgeOnce failed: ${e?.message}`),
+        );
+      }
+    }
 
     // Re-fetch movement + inventory with their relations so the response
     // includes user/camp/resource (see docs/ALIGNMENT_SPEC.md P2-6).
@@ -451,6 +506,11 @@ export class ResourcesService implements OnModuleInit {
 
     await this.refreshAlertFlags(campId);
 
+    // PROVEEDOR_CONSISTENTE — award to camp managers if no critical alerts remain
+    this.checkProveedorConsistente(campId).catch((e) =>
+      this.logger.warn(`checkProveedorConsistente failed: ${e?.message}`),
+    );
+
     return { production, consumption, movementCount };
   }
 
@@ -530,5 +590,211 @@ export class ResourcesService implements OnModuleInit {
       .where("camp_id = :campId", { campId })
       .andWhere("current_quantity >= minimum_stock_required")
       .execute();
+  }
+
+  // ─── Gamification helpers ───────────────────────────────────────────────────
+
+  private async grantXp(userId: number, points: number): Promise<void> {
+    const user = await this.userAccountRepo.findOne({
+      where: { id: userId },
+      select: ["id", "person_id"],
+    });
+    if (!user?.person_id) return;
+
+    const person = await this.personRepo.findOne({
+      where: { id: Number(user.person_id) },
+    });
+    if (!person) return;
+
+    person.experience_points = (person.experience_points ?? 0) + points;
+
+    if (person.experience_points >= 100) {
+      person.experience_level =
+        (person.experience_level ?? 1) +
+        Math.floor(person.experience_points / 100);
+      person.experience_points = person.experience_points % 100;
+    }
+
+    await this.personRepo.save(person);
+  }
+
+  private async grantAchievement(
+    userId: number,
+    achievementName: string,
+  ): Promise<boolean> {
+    const user = await this.userAccountRepo.findOne({
+      where: { id: userId },
+      select: ["id", "person_id"],
+    });
+    if (!user?.person_id) return false;
+
+    const personId = Number(user.person_id);
+
+    const exists = await this.personAchievementRepo.findOne({
+      where: { person_id: personId, achievement_name: achievementName },
+    });
+    if (exists) return false;
+
+    await this.personAchievementRepo.save(
+      this.personAchievementRepo.create({
+        person_id: personId,
+        achievement_name: achievementName,
+        obtained_at: new Date(),
+      }),
+    );
+
+    this.logger.log(
+      `Achievement "${achievementName}" granted to person ${personId}`,
+    );
+    return true;
+  }
+
+  private async grantBadgeOnce(
+    userId: number,
+    badgeName: string,
+    badgeDescription: string,
+  ): Promise<void> {
+    const assetRepo = this.userAssetRepo.manager.getRepository(Asset);
+
+    let asset = await assetRepo.findOne({
+      where: { name: badgeName, asset_type: "badge" },
+    });
+
+    if (!asset) {
+      asset = await assetRepo.save(
+        assetRepo.create({
+          name: badgeName,
+          description: badgeDescription,
+          asset_type: "badge",
+          url: "",
+          public_id: "",
+          rarity: 2,
+          active: true,
+        }),
+      );
+    }
+
+    const existing = await this.userAssetRepo.findOne({
+      where: {
+        user_account_id: userId,
+        asset_id: Number(asset.id),
+        relation_type: "badge",
+      },
+    });
+    if (existing) return;
+
+    await this.userAssetRepo.save(
+      this.userAssetRepo.create({
+        user_account_id: userId,
+        asset_id: Number(asset.id),
+        relation_type: "badge",
+        is_displayed: false,
+      }),
+    );
+
+    this.logger.log(`Badge "${badgeName}" granted to user ${userId}`);
+  }
+
+  private async checkProveedorConsistente(campId: number): Promise<void> {
+    const alertCount = await this.inventoryRepo.count({
+      where: { camp_id: campId, alert_active: true },
+    });
+    if (alertCount > 0) return;
+
+    const managers = await this.userAccountRepo
+      .createQueryBuilder("ua")
+      .leftJoinAndSelect("ua.role", "role")
+      .where("ua.camp_id = :campId", { campId })
+      .andWhere("role.name IN (:...roles)", {
+        roles: ["camp_manager", "resource_manager"],
+      })
+      .getMany();
+
+    for (const manager of managers) {
+      await this.grantAchievement(
+        Number(manager.id),
+        "PROVEEDOR_CONSISTENTE",
+      ).catch(() => {});
+    }
+  }
+
+  // ─── Production ranking ──────────────────────────────────────────────────────
+
+  async getProductionRanking(campId: number): Promise<
+    {
+      rank: number;
+      person_id: number;
+      name: string;
+      profession: string;
+      food_production: number;
+      water_production: number;
+      total_production: number;
+      experience_level: number;
+    }[]
+  > {
+    const workers = await this.personRepo
+      .createQueryBuilder("person")
+      .leftJoinAndSelect("person.profession", "profession")
+      .leftJoin("person.userAccount", "ua")
+      .where("ua.camp_id = :campId", { campId })
+      .andWhere("person.can_work = :cw", { cw: true })
+      .andWhere("person.status = :st", { st: PersonStatus.ACTIVE })
+      .getMany();
+
+    const foodResource = await this.resourceRepo.findOne({
+      where: { category: "food" },
+    });
+    const waterResource = await this.resourceRepo.findOne({
+      where: { category: "water" },
+    });
+
+    const ranked = await Promise.all(
+      workers.map(async (person) => {
+        const profConfig = Object.values(PROFESSIONS_CONFIG).find(
+          (p) => p.name === person.profession?.name,
+        );
+
+        const customFood = foodResource
+          ? await this.dailyProdRepo.findOne({
+              where: {
+                camp_id: campId,
+                profession_id: Number(person.profession?.id),
+                resource_id: Number(foodResource.id),
+              },
+            })
+          : null;
+
+        const customWater = waterResource
+          ? await this.dailyProdRepo.findOne({
+              where: {
+                camp_id: campId,
+                profession_id: Number(person.profession?.id),
+                resource_id: Number(waterResource.id),
+              },
+            })
+          : null;
+
+        const foodProd = customFood
+          ? Number(customFood.base_production)
+          : (profConfig?.daily_food_production ?? 0);
+        const waterProd = customWater
+          ? Number(customWater.base_production)
+          : (profConfig?.daily_water_production ?? 0);
+
+        return {
+          person_id: Number(person.id),
+          name: `${person.first_name} ${person.last_name}`,
+          profession: person.profession?.name ?? "Sin profesión",
+          food_production: foodProd,
+          water_production: waterProd,
+          total_production: foodProd + waterProd,
+          experience_level: person.experience_level ?? 1,
+        };
+      }),
+    );
+
+    return ranked
+      .sort((a, b) => b.total_production - a.total_production)
+      .map((r, i) => ({ rank: i + 1, ...r }));
   }
 }

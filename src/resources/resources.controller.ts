@@ -140,7 +140,32 @@ export class ResourcesController {
     summary: "Ejecutar proceso diario manualmente (produccion + consumo)",
   })
   async triggerDailyProcess(@Param("campId", ParseIntPipe) campId: number) {
-    return this.resourcesService.executeDailyProcess(campId);
+    const result = await this.resourcesService.executeDailyProcess(campId);
+    return {
+      message: `Proceso diario ejecutado: ${result.movementCount} movimientos registrados`,
+      metrics: {
+        foodProduced: result.production["food"] ?? 0,
+        foodConsumed: result.consumption["food"] ?? 0,
+        waterProduced: result.production["water"] ?? 0,
+        waterConsumed: result.consumption["water"] ?? 0,
+      },
+    };
+  }
+
+  @Get("production-ranking/:campId")
+  @Roles(
+    "admin",
+    "resource_manager",
+    "camp_manager",
+    "camp_leader",
+    "travel_manager",
+  )
+  @ApiOperation({
+    summary:
+      "Ranking de productividad diaria de trabajadores activos en el campamento",
+  })
+  async getProductionRanking(@Param("campId", ParseIntPipe) campId: number) {
+    return this.resourcesService.getProductionRanking(campId);
   }
 
   @Post("daily-production/:personId")

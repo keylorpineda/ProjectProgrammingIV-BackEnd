@@ -180,7 +180,9 @@
     "trabajar",
     "transferencia",
     "unidades",
-    "viaje"
+    "viaje",
+    "Proveedor",
+    "Consistente"
   ],
   "ignorePaths": [
     "node_modules",
