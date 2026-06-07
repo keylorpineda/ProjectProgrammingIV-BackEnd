@@ -2,7 +2,7 @@
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Profession } from "../entities/profession.entity";
-import { CreateProfessionDto } from "../dto/create-profession.dto";
+import type { CreateProfessionDto } from "../dto/create-profession.dto";
 import { PersonsService } from "./persons.service";
 
 @Injectable()
@@ -56,8 +56,8 @@ export class ProfessionsService {
 
     if (needsWorkers) {
       console.warn(
-        `?? ALERTA: Profesi�n "${profession.name}" necesita trabajadores. ` +
-          `Actual: ${activeWorkers}, M�nimo: ${profession.minimum_active_required}`,
+        `?? ALERTA: Profesión "${profession.name}" necesita trabajadores. ` +
+          `Actual: ${activeWorkers}, Mínimo: ${profession.minimum_active_required}`,
       );
     }
 

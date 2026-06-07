@@ -486,7 +486,7 @@ export class ResourcesService implements OnModuleInit {
         resource_id: Number(foodResource.id),
         quantity: totalFoodCons,
         type: "daily_consumption",
-        description: `Consumo diario de comida: ${personsInCamp} personas Ã— ${foodRation} unidades`,
+        description: `Consumo diario de comida: ${personsInCamp} personas x ${foodRation} unidades`,
       });
       consumption["food"] = totalFoodCons;
       movementCount++;
@@ -498,7 +498,7 @@ export class ResourcesService implements OnModuleInit {
         resource_id: Number(waterResource.id),
         quantity: totalWaterCons,
         type: "daily_consumption",
-        description: `Consumo diario de agua: ${personsInCamp} personas Ã— ${waterRation} litros`,
+        description: `Consumo diario de agua: ${personsInCamp} personas x ${waterRation} litros`,
       });
       consumption["water"] = totalWaterCons;
       movementCount++;

@@ -85,7 +85,7 @@ export class AuthService {
         success: false,
         failure_reason: "User not found",
       });
-      throw new UnauthorizedException("Credenciales inv�lidas");
+      throw new UnauthorizedException("Credenciales inválidas");
     }
 
     const isPasswordValid = await this.verifyPassword(
@@ -102,7 +102,7 @@ export class AuthService {
         failure_reason: "Invalid password",
         user_id: Number(user.id),
       });
-      throw new UnauthorizedException("Credenciales inv�lidas");
+      throw new UnauthorizedException("Credenciales inválidas");
     }
 
     const payload = {
@@ -201,7 +201,7 @@ export class AuthService {
     try {
       payload = this.jwtService.verify(refreshToken);
     } catch (error) {
-      throw new UnauthorizedException("Refresh token inv�lido o expirado");
+      throw new UnauthorizedException("Refresh token inválido o expirado");
     }
 
     const sessions = await this.sessionRepo
@@ -225,13 +225,13 @@ export class AuthService {
     }
 
     if (!validSession) {
-      throw new UnauthorizedException("Sesi�n inv�lida o expirada");
+      throw new UnauthorizedException("Sesión inv�lida o expirada");
     }
 
     if (new Date() > validSession.expires_at) {
       validSession.is_active = false;
       await this.sessionRepo.save(validSession);
-      throw new UnauthorizedException("Sesi�n expirada");
+      throw new UnauthorizedException("Sesión expirada");
     }
 
     const user = await this.userRepo.findOne({
@@ -415,7 +415,7 @@ export class AuthService {
   }
 
   /**
-   * Verifica el estado de la sesi�n del usuario
+   * Verifica el estado de la sesión del usuario
    * Retorna informaci�n sobre actividad y tiempo restante antes del auto-logout
    */
   async checkSessionStatus(userId: number): Promise<{

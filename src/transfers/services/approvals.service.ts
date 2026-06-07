@@ -10,7 +10,7 @@ import { Approval } from "../entities/approval.entity";
 import { IntercampRequest } from "../entities/intercamp-request.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
 import { AuditLog } from "../../common/entities/audit-log.entity";
-import { ApprovalDto } from "../dto/approval.dto";
+import type { ApprovalDto } from "../dto/approval.dto";
 
 @Injectable()
 export class ApprovalsService {
@@ -55,7 +55,7 @@ export class ApprovalsService {
     );
 
     if (existingApproval) {
-      throw new BadRequestException("Ya has registrado tu decisi�n");
+      throw new BadRequestException("Ya has registrado tu decisión");
     }
 
     const campRole =

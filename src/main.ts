@@ -23,6 +23,12 @@ async function bootstrap() {
   app.use(cookieParser());
   app.use(helmet());
 
+  // Forzar UTF-8 en todas las respuestas JSON para que tildes y caracteres especiales lleguen correctamente
+  app.use((_req: any, res: any, next: any) => {
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    next();
+  });
+
   app.useGlobalInterceptors(new SanitizeInterceptor());
 
   app.useWebSocketAdapter(new RedisIoAdapter(app));

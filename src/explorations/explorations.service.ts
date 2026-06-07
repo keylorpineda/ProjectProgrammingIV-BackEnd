@@ -13,8 +13,8 @@ import { Person } from "../users/entities/person.entity";
 import { AuditLog } from "../common/entities/audit-log.entity";
 import { ResourcesService } from "../resources/resources.service";
 import { PythonAiService } from "../ai/services/python-ai.service";
-import { CreateExplorationDto } from "./dto/create-exploration.dto";
-import { ReturnExplorationDto } from "./dto/return-exploration.dto";
+import type { CreateExplorationDto } from "./dto/create-exploration.dto";
+import type { ReturnExplorationDto } from "./dto/return-exploration.dto";
 import {
   DAILY_CONSUMPTION,
   PersonStatus,
@@ -44,7 +44,7 @@ export class ExplorationsService {
   ): Promise<Exploration> {
     if (!dto.persons || dto.persons.length === 0) {
       throw new BadRequestException(
-        "Debe asignar al menos una persona a la exploraci�n",
+        "Debe asignar al menos una persona a la exploración",
       );
     }
 
@@ -66,7 +66,7 @@ export class ExplorationsService {
     for (const person of persons) {
       if (!person.profession || !person.profession.can_explore) {
         throw new BadRequestException(
-          `${person.first_name} ${person.last_name} (ID ${person.id}) no tiene profesi�n habilitada para explorar`,
+          `${person.first_name} ${person.last_name} (ID ${person.id}) no tiene profesión habilitada para explorar`,
         );
       }
 
@@ -78,7 +78,7 @@ export class ExplorationsService {
 
       if (person.status !== PersonStatus.ACTIVE) {
         throw new BadRequestException(
-          `${person.first_name} ${person.last_name} (ID ${person.id}) no est� activo (estado: ${person.status})`,
+          `${person.first_name} ${person.last_name} (ID ${person.id}) no está activo (estado: ${person.status})`,
         );
       }
 
@@ -91,7 +91,7 @@ export class ExplorationsService {
 
       if (alreadyExploring > 0) {
         throw new ConflictException(
-          `${person.first_name} ${person.last_name} (ID ${person.id}) ya est� asignado a otra exploraci�n activa`,
+          `${person.first_name} ${person.last_name} (ID ${person.id}) ya está asignado a otra exploración activa`,
         );
       }
     }
@@ -149,7 +149,7 @@ export class ExplorationsService {
           resource_id: Number(foodResource.id),
           quantity: foodNeeded,
           type: "exploration_out",
-          description: `Raciones de comida para exploraci�n "${dto.name}" (${totalPersons} personas � ${totalDays} d�as)`,
+          description: `Raciones de comida para exploración "${dto.name}" (${totalPersons} personas x ${totalDays} días)`,
         },
         userId,
       );
@@ -160,7 +160,7 @@ export class ExplorationsService {
           resource_id: Number(waterResource.id),
           quantity: waterNeeded,
           type: "exploration_out",
-          description: `Raciones de agua para exploraci�n "${dto.name}" (${totalPersons} personas � ${totalDays} d�as)`,
+          description: `Raciones de agua para exploración "${dto.name}" (${totalPersons} personas x ${totalDays} días)`,
         },
         userId,
       );
@@ -189,7 +189,7 @@ export class ExplorationsService {
               resource_id: resDto.resource_id,
               quantity: resDto.quantity,
               type: "exploration_out",
-              description: `Recurso adicional para exploraci�n "${dto.name}"`,
+              description: `Recurso adicional para exploración "${dto.name}"`,
             },
             userId,
           );
@@ -254,15 +254,15 @@ export class ExplorationsService {
     });
 
     if (!exploration) {
-      throw new NotFoundException(`Exploraci�n con ID ${id} no encontrada`);
+      throw new NotFoundException(`Exploración con ID ${id} no encontrada`);
     }
 
     if (exploration.status === "completed") {
-      throw new ConflictException("Esta exploraci�n ya fue completada");
+      throw new ConflictException("Esta exploración ya fue completada");
     }
 
     if (exploration.status === "cancelled") {
-      throw new ConflictException("Esta exploraci�n fue cancelada");
+      throw new ConflictException("Esta exploración fue cancelada");
     }
 
     if (exploration.status === "scheduled") {
@@ -301,7 +301,7 @@ export class ExplorationsService {
               resource_id: fr.resource_id,
               quantity: fr.quantity,
               type: "exploration_in",
-              description: `Recursos encontrados en exploraci�n "${exploration.name}"`,
+              description: `Recursos encontrados en exploración "${exploration.name}"`,
             },
             userId,
           );
@@ -452,7 +452,7 @@ export class ExplorationsService {
     });
 
     if (!exploration) {
-      throw new NotFoundException(`Exploraci�n con ID ${id} no encontrada`);
+      throw new NotFoundException(`Exploración con ID ${id} no encontrada`);
     }
 
     return exploration;
@@ -469,7 +469,7 @@ export class ExplorationsService {
     });
 
     if (!exploration) {
-      throw new NotFoundException(`Exploraci�n con ID ${id} no encontrada`);
+      throw new NotFoundException(`Exploración con ID ${id} no encontrada`);
     }
 
     if (exploration.status !== "scheduled") {
@@ -494,7 +494,7 @@ export class ExplorationsService {
             resource_id: Number(er.resource_id),
             quantity: Number(er.quantity),
             type: "exploration_in",
-            description: `Devoluci�n por cancelaci�n de exploraci�n "${exploration.name}"`,
+            description: `Devolución por cancelación de exploración "${exploration.name}"`,
           },
           userId,
         );
@@ -541,7 +541,7 @@ export class ExplorationsService {
     });
 
     if (!exploration) {
-      throw new NotFoundException(`Exploraci�n con ID ${id} no encontrada`);
+      throw new NotFoundException(`Exploración con ID ${id} no encontrada`);
     }
 
     if (exploration.status !== "scheduled") {

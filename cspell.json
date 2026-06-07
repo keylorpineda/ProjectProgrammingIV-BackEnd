@@ -182,7 +182,9 @@
     "unidades",
     "viaje",
     "Proveedor",
-    "Consistente"
+    "Consistente",
+    "sesión",
+    "Sesión"
   ],
   "ignorePaths": [
     "node_modules",
