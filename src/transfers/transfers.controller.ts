@@ -44,6 +44,17 @@ export class TransfersController {
     return this.transfersService.createRequest(dto, user.userId);
   }
 
+  @Get("requests/map")
+  @Roles("admin", "resource_manager", "travel_manager", "camp_leader")
+  @ApiOperation({
+    summary: "Transferencias activas para el mapa táctico",
+    description:
+      "Retorna id, camp_origin_id, camp_destination_id y type de todas las transferencias pending/approved/in_transit. Un solo request en lugar de N llamadas por campamento.",
+  })
+  async getActiveTransfersForMap() {
+    return this.transfersService.findActiveTransfersForMap();
+  }
+
   @Get("requests/camp/:campId")
   @Roles(
     "admin",

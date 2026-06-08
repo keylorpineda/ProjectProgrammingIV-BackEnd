@@ -79,7 +79,7 @@ const ds = new DataSource({
   ],
   synchronize: false,
   ssl: { rejectUnauthorized: false },
-  extra: { max: 5, idleTimeoutMillis: 30000 },
+  extra: { max: 1, idleTimeoutMillis: 10000, connectionTimeoutMillis: 10000 },
 });
 
 // ── Cloudinary config ─────────────────────────────────────────────────────
@@ -286,16 +286,6 @@ const EXPLORATION_STATUSES = [
   "cancelled",
 ];
 
-const ADMISSION_DECISION_STATUSES = [
-  "PENDING_REVIEW",
-  "PENDING_REVIEW",
-  "APPROVED",
-  "APPROVED",
-  "APPROVED",
-  "REJECTED",
-  "REJECTED",
-];
-
 const ACHIEVEMENT_NAMES = [
   "PRIMER_TRABAJO",
   "EXPLORADOR_NATO",
@@ -349,6 +339,130 @@ const CAMP_PICSUM_IDS = [
   10, 15, 28, 43, 76, 82, 103, 114, 167, 193, 212, 247, 291, 315, 358,
 ];
 
+// Definición de badges temáticos post-apocalípticos
+const BADGES_DATA = [
+  {
+    name: "Primer Trabajo",
+    desc: "Completó su primera asignación laboral en el campamento",
+    category: "trabajo",
+    rarity: 1,
+    seed: "primer_trabajo",
+    bg: "fde68a",
+  },
+  {
+    name: "Explorador",
+    desc: "Participó en su primera exploración fuera del campamento",
+    category: "exploración",
+    rarity: 1,
+    seed: "explorador",
+    bg: "bbf7d0",
+  },
+  {
+    name: "Veterano",
+    desc: "Más de un año de servicio activo en el sistema",
+    category: "servicio",
+    rarity: 2,
+    seed: "veterano",
+    bg: "bfdbfe",
+  },
+  {
+    name: "Comandante",
+    desc: "Lideró un campamento con más de 100 sobrevivientes",
+    category: "liderazgo",
+    rarity: 3,
+    seed: "comandante",
+    bg: "fca5a5",
+  },
+  {
+    name: "Médico de Campo",
+    desc: "Salvó vidas bajo condiciones extremas sin recursos",
+    category: "salud",
+    rarity: 2,
+    seed: "medico_campo",
+    bg: "a7f3d0",
+  },
+  {
+    name: "Guardián",
+    desc: "Protegió el campamento durante una amenaza exterior",
+    category: "seguridad",
+    rarity: 2,
+    seed: "guardian",
+    bg: "c7d2fe",
+  },
+  {
+    name: "Ingeniero",
+    desc: "Construyó infraestructura vital con recursos escasos",
+    category: "construcción",
+    rarity: 2,
+    seed: "ingeniero",
+    bg: "fed7aa",
+  },
+  {
+    name: "Científico",
+    desc: "Realizó investigaciones que mejoraron la vida del camp",
+    category: "ciencia",
+    rarity: 3,
+    seed: "cientifico",
+    bg: "ddd6fe",
+  },
+  {
+    name: "Comerciante",
+    desc: "Gestionó transferencias exitosas entre campamentos",
+    category: "comercio",
+    rarity: 2,
+    seed: "comerciante",
+    bg: "fde68a",
+  },
+  {
+    name: "Pionero",
+    desc: "Uno de los primeros en unirse al campamento",
+    category: "fundación",
+    rarity: 3,
+    seed: "pionero",
+    bg: "99f6e4",
+  },
+  {
+    name: "Superviviente",
+    desc: "Superó condiciones extremas y sobrevivió al fin del mundo",
+    category: "supervivencia",
+    rarity: 1,
+    seed: "superviviente",
+    bg: "fecdd3",
+  },
+  {
+    name: "Artesano",
+    desc: "Fabricó equipamiento esencial para la supervivencia",
+    category: "artesanía",
+    rarity: 2,
+    seed: "artesano",
+    bg: "e9d5ff",
+  },
+  {
+    name: "Héroe",
+    desc: "Acto heroico reconocido por el consejo del campamento",
+    category: "heroísmo",
+    rarity: 4,
+    seed: "heroe",
+    bg: "fbbf24",
+  },
+  {
+    name: "Embajador",
+    desc: "Representó al campamento en negociaciones interzonal",
+    category: "diplomacia",
+    rarity: 3,
+    seed: "embajador",
+    bg: "6ee7b7",
+  },
+  {
+    name: "Leyenda",
+    desc: "Contribución excepcional que cambió el destino del camp",
+    category: "legendario",
+    rarity: 5,
+    seed: "leyenda",
+    bg: "fcd34d",
+  },
+];
+
 // ── Image upload ──────────────────────────────────────────────────────────
 type ImgRef = { url: string; public_id: string };
 
@@ -370,11 +484,16 @@ async function uploadImg(
   }
 }
 
-async function phaseImages(): Promise<{ persons: ImgRef[]; camps: ImgRef[] }> {
+async function phaseImages(): Promise<{
+  persons: ImgRef[];
+  camps: ImgRef[];
+  badges: ImgRef[];
+}> {
   log("FASE 1 — Subiendo imágenes a Cloudinary");
 
   const persons: ImgRef[] = [];
   const camps: ImgRef[] = [];
+  const badges: ImgRef[] = [];
 
   // 15 hombres + 15 mujeres = 30 avatares de personas
   for (let i = 1; i <= 15; i++) {
@@ -407,10 +526,22 @@ async function phaseImages(): Promise<{ persons: ImgRef[]; camps: ImgRef[] }> {
     step(`Logos camps ${camps.length}/15`);
   }
 
+  // 15 badges — íconos SVG via DiceBear
+  for (let i = 0; i < BADGES_DATA.length; i++) {
+    const b = BADGES_DATA[i];
+    const img = await uploadImg(
+      `https://api.dicebear.com/9.x/shapes/svg?seed=${b.seed}&backgroundColor=${b.bg}&size=200`,
+      "badges",
+      `badge_${b.seed}`,
+    );
+    badges.push(img);
+    step(`Badges ${badges.length}/${BADGES_DATA.length}`);
+  }
+
   log(
-    `✓ ${persons.filter((p) => p.url).length} avatares + ${camps.filter((c) => c.url).length} logos subidos`,
+    `✓ ${persons.filter((p) => p.url).length} avatares + ${camps.filter((c) => c.url).length} logos + ${badges.filter((b) => b.url).length} badges subidos`,
   );
-  return { persons, camps };
+  return { persons, camps, badges };
 }
 
 // ── Cleanup ───────────────────────────────────────────────────────────────
@@ -420,6 +551,7 @@ async function phaseCleanup(): Promise<void> {
   const tables = [
     "person_achievement",
     "user_asset",
+    "asset",
     "audit_log",
     "daily_consumption",
     "daily_production",
@@ -446,9 +578,7 @@ async function phaseCleanup(): Promise<void> {
     step(`Tabla ${t} limpia`);
   }
 
-  log(
-    "✓ Base de datos limpia (roles, profesiones, recursos y assets intactos)",
-  );
+  log("✓ Base de datos limpia (roles, profesiones y recursos intactos)");
 }
 
 // ── Camps ─────────────────────────────────────────────────────────────────
@@ -486,7 +616,7 @@ async function phasePersonsAndAccounts(
 
   const personRepo = ds.getRepository(Person);
   const accountRepo = ds.getRepository(UserAccount);
-  const HASH = await bcrypt.hash("12345678", 10);
+  const HASH = await bcrypt.hash("123456", 10);
 
   const roleMap = Object.fromEntries(roles.map((r) => [r.name, r]));
   const allPersons: Person[] = [];
@@ -912,13 +1042,28 @@ async function phaseAdmissions(
 
   for (let i = 0; i < TOTAL; i++) {
     const camp = pick(camps);
-    const status = pick(ADMISSION_DECISION_STATUSES);
     const isAuto = Math.random() > 0.4;
     const isArch = Math.random() > 0.8;
     const reviewer = pick(accounts);
     const subDate = randDate(new Date("2024-01-01"), new Date());
-    const score = rand(20, 98);
     const profession = pick(professions);
+
+    // Score determina la sugerencia; 25% quedan pendientes sin decidir
+    const score = rand(20, 98);
+    const isHighScore = score > 75;
+    const isLowScore = score < 50;
+    const suggestedDecision = isHighScore
+      ? "RECOMMEND_ACCEPT"
+      : isLowScore
+        ? "RECOMMEND_REJECT"
+        : "REQUIRES_REVIEW";
+    const isApproved = score >= 65;
+    const isPending = Math.random() < 0.25;
+    const status = isPending
+      ? "PENDING_REVIEW"
+      : isApproved
+        ? "APPROVED"
+        : "REJECTED";
 
     batch.push({
       tracking_code: `ADM-${Date.now()}-${i}`,
@@ -933,18 +1078,32 @@ async function phaseAdmissions(
       },
       score,
       status,
-      suggested_decision:
-        status === "APPROVED"
-          ? "APPROVE"
-          : status === "REJECTED"
-            ? "REJECT"
-            : undefined,
+      suggested_decision: isPending ? undefined : suggestedDecision,
       suggested_profession_id: Number(profession.id),
-      justification: pick(CANDIDATE_JUSTIFICATIONS),
       raw_ai_response: { model: "gpt-4", confidence: score / 100 },
       reviewed_by_user_id:
         status !== "PENDING_REVIEW" ? Number(reviewer.id) : undefined,
       final_human_decision: status !== "PENDING_REVIEW" ? status : undefined,
+      justification: isHighScore
+        ? pick([
+            "Candidato con habilidades técnicas sólidas. Puntaje superior a 75.",
+            "Perfil compatible con las profesiones demandadas.",
+            "Experiencia previa en supervivencia demostrada.",
+            "Aprobado por unanimidad del comité de admisión.",
+          ])
+        : isLowScore
+          ? pick([
+              "Puntaje insuficiente para las necesidades del camp.",
+              "Sin habilidades relevantes para el campamento.",
+              "Perfil no compatible con roles disponibles.",
+              "Historial de conflictos grupales detectado.",
+            ])
+          : pick([
+              "Puntaje en rango medio. Se requiere revisión humana.",
+              "Perfil con potencial pero necesita evaluación adicional.",
+              "Criterios parcialmente cumplidos. Pendiente de revisión.",
+              "Candidato borderline, el comité debe revisar manualmente.",
+            ]),
       admin_notes: Math.random() > 0.7 ? faker.lorem.sentence() : undefined,
       submission_date: subDate,
       review_date:
@@ -968,12 +1127,36 @@ async function phaseAdmissions(
   log(`✓ ${TOTAL} admisiones creadas`);
 }
 
+// ── Assets (badges) ───────────────────────────────────────────────────────
+async function phaseAssets(badgeImgs: ImgRef[]): Promise<void> {
+  log("FASE 10 — Creando badges en asset table");
+  const assetRepo = ds.getRepository(Asset);
+
+  const batch = BADGES_DATA.map((b, i) => {
+    const img = badgeImgs[i] ?? { url: "", public_id: "" };
+    return assetRepo.create({
+      name: b.name,
+      description: b.desc,
+      asset_type: "badge",
+      category: b.category,
+      url: img.url,
+      public_id: img.public_id,
+      thumbnail_url: img.url,
+      rarity: b.rarity,
+      active: true,
+    });
+  });
+
+  await assetRepo.save(batch);
+  log(`✓ ${batch.length} badges creados`);
+}
+
 // ── Person Achievements + User Assets ────────────────────────────────────
 async function phaseAchievementsAndAssets(
   persons: Person[],
   accounts: UserAccount[],
 ): Promise<void> {
-  log("FASE 10 — Asignando achievements y badges");
+  log("FASE 11 — Asignando achievements y badges");
   const achRepo = ds.getRepository(PersonAchievement);
   const assetRepo = ds.getRepository(UserAsset);
 
@@ -1048,7 +1231,7 @@ async function phaseDailyProduction(
   professions: Profession[],
   resources: Resource[],
 ): Promise<void> {
-  log("FASE 11 — Configurando producción diaria");
+  log("FASE 12 — Configurando producción diaria");
   const repo = ds.getRepository(DailyProduction);
 
   const producerProfs = professions.filter((p) =>
@@ -1100,7 +1283,7 @@ async function phaseAuditLogs(
   camps: Camp[],
   accounts: UserAccount[],
 ): Promise<void> {
-  log("FASE 12 — Generando audit logs (300)");
+  log("FASE 13 — Generando audit logs (300)");
   const repo = ds.getRepository(AuditLog);
 
   const ACTIONS = [
@@ -1157,6 +1340,7 @@ async function printStats(): Promise<void> {
     ["request_resource_detail", "Detalles de transfer"],
     ["ai_admission", "Admisiones AI"],
     ["person_achievement", "Achievements"],
+    ["asset", "Badges (tipos)"],
     ["user_asset", "Badges asignados"],
     ["daily_production", "Config. producción diaria"],
     ["audit_log", "Audit logs"],
@@ -1209,7 +1393,11 @@ async function main() {
   );
 
   // Fases
-  const { persons: personImgs, camps: campImgs } = await phaseImages();
+  const {
+    persons: personImgs,
+    camps: campImgs,
+    badges: badgeImgs,
+  } = await phaseImages();
   await phaseCleanup();
   const camps = await phaseCamps(campImgs);
   const { persons, accounts } = await phasePersonsAndAccounts(
@@ -1223,6 +1411,7 @@ async function main() {
   await phaseExplorations(camps, persons, accounts, resources);
   await phaseTransfers(camps, resources, accounts);
   await phaseAdmissions(camps, professions, accounts);
+  await phaseAssets(badgeImgs);
   await phaseAchievementsAndAssets(persons, accounts);
   await phaseDailyProduction(camps, professions, resources);
   await phaseAuditLogs(camps, accounts);

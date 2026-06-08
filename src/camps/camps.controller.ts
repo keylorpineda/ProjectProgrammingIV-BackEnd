@@ -53,6 +53,17 @@ export class CampsController {
     return this.campsService.findAll();
   }
 
+  @Get("map")
+  @ApiOperation({
+    summary: "Marcadores del mapa",
+    description:
+      "Retorna solo los campos necesarios para renderizar los marcadores del mapa (id, nombre, coordenadas, descripción, capacidad). Más rápido que /camps.",
+  })
+  @ApiResponse({ status: 200, description: "Lista de marcadores." })
+  findMapMarkers() {
+    return this.campsService.findMapMarkers();
+  }
+
   @Get(":id")
   @ApiOperation({
     summary: "Detalle de campamento",

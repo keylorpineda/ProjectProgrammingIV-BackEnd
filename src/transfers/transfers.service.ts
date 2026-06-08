@@ -50,6 +50,15 @@ export class TransfersService {
     return this.requestsService.findPendingRequestsByCamp(campId);
   }
 
+  async findActiveTransfersForMap(): Promise<
+    Pick<
+      IntercampRequest,
+      "id" | "camp_origin_id" | "camp_destination_id" | "type"
+    >[]
+  > {
+    return this.requestsService.findActiveTransfersForMap();
+  }
+
   async approveOrRejectRequest(
     requestId: number,
     userId: number,

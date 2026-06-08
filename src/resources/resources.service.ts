@@ -174,6 +174,47 @@ export class ResourcesService implements OnModuleInit {
       .getMany();
   }
 
+  async getInventoryAlertsAll(): Promise<
+    Record<
+      string,
+      {
+        resource_id: number;
+        resource_name: string;
+        current_quantity: number;
+        minimum_stock_required: number;
+      }[]
+    >
+  > {
+    const alerts = await this.inventoryRepo
+      .createQueryBuilder("inv")
+      .leftJoinAndSelect("inv.resource", "resource")
+      .where("inv.alert_active = true")
+      .getMany();
+
+    const grouped: Record<
+      string,
+      {
+        resource_id: number;
+        resource_name: string;
+        current_quantity: number;
+        minimum_stock_required: number;
+      }[]
+    > = {};
+
+    for (const inv of alerts) {
+      const key = String(inv.camp_id);
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push({
+        resource_id: Number(inv.resource_id),
+        resource_name: inv.resource?.name ?? `Recurso ${inv.resource_id}`,
+        current_quantity: Number(inv.current_quantity),
+        minimum_stock_required: Number(inv.minimum_stock_required),
+      });
+    }
+
+    return grouped;
+  }
+
   async updateInventory(
     campId: number,
     resourceId: number,

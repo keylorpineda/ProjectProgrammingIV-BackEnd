@@ -73,6 +73,31 @@ export class CampsService {
     });
   }
 
+  async findMapMarkers(): Promise<
+    Pick<
+      Camp,
+      | "id"
+      | "name"
+      | "latitude"
+      | "longitude"
+      | "location_description"
+      | "max_capacity"
+    >[]
+  > {
+    return this.campRepo.find({
+      where: { active: true },
+      select: [
+        "id",
+        "name",
+        "latitude",
+        "longitude",
+        "location_description",
+        "max_capacity",
+      ],
+      order: { id: "ASC" },
+    });
+  }
+
   async findOne(id: number): Promise<{
     camp: Camp;
     metrics: {

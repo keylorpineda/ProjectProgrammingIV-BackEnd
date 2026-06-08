@@ -32,6 +32,17 @@ import { UpdateInventoryDto } from "./dto/update-inventory.dto";
 export class ResourcesController {
   constructor(private readonly resourcesService: ResourcesService) {}
 
+  @Get("inventory/alerts/all")
+  @Roles("admin", "resource_manager", "travel_manager", "camp_leader")
+  @ApiOperation({
+    summary: "Alertas de inventario de todos los campamentos",
+    description:
+      "Retorna un objeto { campId: alertas[] } con todas las alertas activas. Un solo request en lugar de N llamadas por campamento.",
+  })
+  async getAllAlerts() {
+    return this.resourcesService.getInventoryAlertsAll();
+  }
+
   @Get("inventory/:campId")
   @Roles(
     "admin",

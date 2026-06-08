@@ -335,6 +335,22 @@ export class RequestsService {
     });
   }
 
+  async findActiveTransfersForMap(): Promise<
+    Pick<
+      IntercampRequest,
+      "id" | "camp_origin_id" | "camp_destination_id" | "type"
+    >[]
+  > {
+    return this.requestRepo.find({
+      where: [
+        { status: "pending" },
+        { status: "approved" },
+        { status: "in_transit" },
+      ],
+      select: ["id", "camp_origin_id", "camp_destination_id", "type"],
+    });
+  }
+
   async cancelRequest(
     requestId: number,
     userId: number,
