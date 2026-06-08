@@ -35,7 +35,10 @@ async function bootstrap() {
   app.useWebSocketAdapter(new RedisIoAdapter(app));
 
   app.enableCors({
-    origin: true, // Permitir explícitamente todos los orígenes para no bloquear comunicación del frontend
+    origin: [
+      "http://localhost:5173", // Para desarrollo local
+      "https://doomsday-system-ui.vercel.app", // URL de producción en Vercel
+    ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
