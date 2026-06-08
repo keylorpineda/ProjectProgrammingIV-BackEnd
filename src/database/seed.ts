@@ -40,23 +40,35 @@ async function seed() {
   if (!campAlfa) {
     campAlfa = campRepo.create({
       name: "BUNKER ALFA",
-      location_description: "Sector 7G",
+      location_description: "Sector 7G — Cuenca del Río Virilla",
       max_capacity: 100,
       active: true,
+      latitude: 9.9281,
+      longitude: -84.0907,
     });
-    await campRepo.save(campAlfa);
+  } else {
+    campAlfa.latitude = 9.9281;
+    campAlfa.longitude = -84.0907;
+    campAlfa.location_description = "Sector 7G — Cuenca del Río Virilla";
   }
+  await campRepo.save(campAlfa);
 
   let campBeta = await campRepo.findOne({ where: { name: "CAMP BETA" } });
   if (!campBeta) {
     campBeta = campRepo.create({
       name: "CAMP BETA",
-      location_description: "Zona Muerta",
+      location_description: "Zona Muerta — Ruinas de Cartago",
       max_capacity: 50,
       active: true,
+      latitude: 9.8647,
+      longitude: -83.9197,
     });
-    await campRepo.save(campBeta);
+  } else {
+    campBeta.latitude = 9.8647;
+    campBeta.longitude = -83.9197;
+    campBeta.location_description = "Zona Muerta — Ruinas de Cartago";
   }
+  await campRepo.save(campBeta);
 
   console.log("Seeding Users...");
   const password_hash = await bcrypt.hash("123456", 10);

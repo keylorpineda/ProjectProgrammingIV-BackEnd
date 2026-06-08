@@ -184,7 +184,9 @@
     "Proveedor",
     "Consistente",
     "sesión",
-    "Sesión"
+    "Sesión",
+    "brevo",
+    "Brevo"
   ],
   "ignorePaths": [
     "node_modules",
