@@ -26,6 +26,7 @@ describe("ResourcesController", () => {
             getMovementsByCamp: jest.fn(),
             createMovement: jest.fn(),
             executeDailyProcess: jest.fn(),
+            getProductionRanking: jest.fn(),
             adjustProductionForPerson: jest.fn(),
             findAll: jest.fn(),
             findResourceById: jest.fn(),
@@ -161,6 +162,33 @@ describe("ResourcesController", () => {
         waterConsumed: 6,
       },
     });
+  });
+
+  it("should trigger the daily process and use fallback 0 values for metrics", async () => {
+    service.executeDailyProcess.mockResolvedValue({
+      production: {},
+      consumption: {},
+      movementCount: 0,
+    });
+
+    const result = await controller.triggerDailyProcess(8);
+
+    expect(result.metrics).toEqual({
+      foodProduced: 0,
+      foodConsumed: 0,
+      waterProduced: 0,
+      waterConsumed: 0,
+    });
+  });
+
+  it("should get production ranking", async () => {
+    const ranking = [{ person_id: 1, food_produced: 10 }];
+    service.getProductionRanking.mockResolvedValue(ranking as any);
+
+    const result = await controller.getProductionRanking(4);
+
+    expect(service.getProductionRanking).toHaveBeenCalledWith(4);
+    expect(result).toEqual(ranking);
   });
 
   it("should adjust daily production for a person", async () => {

@@ -1,7 +1,8 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import type { Repository } from "typeorm";
 import { PersonsService } from "./persons.service";
 import { Person } from "../entities/person.entity";
 import { Profession } from "../entities/profession.entity";
@@ -112,7 +113,10 @@ describe("PersonsService", () => {
       limit: 100,
       totalPages: 1,
     });
-    expect(qb.where).toHaveBeenCalledWith("camp.id = :campId", { campId: 9 });
+    expect(qb.where).toHaveBeenCalledWith(
+      "(camp.id = :campId OR person.camp_id = :campId)",
+      { campId: 9 },
+    );
     expect(qb.andWhere).toHaveBeenCalledWith(
       "(LOWER(person.first_name) LIKE :s OR LOWER(person.last_name) LIKE :s OR person.identification_code LIKE :s)",
       { s: "%eva%" },
@@ -339,9 +343,12 @@ describe("PersonsService", () => {
     await expect(service.findActiveWorkersByCamp(3)).resolves.toEqual([
       { id: 1 },
     ]);
-    expect(qb.where).toHaveBeenCalledWith("userAccount.camp_id = :campId", {
-      campId: 3,
-    });
+    expect(qb.where).toHaveBeenCalledWith(
+      "(userAccount.camp_id = :campId OR person.camp_id = :campId)",
+      {
+        campId: 3,
+      },
+    );
   });
 
   it("should count persons by camp and optionally exclude deceased", async () => {

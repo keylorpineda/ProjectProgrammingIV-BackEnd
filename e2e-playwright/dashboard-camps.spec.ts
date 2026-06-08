@@ -93,17 +93,17 @@ test.describe("Dashboard — Metricas por Rol", () => {
 
     expect(response.status()).toBe(200);
     const body = await response.json();
-    expect(body).toHaveProperty("campId");
+    expect(body).toHaveProperty("camp_id");
     expect(body).toHaveProperty("role");
-    expect(body).toHaveProperty("generatedAt");
+    expect(body).toHaveProperty("generated_at");
     expect(body).toHaveProperty("camp");
     expect(body).toHaveProperty("transfers");
 
     // Admin debe ver metricas de bodega
     expect(body).toHaveProperty("warehouse");
-    expect(body.camp).toHaveProperty("totalPeople");
-    expect(body.camp).toHaveProperty("activeWorkers");
-    expect(body.camp).toHaveProperty("emptyProfessions");
+    expect(body.camp).toHaveProperty("total_people");
+    expect(body.camp).toHaveProperty("active_workers");
+    expect(body.camp).toHaveProperty("empty_professions");
   });
 
   test("GET /dashboard/metrics/:campId → metricas incluyen exploraciones activas", async ({
@@ -114,8 +114,8 @@ test.describe("Dashboard — Metricas por Rol", () => {
     });
 
     const body = await response.json();
-    expect(body.camp).toHaveProperty("activeExplorations");
-    expect(typeof body.camp.activeExplorations).toBe("number");
+    expect(body.camp).toHaveProperty("active_explorations");
+    expect(typeof body.camp.active_explorations).toBe("number");
   });
 
   test("GET /dashboard/metrics/:campId → warehouse tiene alertas de recursos criticos", async ({
@@ -127,8 +127,8 @@ test.describe("Dashboard — Metricas por Rol", () => {
 
     const body = await response.json();
     if (body.warehouse) {
-      expect(body.warehouse).toHaveProperty("criticalResources");
-      expect(Array.isArray(body.warehouse.criticalResources)).toBe(true);
+      expect(body.warehouse).toHaveProperty("critical_resources");
+      expect(Array.isArray(body.warehouse.critical_resources)).toBe(true);
     }
   });
 });

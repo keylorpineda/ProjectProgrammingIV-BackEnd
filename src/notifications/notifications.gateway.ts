@@ -1,10 +1,10 @@
-import {
-  WebSocketGateway,
-  WebSocketServer,
+import type {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from "@nestjs/websockets";
-import { Server, Socket } from "socket.io";
+import { WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
+import type { Socket } from "socket.io";
+import { Server } from "socket.io";
 import { JwtService } from "@nestjs/jwt";
 import { Logger } from "@nestjs/common";
 

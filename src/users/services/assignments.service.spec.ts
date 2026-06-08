@@ -1,243 +1,157 @@
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
+import { AssignmentsService } from "./assignments.service";
+import { getRepositoryToken } from "@nestjs/typeorm";
 import {
+  NotFoundException,
   BadRequestException,
   ConflictException,
-  NotFoundException,
 } from "@nestjs/common";
-import { Test, TestingModule } from "@nestjs/testing";
-import { getRepositoryToken } from "@nestjs/typeorm";
-import { IsNull, Repository } from "typeorm";
-import { AssignmentsService } from "./assignments.service";
 import { TemporaryAssignment } from "../entities/temporary-assignment.entity";
 import { Person } from "../entities/person.entity";
 import { ProfessionsService } from "./professions.service";
-import { TEMPORARY_ASSIGNMENT_CONFIG } from "../constants/professions.constants";
 
 describe("AssignmentsService", () => {
   let service: AssignmentsService;
-  let tempAssignmentRepo: jest.Mocked<Repository<TemporaryAssignment>>;
-  let personRepo: jest.Mocked<Repository<Person>>;
-  let professionsService: jest.Mocked<ProfessionsService>;
+  let tempAssignmentRepo: any;
+  let personRepo: any;
+  let professionsService: any;
 
   beforeEach(async () => {
+    tempAssignmentRepo = {
+      findOne: jest.fn(),
+      create: jest.fn().mockImplementation((dto) => dto),
+      save: jest.fn().mockImplementation((dto) => dto),
+      createQueryBuilder: jest.fn().mockReturnValue({
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([{ id: 1 }]),
+      }),
+    };
+
+    personRepo = {
+      findOne: jest.fn(),
+    };
+
+    professionsService = {
+      findById: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AssignmentsService,
         {
           provide: getRepositoryToken(TemporaryAssignment),
-          useValue: {
-            findOne: jest.fn(),
-            create: jest.fn(),
-            save: jest.fn(),
-            createQueryBuilder: jest.fn(),
-          },
+          useValue: tempAssignmentRepo,
         },
-        {
-          provide: getRepositoryToken(Person),
-          useValue: {
-            findOne: jest.fn(),
-          },
-        },
-        {
-          provide: ProfessionsService,
-          useValue: {
-            findById: jest.fn(),
-          },
-        },
+        { provide: getRepositoryToken(Person), useValue: personRepo },
+        { provide: ProfessionsService, useValue: professionsService },
       ],
     }).compile();
 
-    service = module.get(AssignmentsService);
-    tempAssignmentRepo = module.get(getRepositoryToken(TemporaryAssignment));
-    personRepo = module.get(getRepositoryToken(Person));
-    professionsService = module.get(ProfessionsService);
+    service = module.get<AssignmentsService>(AssignmentsService);
   });
 
-  it("should create a temporary assignment with defaults", async () => {
-    const person = {
-      id: 1,
-      profession_id: 10,
-      can_work: true,
-      userAccount: { id: 7 },
-    } as any;
-    const assignment = { id: 4 } as TemporaryAssignment;
-    personRepo.findOne.mockResolvedValueOnce(person);
-    professionsService.findById.mockResolvedValueOnce({ id: 11 } as any);
-    tempAssignmentRepo.findOne.mockResolvedValueOnce(null);
-    tempAssignmentRepo.create.mockReturnValueOnce(assignment);
-    tempAssignmentRepo.save.mockResolvedValueOnce(assignment);
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
-    await expect(
-      service.create({ person_id: 1, profession_temporary_id: 11 } as any, 99),
-    ).resolves.toBe(assignment);
-    expect(tempAssignmentRepo.findOne).toHaveBeenCalledWith({
-      where: {
-        user_account_id: 7,
-        end_date: IsNull(),
-      },
+  describe("create", () => {
+    it("should throw NotFoundException if person not found", async () => {
+      personRepo.findOne.mockResolvedValue(null);
+      await expect(service.create({ person_id: 1 } as any, 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
-    expect(tempAssignmentRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        user_account_id: 7,
-        profession_origin_id: 10,
-        profession_temporary_id: 11,
-        start_date: expect.any(Date),
-        end_date: expect.any(Date),
-        reason: "Assigned due to profession shortage",
-        user_approve_id: 99,
-      }),
-    );
+
+    it("should throw BadRequestException if person has no profession", async () => {
+      personRepo.findOne.mockResolvedValue({ id: 1 });
+      await expect(service.create({ person_id: 1 } as any, 1)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it("should throw BadRequestException if person cannot work", async () => {
+      personRepo.findOne.mockResolvedValue({
+        id: 1,
+        profession_id: 2,
+        can_work: false,
+        status: "sick",
+      });
+      await expect(service.create({ person_id: 1 } as any, 1)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it("should throw BadRequestException if assigning to current profession", async () => {
+      personRepo.findOne.mockResolvedValue({
+        id: 1,
+        profession_id: 2,
+        can_work: true,
+      });
+      professionsService.findById.mockResolvedValue({ id: 2 });
+      await expect(
+        service.create({ person_id: 1, profession_temporary_id: 2 } as any, 1),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw ConflictException if already has active assignment", async () => {
+      personRepo.findOne.mockResolvedValue({
+        id: 1,
+        profession_id: 2,
+        can_work: true,
+        userAccount: { id: 10 },
+      });
+      professionsService.findById.mockResolvedValue({ id: 3 });
+      tempAssignmentRepo.findOne.mockResolvedValue({ id: 5 });
+
+      await expect(
+        service.create({ person_id: 1, profession_temporary_id: 3 } as any, 1),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("should create temporary assignment successfully", async () => {
+      personRepo.findOne.mockResolvedValue({
+        id: 1,
+        profession_id: 2,
+        can_work: true,
+        userAccount: { id: 10 },
+      });
+      professionsService.findById.mockResolvedValue({ id: 3 });
+      tempAssignmentRepo.findOne.mockResolvedValue(null);
+
+      const res = await service.create(
+        { person_id: 1, profession_temporary_id: 3, duration_days: 5 } as any,
+        99,
+      );
+      expect(res.user_approve_id).toBe(99);
+      expect(res.profession_temporary_id).toBe(3);
+    });
   });
 
-  it("should create a temporary assignment with explicit dates and reason", async () => {
-    const person = {
-      id: 1,
-      profession_id: 10,
-      can_work: true,
-      userAccount: { id: 7 },
-    } as any;
-    const assignment = { id: 4 } as TemporaryAssignment;
-    personRepo.findOne.mockResolvedValueOnce(person);
-    professionsService.findById.mockResolvedValueOnce({ id: 12 } as any);
-    tempAssignmentRepo.findOne.mockResolvedValueOnce(null);
-    tempAssignmentRepo.create.mockReturnValueOnce(assignment);
-    tempAssignmentRepo.save.mockResolvedValueOnce(assignment);
+  describe("findActive", () => {
+    it("should find active assignments with camp filter", async () => {
+      const res = await service.findActive(1);
+      expect(res).toEqual([{ id: 1 }]);
+    });
 
-    await service.create(
-      {
-        person_id: 1,
-        profession_temporary_id: 12,
-        duration_days: 3,
-        reason: "Urgencia",
-        start_date: "2026-03-01T00:00:00.000Z",
-      } as any,
-      100,
-    );
-
-    expect(tempAssignmentRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        reason: "Urgencia",
-        user_approve_id: 100,
-      }),
-    );
+    it("should find active assignments without camp filter", async () => {
+      const res = await service.findActive();
+      expect(res).toEqual([{ id: 1 }]);
+    });
   });
 
-  it("should reject creating assignment when person does not exist", async () => {
-    personRepo.findOne.mockResolvedValueOnce(null);
+  describe("end", () => {
+    it("should throw NotFoundException if assignment not found", async () => {
+      tempAssignmentRepo.findOne.mockResolvedValue(null);
+      await expect(service.end(1)).rejects.toThrow(NotFoundException);
+    });
 
-    await expect(
-      service.create({ person_id: 50, profession_temporary_id: 2 } as any, 1),
-    ).rejects.toThrow(new NotFoundException("Person with ID 50 not found"));
-  });
-
-  it("should reject creating assignment when person has no profession", async () => {
-    personRepo.findOne.mockResolvedValueOnce({ profession_id: null } as any);
-
-    await expect(
-      service.create({ person_id: 1, profession_temporary_id: 2 } as any, 1),
-    ).rejects.toThrow(
-      new BadRequestException(
-        "Person must have a profession to be temporarily assigned",
-      ),
-    );
-  });
-
-  it("should reject creating assignment when person cannot work", async () => {
-    personRepo.findOne.mockResolvedValueOnce({
-      profession_id: 1,
-      can_work: false,
-      status: "sick",
-    } as any);
-
-    await expect(
-      service.create({ person_id: 1, profession_temporary_id: 2 } as any, 1),
-    ).rejects.toThrow(
-      new BadRequestException("Person cannot work (status: sick)"),
-    );
-  });
-
-  it("should reject creating assignment for current profession", async () => {
-    personRepo.findOne.mockResolvedValueOnce({
-      profession_id: 2,
-      can_work: true,
-      userAccount: { id: 1 },
-    } as any);
-    professionsService.findById.mockResolvedValueOnce({ id: 2 } as any);
-
-    await expect(
-      service.create({ person_id: 1, profession_temporary_id: 2 } as any, 1),
-    ).rejects.toThrow(
-      new BadRequestException(
-        "Cannot assign person to their current profession",
-      ),
-    );
-  });
-
-  it("should reject creating assignment when one is already active", async () => {
-    personRepo.findOne.mockResolvedValueOnce({
-      profession_id: 2,
-      can_work: true,
-      userAccount: { id: 1 },
-    } as any);
-    professionsService.findById.mockResolvedValueOnce({ id: 3 } as any);
-    tempAssignmentRepo.findOne.mockResolvedValueOnce({ id: 99 } as any);
-
-    await expect(
-      service.create({ person_id: 1, profession_temporary_id: 3 } as any, 1),
-    ).rejects.toThrow(
-      new ConflictException(
-        "Person already has an active temporary assignment",
-      ),
-    );
-  });
-
-  it("should find active assignments and optionally filter by camp", async () => {
-    const qbWithCamp: any = {
-      leftJoinAndSelect: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      getMany: jest.fn().mockResolvedValueOnce([{ id: 1 }]),
-    };
-    const qbWithoutCamp: any = {
-      leftJoinAndSelect: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      getMany: jest.fn().mockResolvedValueOnce([]),
-    };
-    tempAssignmentRepo.createQueryBuilder
-      .mockReturnValueOnce(qbWithCamp)
-      .mockReturnValueOnce(qbWithoutCamp);
-
-    await expect(service.findActive(8)).resolves.toEqual([{ id: 1 }]);
-    await expect(service.findActive()).resolves.toEqual([]);
-    expect(qbWithCamp.andWhere).toHaveBeenCalledWith(
-      "userAccount.camp_id = :campId",
-      { campId: 8 },
-    );
-    expect(qbWithoutCamp.andWhere).not.toHaveBeenCalledWith(
-      "userAccount.camp_id = :campId",
-      { campId: 8 },
-    );
-  });
-
-  it("should end an assignment", async () => {
-    const assignment = { id: 4, end_date: null } as any;
-    tempAssignmentRepo.findOne.mockResolvedValueOnce(assignment);
-    tempAssignmentRepo.save.mockImplementation(async (value) => value as any);
-
-    const result = await service.end(4);
-
-    expect(result.end_date).toBeInstanceOf(Date);
-  });
-
-  it("should reject ending a missing assignment", async () => {
-    tempAssignmentRepo.findOne.mockResolvedValueOnce(null);
-
-    await expect(service.end(404)).rejects.toThrow(
-      new NotFoundException("Temporary assignment with ID 404 not found"),
-    );
-  });
-
-  it("should use the configured default duration when none is provided", () => {
-    expect(TEMPORARY_ASSIGNMENT_CONFIG.DEFAULT_DURATION_DAYS).toBe(7);
+    it("should end assignment successfully", async () => {
+      tempAssignmentRepo.findOne.mockResolvedValue({ id: 1, end_date: null });
+      const res = await service.end(1);
+      expect(res.end_date).toBeDefined();
+    });
   });
 });

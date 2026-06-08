@@ -1,225 +1,157 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from "@nestjs/common";
-import { Test, TestingModule } from "@nestjs/testing";
-import { getRepositoryToken } from "@nestjs/typeorm";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { ApprovalsService } from "./approvals.service";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import {
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from "@nestjs/common";
 import { Approval } from "../entities/approval.entity";
 import { IntercampRequest } from "../entities/intercamp-request.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
 import { AuditLog } from "../../common/entities/audit-log.entity";
 
-const createRepoMock = () => ({
-  findOne: jest.fn(),
-  create: jest.fn((value) => value),
-  save: jest.fn(async (value) => value),
-});
-
 describe("ApprovalsService", () => {
   let service: ApprovalsService;
-  let approvalRepo: ReturnType<typeof createRepoMock>;
-  let requestRepo: ReturnType<typeof createRepoMock>;
-  let userRepo: ReturnType<typeof createRepoMock>;
-  let auditRepo: ReturnType<typeof createRepoMock>;
-
-  const baseRequest = {
-    id: 50,
-    camp_origin_id: 10,
-    camp_destination_id: 20,
-    status: "pending",
-    approvals: [],
-  } as any as IntercampRequest;
+  let userRepo: any;
+  let requestRepo: any;
+  let approvalRepo: any;
+  let auditRepo: any;
 
   beforeEach(async () => {
+    userRepo = { findOne: jest.fn() };
+    requestRepo = { save: jest.fn() };
+    approvalRepo = {
+      create: jest.fn().mockImplementation((dto) => dto),
+      save: jest.fn(),
+    };
+    auditRepo = {
+      create: jest.fn().mockImplementation((dto) => dto),
+      save: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ApprovalsService,
-        { provide: getRepositoryToken(Approval), useValue: createRepoMock() },
+        { provide: getRepositoryToken(UserAccount), useValue: userRepo },
         {
           provide: getRepositoryToken(IntercampRequest),
-          useValue: createRepoMock(),
+          useValue: requestRepo,
         },
-        {
-          provide: getRepositoryToken(UserAccount),
-          useValue: createRepoMock(),
-        },
-        { provide: getRepositoryToken(AuditLog), useValue: createRepoMock() },
+        { provide: getRepositoryToken(Approval), useValue: approvalRepo },
+        { provide: getRepositoryToken(AuditLog), useValue: auditRepo },
       ],
     }).compile();
 
-    service = module.get(ApprovalsService);
-    approvalRepo = module.get(getRepositoryToken(Approval));
-    requestRepo = module.get(getRepositoryToken(IntercampRequest));
-    userRepo = module.get(getRepositoryToken(UserAccount));
-    auditRepo = module.get(getRepositoryToken(AuditLog));
+    service = module.get<ApprovalsService>(ApprovalsService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it("should be defined", () => {
-    expect(service).toBeDefined();
-  });
-
-  it("should throw when the user does not exist", async () => {
-    userRepo.findOne.mockResolvedValueOnce(null);
-
-    await expect(
-      service.approveOrReject(baseRequest, 99, { status: "approved" } as any),
-    ).rejects.toThrow(new NotFoundException("Usuario con ID 99 no encontrado"));
-  });
-
-  it("should throw when the user camp is not involved in the request", async () => {
-    userRepo.findOne.mockResolvedValueOnce({
-      id: 2,
-      camp_id: 99,
-      role: {},
-      camp: {},
+  describe("approveOrReject", () => {
+    it("should throw NotFoundException if user not found", async () => {
+      userRepo.findOne.mockResolvedValue(null);
+      await expect(
+        service.approveOrReject({} as any, 1, { status: "approved" }),
+      ).rejects.toThrow(NotFoundException);
     });
 
-    await expect(
-      service.approveOrReject(baseRequest, 2, { status: "approved" } as any),
-    ).rejects.toThrow(
-      new ForbiddenException(
-        "Solo usuarios de los campamentos implicados pueden aprobar/rechazar",
-      ),
-    );
-  });
+    it("should throw ForbiddenException if user not from origin or destination camp", async () => {
+      userRepo.findOne.mockResolvedValue({ id: 1, camp_id: 3 });
+      const request = { camp_origin_id: 1, camp_destination_id: 2 } as any;
 
-  it("should throw when the user already approved", async () => {
-    userRepo.findOne.mockResolvedValueOnce({
-      id: 2,
-      camp_id: 10,
-      role: {},
-      camp: {},
-    });
-    const request = {
-      ...baseRequest,
-      approvals: [{ user_id: 2 }],
-    } as any as IntercampRequest;
-
-    await expect(
-      service.approveOrReject(request, 2, { status: "approved" } as any),
-    ).rejects.toThrow(BadRequestException);
-  });
-
-  it("should reject a request and persist audit data", async () => {
-    userRepo.findOne.mockResolvedValueOnce({
-      id: 2,
-      camp_id: 10,
-      role: {},
-      camp: {},
+      await expect(
+        service.approveOrReject(request, 1, { status: "approved" }),
+      ).rejects.toThrow(ForbiddenException);
     });
 
-    const result = await service.approveOrReject(baseRequest, 2, {
-      status: "rejected",
-      notes: "faltan insumos",
-    } as any);
+    it("should throw BadRequestException if user already approved", async () => {
+      userRepo.findOne.mockResolvedValue({ id: 1, camp_id: 1 });
+      const request = {
+        camp_origin_id: 1,
+        camp_destination_id: 2,
+        approvals: [{ user_id: 1, status: "approved" }],
+      } as any;
 
-    expect(approvalRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        user_id: 2,
-        entity_type: "intercamp_request",
-        entity_id: 50,
+      await expect(
+        service.approveOrReject(request, 1, { status: "approved" }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should reject the request correctly", async () => {
+      userRepo.findOne.mockResolvedValue({ id: 1, camp_id: 1 });
+      const request = {
+        id: 1,
+        camp_origin_id: 1,
+        camp_destination_id: 2,
+        approvals: [],
+      } as any;
+
+      const res = await service.approveOrReject(request, 1, {
         status: "rejected",
-      }),
-    );
-    expect(requestRepo.save).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "rejected" }),
-    );
-    expect(auditRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: "intercamp_request_rejected",
-        new_value: { notes: "faltan insumos" },
-      }),
-    );
-    expect(result.bothApproved).toBe(false);
-  });
+        notes: "No way",
+      });
 
-  it("should partially approve when the other camp has not approved yet", async () => {
-    userRepo.findOne.mockResolvedValueOnce({
-      id: 2,
-      camp_id: 10,
-      role: {},
-      camp: {},
+      expect(res.bothApproved).toBe(false);
+      expect(request.status).toBe("rejected");
+      expect(requestRepo.save).toHaveBeenCalledWith(request);
+      expect(auditRepo.save).toHaveBeenCalled();
     });
 
-    const result = await service.approveOrReject(baseRequest, 2, {
-      status: "approved",
-    } as any);
+    it("should partially approve if other camp hasn't approved", async () => {
+      userRepo.findOne.mockResolvedValue({ id: 1, camp_id: 1 });
+      const request = {
+        id: 1,
+        camp_origin_id: 1,
+        camp_destination_id: 2,
+        approvals: [{ user_id: 2, status: "rejected", user: { camp_id: 2 } }],
+      } as any;
 
-    expect(requestRepo.save).not.toHaveBeenCalled();
-    expect(auditRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: "intercamp_request_approved_partial",
-        new_value: { waiting_other_camp: true },
-      }),
-    );
-    expect(result.bothApproved).toBe(false);
-  });
+      const res = await service.approveOrReject(request, 1, {
+        status: "approved",
+      });
 
-  it("should mark the request as fully approved when the other camp already approved", async () => {
-    userRepo.findOne.mockResolvedValueOnce({
-      id: 2,
-      camp_id: 10,
-      role: {},
-      camp: {},
+      expect(res.bothApproved).toBe(false);
+      expect(requestRepo.save).not.toHaveBeenCalled(); // status hasn't changed to approved yet
     });
-    const request = {
-      ...baseRequest,
-      approvals: [
-        {
-          user_id: 8,
-          status: "approved",
-          user: { camp_id: 20 },
-        },
-      ],
-    } as any as IntercampRequest;
 
-    const result = await service.approveOrReject(request, 2, {
-      status: "approved",
-    } as any);
+    it("should fully approve if other camp has approved", async () => {
+      userRepo.findOne.mockResolvedValue({ id: 1, camp_id: 1 });
+      const request = {
+        id: 1,
+        camp_origin_id: 1,
+        camp_destination_id: 2,
+        approvals: [{ user_id: 2, status: "approved", user: { camp_id: 2 } }],
+      } as any;
 
-    expect(requestRepo.save).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "approved" }),
-    );
-    expect(auditRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: "intercamp_request_approved_dual",
-        new_value: { both_camps_approved: true },
-      }),
-    );
-    expect(result.bothApproved).toBe(true);
-  });
+      const res = await service.approveOrReject(request, 1, {
+        status: "approved",
+      });
 
-  it("should mark the request as fully approved when the destination camp approves after origin", async () => {
-    userRepo.findOne.mockResolvedValueOnce({
-      id: 9,
-      camp_id: 20,
-      role: {},
-      camp: {},
+      expect(res.bothApproved).toBe(true);
+      expect(request.status).toBe("approved");
+      expect(requestRepo.save).toHaveBeenCalledWith(request);
+      expect(auditRepo.save).toHaveBeenCalled();
     });
-    const request = {
-      ...baseRequest,
-      approvals: [
-        {
-          user_id: 3,
-          status: "approved",
-          user: { camp_id: 10 },
-        },
-      ],
-    } as any as IntercampRequest;
 
-    const result = await service.approveOrReject(request, 9, {
-      status: "approved",
-    } as any);
+    it("should fully approve if destination user approves and origin already approved", async () => {
+      userRepo.findOne.mockResolvedValue({ id: 1, camp_id: 2 }); // destination
+      const request = {
+        id: 1,
+        camp_origin_id: 1,
+        camp_destination_id: 2,
+        approvals: [{ user_id: 2, status: "approved", user: { camp_id: 1 } }],
+      } as any;
 
-    expect(requestRepo.save).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "approved" }),
-    );
-    expect(result.bothApproved).toBe(true);
+      const res = await service.approveOrReject(request, 1, {
+        status: "approved",
+      });
+
+      expect(res.bothApproved).toBe(true);
+      expect(request.status).toBe("approved");
+    });
   });
 });

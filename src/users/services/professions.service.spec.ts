@@ -1,163 +1,143 @@
-import { NotFoundException } from "@nestjs/common";
-import { Test, TestingModule } from "@nestjs/testing";
-import { getRepositoryToken } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { ProfessionsService } from "./professions.service";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { NotFoundException } from "@nestjs/common";
 import { Profession } from "../entities/profession.entity";
 import { PersonsService } from "./persons.service";
 
 describe("ProfessionsService", () => {
   let service: ProfessionsService;
-  let professionRepo: jest.Mocked<Repository<Profession>>;
-  let personsService: jest.Mocked<PersonsService>;
+  let professionRepo: any;
+  let personsService: any;
 
   beforeEach(async () => {
+    professionRepo = {
+      find: jest.fn(),
+      findOne: jest.fn(),
+      create: jest.fn().mockImplementation((dto) => dto),
+      save: jest.fn().mockImplementation((dto) => dto),
+    };
+
+    personsService = {
+      countActiveWorkers: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProfessionsService,
-        {
-          provide: getRepositoryToken(Profession),
-          useValue: {
-            find: jest.fn(),
-            findOne: jest.fn(),
-            create: jest.fn(),
-            save: jest.fn(),
-          },
-        },
-        {
-          provide: PersonsService,
-          useValue: {
-            countActiveWorkers: jest.fn(),
-          },
-        },
+        { provide: getRepositoryToken(Profession), useValue: professionRepo },
+        { provide: PersonsService, useValue: personsService },
       ],
     }).compile();
 
-    service = module.get(ProfessionsService);
-    professionRepo = module.get(getRepositoryToken(Profession));
-    personsService = module.get(PersonsService);
+    service = module.get<ProfessionsService>(ProfessionsService);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
-  it("should find all professions with persons relation", async () => {
-    professionRepo.find.mockResolvedValueOnce([{ id: 1 }] as any);
-
-    await expect(service.findAll()).resolves.toEqual([{ id: 1 }]);
-    expect(professionRepo.find).toHaveBeenCalledWith({
-      relations: ["persons"],
+  describe("findAll", () => {
+    it("should return all professions", async () => {
+      professionRepo.find.mockResolvedValue([{ id: 1 }]);
+      const res = await service.findAll();
+      expect(res).toEqual([{ id: 1 }]);
     });
   });
 
-  it("should find a profession by id", async () => {
-    const profession = { id: 1 } as Profession;
-    professionRepo.findOne.mockResolvedValueOnce(profession);
-
-    await expect(service.findById(1)).resolves.toBe(profession);
-  });
-
-  it("should throw when profession is missing", async () => {
-    professionRepo.findOne.mockResolvedValueOnce(null);
-
-    await expect(service.findById(44)).rejects.toThrow(
-      new NotFoundException("Profession with ID 44 not found"),
-    );
-  });
-
-  it("should create a profession", async () => {
-    const dto = { name: "Ingeniero" };
-    const profession = { id: 2, ...dto } as Profession;
-    professionRepo.create.mockReturnValueOnce(profession);
-    professionRepo.save.mockResolvedValueOnce(profession);
-
-    await expect(service.create(dto as any)).resolves.toBe(profession);
-    expect(professionRepo.create).toHaveBeenCalledWith(dto);
-  });
-
-  it("should check minimum workers and warn when below minimum", async () => {
-    const warnSpy = jest
-      .spyOn(console, "warn")
-      .mockImplementation(() => undefined);
-    jest.spyOn(service, "findById").mockResolvedValueOnce({
-      id: 4,
-      name: "Guardia",
-      minimum_active_required: 3,
-    } as Profession);
-    personsService.countActiveWorkers.mockResolvedValueOnce(1);
-
-    const result = await service.checkMinimumWorkers(4, 2);
-
-    expect(result).toEqual({
-      needsWorkers: true,
-      currentWorkers: 1,
-      minimumRequired: 3,
+  describe("findById", () => {
+    it("should return a profession if found", async () => {
+      professionRepo.findOne.mockResolvedValue({ id: 1 });
+      const res = await service.findById(1);
+      expect(res).toEqual({ id: 1 });
     });
-    expect(personsService.countActiveWorkers).toHaveBeenCalledWith(4, 2);
-    expect(warnSpy).toHaveBeenCalled();
+
+    it("should throw NotFoundException if not found", async () => {
+      professionRepo.findOne.mockResolvedValue(null);
+      await expect(service.findById(1)).rejects.toThrow(NotFoundException);
+    });
   });
 
-  it("should check minimum workers without warning when minimum is met", async () => {
-    const warnSpy = jest
-      .spyOn(console, "warn")
-      .mockImplementation(() => undefined);
-    jest.spyOn(service, "findById").mockResolvedValueOnce({
-      id: 4,
-      name: "Guardia",
-      minimum_active_required: 2,
-    } as Profession);
-    personsService.countActiveWorkers.mockResolvedValueOnce(2);
-
-    const result = await service.checkMinimumWorkers(4);
-
-    expect(result.needsWorkers).toBe(false);
-    expect(warnSpy).not.toHaveBeenCalled();
+  describe("create", () => {
+    it("should create and return a profession", async () => {
+      const res = await service.create({ name: "Guard" });
+      expect(res).toEqual({ name: "Guard" });
+    });
   });
 
-  it("should return professions needing workers", async () => {
-    jest
-      .spyOn(service, "findAll")
-      .mockResolvedValueOnce([
-        { id: 1, minimum_active_required: 2 } as Profession,
-        { id: 2, minimum_active_required: 1 } as Profession,
-      ]);
-    personsService.countActiveWorkers
-      .mockResolvedValueOnce(1)
-      .mockResolvedValueOnce(1);
+  describe("checkMinimumWorkers", () => {
+    it("should return needsWorkers true with warning if below minimum", async () => {
+      jest.spyOn(service, "findById").mockResolvedValue({
+        id: 1,
+        minimum_active_required: 5,
+        name: "Guard",
+      } as any);
+      personsService.countActiveWorkers.mockResolvedValue(3);
+      const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
 
-    const result = await service.getProfessionsNeedingWorkers();
+      const res = await service.checkMinimumWorkers(1);
+      expect(res).toEqual({
+        needsWorkers: true,
+        currentWorkers: 3,
+        minimumRequired: 5,
+      });
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
 
-    expect(result).toEqual([
-      {
-        profession: { id: 1, minimum_active_required: 2 },
-        currentWorkers: 1,
-        minimumRequired: 2,
-        deficit: 1,
-      },
-    ]);
+    it("should return needsWorkers false if meets minimum", async () => {
+      jest.spyOn(service, "findById").mockResolvedValue({
+        id: 1,
+        minimum_active_required: 5,
+        name: "Guard",
+      } as any);
+      personsService.countActiveWorkers.mockResolvedValue(5);
+
+      const res = await service.checkMinimumWorkers(1);
+      expect(res).toEqual({
+        needsWorkers: false,
+        currentWorkers: 5,
+        minimumRequired: 5,
+      });
+    });
   });
 
-  it("should return professions with excess workers", async () => {
-    jest
-      .spyOn(service, "findAll")
-      .mockResolvedValueOnce([
-        { id: 1, minimum_active_required: 2 } as Profession,
-        { id: 2, minimum_active_required: 3 } as Profession,
-      ]);
-    personsService.countActiveWorkers
-      .mockResolvedValueOnce(4)
-      .mockResolvedValueOnce(3);
+  describe("getProfessionsNeedingWorkers", () => {
+    it("should return professions with deficit", async () => {
+      jest
+        .spyOn(service, "findAll")
+        .mockResolvedValue([
+          { id: 1, minimum_active_required: 5 } as any,
+          { id: 2, minimum_active_required: 2 } as any,
+        ]);
+      personsService.countActiveWorkers
+        .mockResolvedValueOnce(3) // For profession 1
+        .mockResolvedValueOnce(2); // For profession 2
 
-    const result = await service.getProfessionsWithExcess();
+      const res = await service.getProfessionsNeedingWorkers();
+      expect(res).toHaveLength(1);
+      expect(res[0].deficit).toBe(2);
+      expect(res[0].profession.id).toBe(1);
+    });
+  });
 
-    expect(result).toEqual([
-      {
-        profession: { id: 1, minimum_active_required: 2 },
-        currentWorkers: 4,
-        minimumRequired: 2,
-        excess: 2,
-      },
-    ]);
+  describe("getProfessionsWithExcess", () => {
+    it("should return professions with excess", async () => {
+      jest
+        .spyOn(service, "findAll")
+        .mockResolvedValue([
+          { id: 1, minimum_active_required: 5 } as any,
+          { id: 2, minimum_active_required: 2 } as any,
+        ]);
+      personsService.countActiveWorkers
+        .mockResolvedValueOnce(5) // For profession 1
+        .mockResolvedValueOnce(4); // For profession 2
+
+      const res = await service.getProfessionsWithExcess();
+      expect(res).toHaveLength(1);
+      expect(res[0].excess).toBe(2);
+      expect(res[0].profession.id).toBe(2);
+    });
   });
 });

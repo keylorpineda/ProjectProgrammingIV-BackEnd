@@ -1,8 +1,9 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { CampsController } from "./camps.controller";
 import { CampsService } from "./camps.service";
-import { CreateCampDto } from "./dto/create-camp.dto";
-import { UpdateCampDto } from "./dto/update-camp.dto";
+import type { CreateCampDto } from "./dto/create-camp.dto";
+import type { UpdateCampDto } from "./dto/update-camp.dto";
 
 describe("CampsController", () => {
   let controller: CampsController;

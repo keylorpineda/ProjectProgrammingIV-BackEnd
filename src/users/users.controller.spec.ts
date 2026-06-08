@@ -1,4 +1,5 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { UsersController } from "./users.controller";
 import { UsersService } from "./users.service";
 
@@ -36,6 +37,10 @@ describe("UsersController", () => {
             getAllAssets: jest.fn(),
             getMyBadges: jest.fn(),
             toggleBadgeDisplay: jest.fn(),
+            updateUserAvatar: jest.fn(),
+            findUserById: jest.fn(),
+            getMyAchievements: jest.fn(),
+            awardFirstLoginAchievement: jest.fn(),
           },
         },
       ],
@@ -255,5 +260,46 @@ describe("UsersController", () => {
 
     await expect(controller.getAllAssets("badge")).resolves.toEqual(assets);
     expect(usersService.getAllAssets).toHaveBeenCalledWith("badge");
+  });
+
+  it("should test my endpoints correctly", async () => {
+    const userResult = { id: 1 };
+    usersService.updateUserAvatar.mockResolvedValue(userResult as any);
+    usersService.findUserById.mockResolvedValue(userResult as any);
+    usersService.getMyAchievements.mockResolvedValue([] as any);
+    usersService.awardFirstLoginAchievement.mockResolvedValue({} as any);
+
+    await expect(
+      controller.updateMyAvatar({ userId: 1 }, { avatar_url: "url" }),
+    ).resolves.toEqual(userResult);
+
+    await expect(
+      controller.updateMyAvatar(
+        { userId: 1 },
+        { avatar_url: "url", avatar_public_id: "pub" },
+      ),
+    ).resolves.toEqual(userResult);
+
+    await expect(controller.getMe({ userId: 1 })).resolves.toEqual(userResult);
+
+    // Testing getMyProfile with userId and id
+    await expect(controller.getMyProfile({ userId: 1 })).resolves.toEqual(
+      userResult,
+    );
+    await expect(controller.getMyProfile({ id: 2 })).resolves.toEqual(
+      userResult,
+    );
+
+    await expect(controller.getMyAchievements({ userId: 1 })).resolves.toEqual(
+      [],
+    );
+    await expect(controller.getMyAchievements({ id: 2 })).resolves.toEqual([]);
+
+    await expect(
+      controller.awardFirstLoginAchievement({ userId: 1 }),
+    ).resolves.toEqual({});
+    await expect(
+      controller.awardFirstLoginAchievement({ id: 2 }),
+    ).resolves.toEqual({});
   });
 });

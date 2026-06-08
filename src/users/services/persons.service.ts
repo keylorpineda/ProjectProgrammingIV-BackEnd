@@ -7,9 +7,9 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Not, In } from "typeorm";
 import { Person } from "../entities/person.entity";
 import { Profession } from "../entities/profession.entity";
-import { CreatePersonDto } from "../dto/create-person.dto";
-import { UpdatePersonDto } from "../dto/update-person.dto";
-import { UpdatePersonStatusDto } from "../dto/update-person-status.dto";
+import type { CreatePersonDto } from "../dto/create-person.dto";
+import type { UpdatePersonDto } from "../dto/update-person.dto";
+import type { UpdatePersonStatusDto } from "../dto/update-person-status.dto";
 import {
   PersonStatus,
   WORKING_STATUSES,
@@ -67,10 +67,9 @@ export class PersonsService {
       .leftJoinAndSelect("person.camp", "personCamp");
 
     if (campId) {
-      query.where(
-        "(camp.id = :campId OR person.camp_id = :campId)",
-        { campId },
-      );
+      query.where("(camp.id = :campId OR person.camp_id = :campId)", {
+        campId,
+      });
     }
 
     if (search) {
@@ -178,10 +177,9 @@ export class PersonsService {
       .createQueryBuilder("person")
       .leftJoinAndSelect("person.profession", "profession")
       .leftJoinAndSelect("person.userAccount", "userAccount")
-      .where(
-        "(userAccount.camp_id = :campId OR person.camp_id = :campId)",
-        { campId },
-      )
+      .where("(userAccount.camp_id = :campId OR person.camp_id = :campId)", {
+        campId,
+      })
       .andWhere("person.can_work = :canWork", { canWork: true })
       .andWhere("person.status IN (:...statuses)", {
         statuses: WORKING_STATUSES,
@@ -196,10 +194,9 @@ export class PersonsService {
     const query = this.personRepo
       .createQueryBuilder("person")
       .leftJoin("person.userAccount", "userAccount")
-      .where(
-        "(userAccount.camp_id = :campId OR person.camp_id = :campId)",
-        { campId },
-      );
+      .where("(userAccount.camp_id = :campId OR person.camp_id = :campId)", {
+        campId,
+      });
 
     if (excludeDeceased) {
       query.andWhere("person.status != :deceasedStatus", {

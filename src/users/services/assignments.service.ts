@@ -8,7 +8,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, IsNull } from "typeorm";
 import { TemporaryAssignment } from "../entities/temporary-assignment.entity";
 import { Person } from "../entities/person.entity";
-import { CreateTemporaryAssignmentDto } from "../dto/create-temporary-assignment.dto";
+import type { CreateTemporaryAssignmentDto } from "../dto/create-temporary-assignment.dto";
 import { ProfessionsService } from "./professions.service";
 import { TEMPORARY_ASSIGNMENT_CONFIG } from "../constants/professions.constants";
 

@@ -3,6 +3,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { json, urlencoded } from "express";
+import type { Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import * as cookieParser from "cookie-parser";
 import { AppModule } from "./app.module";
@@ -24,7 +25,7 @@ async function bootstrap() {
   app.use(helmet());
 
   // Forzar UTF-8 en todas las respuestas JSON para que tildes y caracteres especiales lleguen correctamente
-  app.use((_req: any, res: any, next: any) => {
+  app.use((_req: Request, res: Response, next: NextFunction) => {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     next();
   });

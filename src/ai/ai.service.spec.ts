@@ -1,4 +1,5 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { NotFoundException } from "@nestjs/common";
 import { AiService } from "./ai.service";
 import { getRepositoryToken } from "@nestjs/typeorm";
@@ -46,12 +47,24 @@ describe("AiService", () => {
                 justification: admission.justification,
               });
             }),
-            findOne: jest.fn().mockResolvedValue({
-              id: 1,
-              tracking_code: "ADM-001",
-              candidate_data: { first_name: "John", last_name: "Doe" },
-              camp: { id: 1, name: "Test Camp" },
-              status: "PENDING_REVIEW",
+            findOne: jest.fn().mockImplementation((query) => {
+              if (query?.where?.tracking_code === "INVALID-CODE")
+                return Promise.resolve(null);
+              if (query?.where?.tracking_code === "ADM-001") {
+                return Promise.resolve({
+                  id: 1,
+                  tracking_code: "ADM-001",
+                  candidate_data: { first_name: "John", last_name: "Doe" },
+                  camp: { id: 1, name: "Test Camp" },
+                  status: "PENDING_REVIEW",
+                  is_auto_decision: false,
+                  auto_decision_reason: null,
+                  submission_date: new Date(),
+                  review_date: null,
+                  final_human_decision: null,
+                });
+              }
+              return Promise.resolve(null);
             }),
             find: jest.fn().mockResolvedValue([{ id: 1 }]),
             findAndCount: jest.fn().mockResolvedValue([[{ id: 1 }], 1]),
@@ -80,8 +93,8 @@ describe("AiService", () => {
           useValue: {
             checkCriticalRules: jest.fn().mockReturnValue({ applies: false }),
             calculateAdmissionScore: jest.fn().mockResolvedValue({
-              score: 85,
-              decision: "ACCEPTED",
+              score: 50,
+              suggested_decision: "RECOMMEND_ACCEPT",
               confidence: "HIGH",
               factors: [],
             }),
@@ -329,6 +342,9 @@ describe("AiService", () => {
 
   describe("getAdmissionDetail - Detail Retrieval", () => {
     it("should get admission detail by id", async () => {
+      const admissionRepo = module.get(getRepositoryToken(AiAdmission));
+      (admissionRepo.findOne as jest.Mock).mockResolvedValueOnce({ id: 1 });
+
       const result = await service.getAdmissionDetail(1);
       expect(result).toBeDefined();
       expect(result.id).toBe(1);
@@ -346,6 +362,7 @@ describe("AiService", () => {
     it("should load all required relations", async () => {
       const admissionRepo = module.get(getRepositoryToken(AiAdmission));
       const findOneSpy = admissionRepo.findOne as jest.Mock;
+      findOneSpy.mockResolvedValueOnce({ id: 1 });
 
       await service.getAdmissionDetail(1);
 

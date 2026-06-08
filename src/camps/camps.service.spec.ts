@@ -1,13 +1,15 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
-import { Repository, DataSource } from "typeorm";
+import type { Repository } from "typeorm";
+import { DataSource } from "typeorm";
 import { NotFoundException, BadRequestException } from "@nestjs/common";
 import { CampsService } from "./camps.service";
 import { Camp } from "./entities/camp.entity";
 import { Inventory } from "../resources/entities/inventory.entity";
 import { Resource } from "../resources/entities/resource.entity";
-import { CreateCampDto } from "./dto/create-camp.dto";
-import { UpdateCampDto } from "./dto/update-camp.dto";
+import type { CreateCampDto } from "./dto/create-camp.dto";
+import type { UpdateCampDto } from "./dto/update-camp.dto";
 
 describe("CampsService", () => {
   let service: CampsService;

@@ -74,7 +74,7 @@ test.describe("Exploraciones — Ciclo completo", () => {
       return;
     }
 
-    explorerId = explorer.id;
+    explorerId = Number(explorer.id);
 
     const departureDate = new Date();
     departureDate.setDate(departureDate.getDate() + 1);
@@ -203,7 +203,7 @@ test.describe("Exploraciones — Ciclo completo", () => {
         departure_date: new Date().toISOString(),
         estimated_days: 2,
         grace_days: 0,
-        persons: [{ person_id: nonExplorer.id, is_leader: false }],
+        persons: [{ person_id: Number(nonExplorer.id), is_leader: false }],
       },
     });
 

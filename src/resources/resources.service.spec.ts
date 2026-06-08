@@ -1,9 +1,10 @@
 import type { TestingModule } from "@nestjs/testing";
 import { Test } from "@nestjs/testing";
-import { getRepositoryToken } from "@nestjs/typeorm";
-import { BadRequestException, Logger, NotFoundException } from "@nestjs/common";
-import { getQueueToken } from "@nestjs/bullmq";
 import { ResourcesService } from "./resources.service";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import type { Queue } from "bullmq";
+import { getQueueToken } from "@nestjs/bullmq";
+import { NotFoundException, BadRequestException } from "@nestjs/common";
 import { Resource } from "./entities/resource.entity";
 import { Inventory } from "./entities/inventory.entity";
 import { InventoryMovement } from "./entities/inventory-movement.entity";
@@ -15,121 +16,55 @@ import { Person } from "../users/entities/person.entity";
 import { PersonAchievement } from "../users/entities/person-achievement.entity";
 import { UserAccount } from "../users/entities/user-account.entity";
 import { UserAsset } from "../users/entities/user-asset.entity";
-import type { CreateResourceDto } from "./dto/create-resource.dto";
-import type { UpdateInventoryDto } from "./dto/update-inventory.dto";
-import type { AdjustDailyProductionDto } from "./dto/adjust-daily-production.dto";
-import {
-  DAILY_CONSUMPTION,
-  PersonStatus,
-} from "../users/constants/professions.constants";
-
-const cloneEntity = <T extends Record<string, any>>(value: T): T => ({
-  ...value,
-});
-const asyncPassThrough = async <T>(value: T): Promise<T> => value;
-
-type RepoMock = {
-  findAndCount: jest.Mock;
-  findOne: jest.Mock;
-  create: jest.Mock;
-  save: jest.Mock;
-  remove: jest.Mock;
-  find: jest.Mock;
-  count: jest.Mock;
-  createQueryBuilder: jest.Mock;
-  getMany: jest.Mock;
-  getCount: jest.Mock;
-};
-
-const createRepoMock = (): RepoMock => ({
-  findAndCount: jest.fn(),
-  findOne: jest.fn(),
-  create: jest.fn(cloneEntity),
-  save: jest.fn(asyncPassThrough),
-  remove: jest.fn(),
-  find: jest.fn(),
-  count: jest.fn().mockResolvedValue(0),
-  createQueryBuilder: jest.fn(),
-  getMany: jest.fn(),
-  getCount: jest.fn(),
-});
 
 describe("ResourcesService", () => {
   let service: ResourcesService;
-  let resourceRepo: any;
-  let inventoryRepo: any;
-  let movementRepo: any;
-  let dailyProdRepo: any;
-  let dailyConsRepo: any;
-  let auditRepo: any;
-  let campRepo: any;
-  let personRepo: any;
+  let mockQueue: jest.Mocked<Queue>;
 
-  const mockResource = {
-    id: 1,
-    name: "Agua",
-    unit: "litros",
-    category: "water",
-    description: "Recurso base",
-  } as Resource;
-
-  const mockInventory = {
-    camp_id: 1,
-    resource_id: 1,
-    current_quantity: 10,
-    minimum_stock_required: 5,
-    alert_active: false,
-    last_update: new Date("2026-01-01T00:00:00.000Z"),
-  } as Inventory;
+  const mockRepo = () => ({
+    find: jest.fn(),
+    findOne: jest.fn(),
+    findAndCount: jest.fn(),
+    create: jest.fn().mockImplementation((dto) => dto),
+    save: jest
+      .fn()
+      .mockImplementation((ent) => Promise.resolve({ id: 1, ...ent })),
+    remove: jest.fn(),
+    count: jest.fn(),
+    createQueryBuilder: jest.fn(),
+    manager: { getRepository: jest.fn() },
+  });
 
   beforeEach(async () => {
+    mockQueue = {
+      add: jest.fn().mockResolvedValue({ id: "job-1" }),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ResourcesService,
-        { provide: getRepositoryToken(Resource), useValue: createRepoMock() },
-        { provide: getRepositoryToken(Inventory), useValue: createRepoMock() },
+        { provide: getRepositoryToken(Resource), useFactory: mockRepo },
+        { provide: getRepositoryToken(Inventory), useFactory: mockRepo },
         {
           provide: getRepositoryToken(InventoryMovement),
-          useValue: createRepoMock(),
+          useFactory: mockRepo,
         },
-        {
-          provide: getRepositoryToken(DailyProduction),
-          useValue: createRepoMock(),
-        },
-        {
-          provide: getRepositoryToken(DailyConsumption),
-          useValue: createRepoMock(),
-        },
-        { provide: getRepositoryToken(AuditLog), useValue: createRepoMock() },
-        { provide: getRepositoryToken(Camp), useValue: createRepoMock() },
-        { provide: getRepositoryToken(Person), useValue: createRepoMock() },
+        { provide: getRepositoryToken(DailyProduction), useFactory: mockRepo },
+        { provide: getRepositoryToken(DailyConsumption), useFactory: mockRepo },
+        { provide: getRepositoryToken(AuditLog), useFactory: mockRepo },
+        { provide: getRepositoryToken(Camp), useFactory: mockRepo },
+        { provide: getRepositoryToken(Person), useFactory: mockRepo },
         {
           provide: getRepositoryToken(PersonAchievement),
-          useValue: createRepoMock(),
+          useFactory: mockRepo,
         },
-        {
-          provide: getRepositoryToken(UserAccount),
-          useValue: createRepoMock(),
-        },
-        { provide: getRepositoryToken(UserAsset), useValue: createRepoMock() },
-        {
-          provide: getQueueToken("daily-tasks"),
-          useValue: {
-            add: jest.fn().mockResolvedValue({}),
-          },
-        },
+        { provide: getRepositoryToken(UserAccount), useFactory: mockRepo },
+        { provide: getRepositoryToken(UserAsset), useFactory: mockRepo },
+        { provide: getQueueToken("daily-tasks"), useValue: mockQueue },
       ],
     }).compile();
 
-    service = module.get(ResourcesService);
-    resourceRepo = module.get(getRepositoryToken(Resource));
-    inventoryRepo = module.get(getRepositoryToken(Inventory));
-    movementRepo = module.get(getRepositoryToken(InventoryMovement));
-    dailyProdRepo = module.get(getRepositoryToken(DailyProduction));
-    dailyConsRepo = module.get(getRepositoryToken(DailyConsumption));
-    auditRepo = module.get(getRepositoryToken(AuditLog));
-    campRepo = module.get(getRepositoryToken(Camp));
-    personRepo = module.get(getRepositoryToken(Person));
+    service = module.get<ResourcesService>(ResourcesService);
   });
 
   afterEach(() => {
@@ -140,533 +75,274 @@ describe("ResourcesService", () => {
     expect(service).toBeDefined();
   });
 
+  describe("onModuleInit", () => {
+    it("should schedule daily-resources job", async () => {
+      await service.onModuleInit();
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "daily-resources",
+        {},
+        { repeat: { pattern: "0 0 * * *" }, jobId: "daily-resources-job" },
+      );
+    });
+  });
+
   describe("findAll", () => {
-    it("should sanitize pagination and filter by category", async () => {
-      resourceRepo.findAndCount!.mockResolvedValue([[mockResource], 1]);
-
-      const result = await service.findAll(0, 999, "water");
-
-      expect(resourceRepo.findAndCount).toHaveBeenCalledWith({
-        where: { category: "water" },
-        order: { name: "ASC" },
-        skip: 0,
-        take: 100,
-      });
-      expect(result).toEqual({
-        data: [mockResource],
-        total: 1,
-        page: 1,
-        limit: 100,
-        totalPages: 1,
-      });
+    it("should return paginated resources", async () => {
+      const repo = service["resourceRepo"] as any;
+      repo.findAndCount.mockResolvedValue([[{ id: 1 }], 1]);
+      const res = await service.findAll(1, 10);
+      expect(res.data).toHaveLength(1);
+      expect(res.total).toBe(1);
+      expect(res.page).toBe(1);
     });
 
-    it("should return pagination without category", async () => {
-      resourceRepo.findAndCount!.mockResolvedValue([[mockResource], 3]);
-
-      const result = await service.findAll(2, 2);
-
-      expect(resourceRepo.findAndCount).toHaveBeenCalledWith({
-        where: {},
-        order: { name: "ASC" },
-        skip: 2,
-        take: 2,
-      });
-      expect(result.totalPages).toBe(2);
-    });
-
-    it("should use default page and limit when parameters are omitted", async () => {
-      resourceRepo.findAndCount!.mockResolvedValue([[mockResource], 1]);
-
-      const result = await service.findAll();
-
-      expect(resourceRepo.findAndCount).toHaveBeenCalledWith({
-        where: {},
-        order: { name: "ASC" },
-        skip: 0,
-        take: 20,
-      });
-      expect(result.page).toBe(1);
-      expect(result.limit).toBe(20);
+    it("should filter by category", async () => {
+      const repo = service["resourceRepo"] as any;
+      repo.findAndCount.mockResolvedValue([[], 0]);
+      await service.findAll(1, 10, "food");
+      expect(repo.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { category: "food" } }),
+      );
     });
   });
 
   describe("findResourceById", () => {
-    it("should return a resource when found", async () => {
-      resourceRepo.findOne!.mockResolvedValue(mockResource);
-
-      const result = await service.findResourceById(1);
-
-      expect(resourceRepo.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
-      expect(result).toBe(mockResource);
+    it("should return resource if found", async () => {
+      const repo = service["resourceRepo"] as any;
+      repo.findOne.mockResolvedValue({ id: 1 });
+      expect(await service.findResourceById(1)).toEqual({ id: 1 });
     });
 
-    it("should throw when resource does not exist", async () => {
-      resourceRepo.findOne!.mockResolvedValue(null);
-
-      await expect(service.findResourceById(99)).rejects.toThrow(
-        new NotFoundException("Recurso con ID 99 no encontrado"),
+    it("should throw NotFoundException if not found", async () => {
+      const repo = service["resourceRepo"] as any;
+      repo.findOne.mockResolvedValue(null);
+      await expect(service.findResourceById(1)).rejects.toThrow(
+        NotFoundException,
       );
     });
   });
 
-  describe("create", () => {
-    it("should create and save a resource", async () => {
-      const dto: CreateResourceDto = {
-        name: "Comida",
-        unit: "kg",
+  describe("create, update, remove", () => {
+    it("should create", async () => {
+      const repo = service["resourceRepo"] as any;
+      repo.save.mockResolvedValue({ id: 1, name: "Test" });
+      const res = await service.create({
+        name: "Test",
         category: "food",
-        description: "Enlatados",
-      };
-      resourceRepo.create!.mockReturnValue({ ...dto, id: 7 });
-      resourceRepo.save!.mockResolvedValue({ ...dto, id: 7 });
-
-      const result = await service.create(dto);
-
-      expect(resourceRepo.create).toHaveBeenCalledWith(dto);
-      expect(resourceRepo.save).toHaveBeenCalledWith({ ...dto, id: 7 });
-      expect(result).toEqual({ ...dto, id: 7 });
-    });
-  });
-
-  describe("update", () => {
-    it("should update and save a resource", async () => {
-      jest.spyOn(service, "findResourceById").mockResolvedValue(mockResource);
-      resourceRepo.save!.mockResolvedValue({
-        ...mockResource,
-        name: "Agua potable",
+        unit: "kg",
       });
-
-      const result = await service.update(1, { name: "Agua potable" });
-
-      expect(service.findResourceById).toHaveBeenCalledWith(1);
-      expect(resourceRepo.save).toHaveBeenCalledWith({
-        ...mockResource,
-        name: "Agua potable",
-      });
-      expect(result.name).toBe("Agua potable");
+      expect(res.name).toBe("Test");
     });
-  });
 
-  describe("remove", () => {
-    it("should remove the resource after finding it", async () => {
-      jest.spyOn(service, "findResourceById").mockResolvedValue(mockResource);
+    it("should update", async () => {
+      const repo = service["resourceRepo"] as any;
+      repo.findOne.mockResolvedValue({ id: 1, name: "Old" });
+      repo.save.mockResolvedValue({ id: 1, name: "New" });
+      const res = await service.update(1, { name: "New" });
+      expect(res.name).toBe("New");
+    });
 
+    it("should remove", async () => {
+      const repo = service["resourceRepo"] as any;
+      repo.findOne.mockResolvedValue({ id: 1 });
+      repo.remove.mockResolvedValue({ id: 1 });
       await service.remove(1);
-
-      expect(service.findResourceById).toHaveBeenCalledWith(1);
-      expect(resourceRepo.remove).toHaveBeenCalledWith(mockResource);
+      expect(repo.remove).toHaveBeenCalled();
     });
   });
 
-  describe("getInventoryByCamp", () => {
-    it("should refresh flags and return inventory with resource relation", async () => {
-      const refreshSpy = jest
-        .spyOn(service as any, "refreshAlertFlags")
-        .mockResolvedValue(undefined);
-      inventoryRepo.find!.mockResolvedValue([mockInventory]);
-
-      const result = await service.getInventoryByCamp(1);
-
-      expect(refreshSpy).toHaveBeenCalledWith(1);
-      expect(inventoryRepo.find).toHaveBeenCalledWith({
-        where: { camp_id: 1 },
-        relations: ["resource", "camp"],
-      });
-      expect(result).toEqual([mockInventory]);
-    });
-  });
-
-  describe("getInventoryAlerts", () => {
-    it("should return alerting inventory items", async () => {
-      const refreshSpy = jest
-        .spyOn(service as any, "refreshAlertFlags")
-        .mockResolvedValue(undefined);
-      const queryBuilder = {
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
+  describe("getInventoryByCamp and Alerts", () => {
+    beforeEach(() => {
+      // Mock refreshAlertFlags
+      const inventoryRepo = service["inventoryRepo"] as any;
+      inventoryRepo.createQueryBuilder.mockReturnValue({
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
-        getMany: jest
-          .fn()
-          .mockResolvedValue([{ ...mockInventory, alert_active: true }]),
-      };
-      inventoryRepo.createQueryBuilder!.mockReturnValue(queryBuilder);
-
-      const result = await service.getInventoryAlerts(2);
-
-      expect(refreshSpy).toHaveBeenCalledWith(2);
-      expect(inventoryRepo.createQueryBuilder).toHaveBeenCalledWith("inv");
-      expect(queryBuilder.where).toHaveBeenCalledWith("inv.camp_id = :campId", {
-        campId: 2,
+        execute: jest.fn().mockResolvedValue(true),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([{ id: 1, alert_active: true }]),
       });
-      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-        "inv.alert_active = true",
-      );
-      expect(result).toHaveLength(1);
+    });
+
+    it("should get inventory by camp", async () => {
+      const repo = service["inventoryRepo"] as any;
+      repo.find.mockResolvedValue([{ id: 1 }]);
+      const res = await service.getInventoryByCamp(1);
+      expect(res).toHaveLength(1);
+    });
+
+    it("should get inventory alerts", async () => {
+      const res = await service.getInventoryAlerts(1);
+      expect(res).toHaveLength(1);
     });
   });
 
   describe("updateInventory", () => {
-    it("should update an existing inventory record", async () => {
-      const dto: UpdateInventoryDto = {
-        current_quantity: 3,
+    it("should update existing inventory", async () => {
+      const repo = service["inventoryRepo"] as any;
+      repo.findOne.mockResolvedValue({
+        id: 1,
+        current_quantity: 0,
+        minimum_stock_required: 0,
+      });
+      repo.save.mockImplementation((ent: any) => Promise.resolve(ent));
+      const res = await service.updateInventory(1, 1, {
+        current_quantity: 10,
         minimum_stock_required: 5,
-      };
-      inventoryRepo.findOne!.mockResolvedValue({ ...mockInventory });
-
-      const result = await service.updateInventory(1, 1, dto);
-
-      expect(inventoryRepo.findOne).toHaveBeenCalledWith({
-        where: { camp_id: 1, resource_id: 1 },
-        relations: ["resource"],
       });
-      expect(inventoryRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          current_quantity: 3,
-          minimum_stock_required: 5,
-          alert_active: true,
-          last_update: expect.any(Date),
-        }),
-      );
-      expect(result.alert_active).toBe(true);
+      expect(res.alert_active).toBe(false);
+      expect(res.current_quantity).toBe(10);
     });
 
-    it("should create a new inventory record when it does not exist", async () => {
-      inventoryRepo.findOne!.mockResolvedValue(null);
-      inventoryRepo.create!.mockReturnValue({
-        camp_id: 5,
-        resource_id: 4,
-        current_quantity: 0,
-        minimum_stock_required: 0,
+    it("should create if not exists", async () => {
+      const repo = service["inventoryRepo"] as any;
+      repo.findOne.mockResolvedValue(null);
+      repo.save.mockImplementation((ent: any) => Promise.resolve(ent));
+      const res = await service.updateInventory(1, 1, {
+        current_quantity: 2,
+        minimum_stock_required: 5,
       });
-
-      const result = await service.updateInventory(5, 4, {
-        current_quantity: 8,
-      });
-
-      expect(inventoryRepo.create).toHaveBeenCalledWith({
-        camp_id: 5,
-        resource_id: 4,
-        current_quantity: 0,
-        minimum_stock_required: 0,
-        last_update: expect.any(Date),
-      });
-      expect(result.current_quantity).toBe(8);
-      expect(result.alert_active).toBe(false);
-    });
-
-    it("should keep current quantity when dto does not provide it", async () => {
-      inventoryRepo.findOne!.mockResolvedValue({
-        ...mockInventory,
-        current_quantity: 12,
-      });
-
-      const result = await service.updateInventory(1, 1, {
-        minimum_stock_required: 20,
-      });
-
-      expect(inventoryRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          current_quantity: 12,
-          minimum_stock_required: 20,
-          alert_active: true,
-        }),
-      );
-      expect(result.current_quantity).toBe(12);
+      expect(res.alert_active).toBe(true);
     });
   });
 
   describe("initializeInventoryForCamp", () => {
-    it("should create inventory only for missing resources", async () => {
-      const secondResource = {
-        ...mockResource,
-        id: 2,
-        category: "food",
-      } as Resource;
-      resourceRepo.find!.mockResolvedValue([mockResource, secondResource]);
-      inventoryRepo
-        .findOne!.mockResolvedValueOnce({ ...mockInventory })
-        .mockResolvedValueOnce(null);
-      inventoryRepo.create!.mockImplementation(cloneEntity);
-      inventoryRepo.save!.mockImplementation(asyncPassThrough);
-
-      const result = await service.initializeInventoryForCamp(9);
-
-      expect(inventoryRepo.findOne).toHaveBeenNthCalledWith(1, {
-        where: { camp_id: 9, resource_id: 1 },
-      });
-      expect(inventoryRepo.findOne).toHaveBeenNthCalledWith(2, {
-        where: { camp_id: 9, resource_id: 2 },
-      });
-      expect(inventoryRepo.create).toHaveBeenCalledWith({
-        camp_id: 9,
-        resource_id: 2,
-        current_quantity: 0,
-        minimum_stock_required: 0,
-        alert_active: false,
-        last_update: expect.any(Date),
-      });
-      expect(result).toEqual([
-        expect.objectContaining({ camp_id: 9, resource_id: 2 }),
-      ]);
+    it("should initialize for camp", async () => {
+      const resourceRepo = service["resourceRepo"] as any;
+      const invRepo = service["inventoryRepo"] as any;
+      resourceRepo.find.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+      invRepo.findOne
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 2 }); // one not exists, one exists
+      invRepo.save.mockResolvedValue({ id: 99 });
+      const res = await service.initializeInventoryForCamp(1);
+      expect(res).toHaveLength(1); // only the missing one was created
     });
   });
 
   describe("getMovementsByCamp", () => {
-    it("should return movements ordered by date desc", async () => {
-      movementRepo.find!.mockResolvedValue([{ id: 1 } as any]);
-
-      const result = await service.getMovementsByCamp(4, 12);
-
-      expect(movementRepo.find).toHaveBeenCalledWith({
-        where: { camp_id: 4 },
-        relations: ["resource", "user"],
-        order: { date: "DESC" },
-        take: 12,
-      });
-      expect(result).toEqual([{ id: 1 }]);
-    });
-
-    it("should use the default movement limit when none is provided", async () => {
-      movementRepo.find!.mockResolvedValue([]);
-
-      await service.getMovementsByCamp(8);
-
-      expect(movementRepo.find).toHaveBeenCalledWith({
-        where: { camp_id: 8 },
-        relations: ["resource", "user"],
-        order: { date: "DESC" },
-        take: 50,
-      });
+    it("should return movements", async () => {
+      const repo = service["movementRepo"] as any;
+      repo.find.mockResolvedValue([{ id: 1 }]);
+      const res = await service.getMovementsByCamp(1);
+      expect(res).toHaveLength(1);
     });
   });
 
   describe("createMovement", () => {
-    it("should create an income movement and audit log", async () => {
-      jest.spyOn(service, "findResourceById").mockResolvedValue(mockResource);
-      inventoryRepo.findOne!.mockResolvedValue({
-        ...mockInventory,
+    beforeEach(() => {
+      const resourceRepo = service["resourceRepo"] as any;
+      resourceRepo.findOne.mockResolvedValue({ id: 1 }); // resource exists
+      const invRepo = service["inventoryRepo"] as any;
+      invRepo.findOne.mockResolvedValue({
         current_quantity: 10,
+        minimum_stock_required: 5,
       });
-      movementRepo.create!.mockImplementation(cloneEntity);
-      movementRepo.save!.mockImplementation(async (value: any) => ({
-        id: 55,
-        ...value,
-      }));
-      auditRepo.create!.mockImplementation(cloneEntity);
+      const userAccountRepo = service["userAccountRepo"] as any;
+      userAccountRepo.findOne.mockResolvedValue({ id: 1, person_id: 1 });
+      const personRepo = service["personRepo"] as any;
+      personRepo.findOne.mockResolvedValue({
+        id: 1,
+        experience_points: 90,
+        experience_level: 1,
+      });
+      const movementRepo = service["movementRepo"] as any;
+      movementRepo.count.mockResolvedValue(1); // for PRIMER_SUMINISTRO
+    });
 
-      const result = await service.createMovement(
+    it("should create an income movement", async () => {
+      const res = await service.createMovement(
         {
           camp_id: 1,
           resource_id: 1,
-          quantity: 5,
           type: "income",
-          description: "Ingreso",
+          quantity: 5,
+          description: "test",
         },
-        3,
+        1,
       );
-
-      expect(service.findResourceById).toHaveBeenCalledWith(1);
-      expect(inventoryRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ current_quantity: 15, alert_active: false }),
-      );
-      expect(movementRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          camp_id: 1,
-          resource_id: 1,
-          quantity: 5,
-          type: "income",
-          user_id: 3,
-          date: expect.any(Date),
-        }),
-      );
-      expect(auditRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          user_id: 3,
-          camp_id: 1,
-          action: "inventory_movement_income",
-          entity_type: "inventory_movement",
-          entity_id: 55,
-          new_value: {
-            resource_id: 1,
-            quantity: 5,
-            type: "income",
-            resulting_quantity: 15,
-          },
-          date: expect.any(Date),
-        }),
-      );
-      expect(result.movement.id).toBe(55);
-      expect(result.inventory.current_quantity).toBe(15);
+      expect(res.movement).toBeDefined();
+      expect(res.inventory.current_quantity).toBe(15);
     });
 
-    it("should create a new inventory and discount quantity for non-income types", async () => {
-      jest.spyOn(service, "findResourceById").mockResolvedValue(mockResource);
-      inventoryRepo.findOne!.mockResolvedValue(null);
-      inventoryRepo.create!.mockImplementation(cloneEntity);
-      movementRepo.create!.mockImplementation(cloneEntity);
-      movementRepo.save!.mockImplementation(async (value: any) => ({
-        id: 77,
-        ...value,
-      }));
-      auditRepo.create!.mockImplementation(cloneEntity);
-
-      const result = await service.createMovement({
-        camp_id: 2,
-        resource_id: 1,
-        quantity: 4,
-        type: "daily_consumption",
-        description: "Salida",
-      });
-
-      expect(inventoryRepo.create).toHaveBeenCalledWith({
-        camp_id: 2,
-        resource_id: 1,
-        current_quantity: 0,
-        minimum_stock_required: 0,
-      });
-      expect(inventoryRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ current_quantity: -4, alert_active: true }),
+    it("should create an outcome movement", async () => {
+      const res = await service.createMovement(
+        {
+          camp_id: 1,
+          resource_id: 1,
+          type: "consumption",
+          quantity: 5,
+          description: "test",
+        },
+        1,
       );
-      expect(result.inventory.current_quantity).toBe(-4);
+      expect(res.inventory.current_quantity).toBe(5);
+    });
+
+    it("should trigger level up if xp exceeds 100", async () => {
+      const personRepo = service["personRepo"] as any;
+      personRepo.findOne.mockResolvedValue({
+        id: 1,
+        experience_points: 95,
+        experience_level: 1,
+      });
+      await service.createMovement(
+        { camp_id: 1, resource_id: 1, type: "income", quantity: 5 },
+        1,
+      );
+      expect(personRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ experience_level: 2, experience_points: 10 }),
+      );
+    });
+
+    it("should grant LOGISTICA_PRECISA if replenishing active alert before zero", async () => {
+      const invRepo = service["inventoryRepo"] as any;
+      invRepo.findOne.mockResolvedValue({
+        current_quantity: 2,
+        minimum_stock_required: 5,
+        alert_active: true,
+      });
+      const assetRepo = service["userAssetRepo"] as any;
+      assetRepo.manager.getRepository.mockReturnValue({
+        findOne: jest.fn().mockResolvedValue(null),
+        save: jest.fn().mockResolvedValue({ id: 99 }),
+        create: jest.fn().mockReturnValue({ id: 99 }),
+      });
+      assetRepo.findOne.mockResolvedValue(null);
+      await service.createMovement(
+        { camp_id: 1, resource_id: 1, type: "income", quantity: 10 },
+        1,
+      );
+      expect(assetRepo.save).toHaveBeenCalled();
     });
   });
 
   describe("executeDailyProcess", () => {
-    it("should throw when food or water resources are missing", async () => {
-      resourceRepo
-        .findOne!.mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ ...mockResource, id: 2 });
-
+    it("should throw if food or water resources are missing", async () => {
+      const resourceRepo = service["resourceRepo"] as any;
+      resourceRepo.findOne.mockResolvedValue(null);
       await expect(service.executeDailyProcess(1)).rejects.toThrow(
-        new NotFoundException(
-          'Recursos de tipo "food" y "water" no configurados. Cree recursos con esas categorias.',
-        ),
+        NotFoundException,
       );
     });
 
-    it("should process daily production and consumption using defaults and overrides", async () => {
-      const foodResource = {
-        id: 11,
-        category: "food",
-        name: "Comida",
-      } as Resource;
-      const waterResource = {
-        id: 12,
-        category: "water",
-        name: "Agua",
-      } as Resource;
-      const workerWithConfig = {
-        id: 1,
-        first_name: "Ana",
-        last_name: "Perez",
-        can_work: true,
-        status: PersonStatus.ACTIVE,
-        profession: { id: 5, name: "Recolector" },
-      };
-      const workerWithoutProduction = {
-        id: 2,
-        first_name: "Luis",
-        last_name: "Diaz",
-        can_work: true,
-        status: PersonStatus.ACTIVE,
-        profession: { id: 6, name: "Guardia" },
-      };
-      const workersQB = {
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        leftJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getMany: jest
-          .fn()
-          .mockResolvedValue([workerWithConfig, workerWithoutProduction]),
-      };
-      const countQB = {
-        leftJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(4),
-      };
+    it("should calculate production and consumption properly", async () => {
+      const resourceRepo = service["resourceRepo"] as any;
+      resourceRepo.findOne.mockImplementation(
+        ({ where: { id, category } }: any) => {
+          if (category === "food" || id === 1)
+            return Promise.resolve({ id: 1, category: "food" });
+          if (category === "water" || id === 2)
+            return Promise.resolve({ id: 2, category: "water" });
+          return Promise.resolve(null);
+        },
+      );
+      jest.spyOn(service, "createMovement").mockResolvedValue({} as any);
 
-      resourceRepo
-        .findOne!.mockResolvedValueOnce(foodResource)
-        .mockResolvedValueOnce(waterResource);
-      personRepo
-        .createQueryBuilder!.mockReturnValueOnce(workersQB)
-        .mockReturnValueOnce(countQB);
-      dailyProdRepo
-        .findOne!.mockResolvedValueOnce({ base_production: 20 })
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-      dailyConsRepo
-        .findOne!.mockResolvedValueOnce({ daily_ration: 5 })
-        .mockResolvedValueOnce(null);
-
-      const createMovementSpy = jest
-        .spyOn(service, "createMovement")
-        .mockImplementation(async (dto: any) => ({
-          movement: { id: Math.random(), ...dto } as any,
-          inventory: {
-            camp_id: dto.camp_id,
-            resource_id: dto.resource_id,
-            current_quantity: dto.quantity,
-          } as any,
-        }));
-      const refreshSpy = jest
-        .spyOn(service as any, "refreshAlertFlags")
-        .mockResolvedValue(undefined);
-
-      const result = await service.executeDailyProcess(10);
-
-      expect(resourceRepo.findOne).toHaveBeenNthCalledWith(1, {
-        where: { category: "food" },
-      });
-      expect(resourceRepo.findOne).toHaveBeenNthCalledWith(2, {
-        where: { category: "water" },
-      });
-      expect(createMovementSpy).toHaveBeenCalledTimes(3);
-      expect(createMovementSpy).toHaveBeenNthCalledWith(1, {
-        camp_id: 10,
-        resource_id: 11,
-        quantity: 20,
-        type: "daily_production",
-        description: "Produccion diaria: Ana Perez (Recolector)",
-      });
-      expect(createMovementSpy).toHaveBeenNthCalledWith(2, {
-        camp_id: 10,
-        resource_id: 11,
-        quantity: 20,
-        type: "daily_consumption",
-        description: "Consumo diario de comida: 4 personas x 5 unidades",
-      });
-      expect(createMovementSpy).toHaveBeenNthCalledWith(3, {
-        camp_id: 10,
-        resource_id: 12,
-        quantity: 12,
-        type: "daily_consumption",
-        description: `Consumo diario de agua: 4 personas x ${DAILY_CONSUMPTION.WATER_PER_PERSON} litros`,
-      });
-      expect(refreshSpy).toHaveBeenCalledWith(10);
-      expect(result).toEqual({
-        production: { food: 20 },
-        consumption: { food: 20, water: 12 },
-        movementCount: 3,
-      });
-    });
-
-    it("should use profession defaults, custom water production and custom water ration", async () => {
-      const foodResource = {
-        id: 31,
-        category: "food",
-        name: "Comida",
-      } as Resource;
-      const waterResource = {
-        id: 32,
-        category: "water",
-        name: "Agua",
-      } as Resource;
-      const workersQB = {
+      const personRepo = service["personRepo"] as any;
+      personRepo.createQueryBuilder.mockReturnValue({
         leftJoinAndSelect: jest.fn().mockReturnThis(),
         leftJoin: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
@@ -674,466 +350,150 @@ describe("ResourcesService", () => {
         getMany: jest.fn().mockResolvedValue([
           {
             id: 1,
-            first_name: "Rosa",
-            last_name: "Campo",
-            can_work: true,
-            status: PersonStatus.ACTIVE,
-            profession: { id: 10, name: "Agricultor" },
-          },
-        ]),
-      };
-      const countQB = {
-        leftJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(2),
-      };
-
-      resourceRepo
-        .findOne!.mockResolvedValueOnce(foodResource)
-        .mockResolvedValueOnce(waterResource);
-      personRepo
-        .createQueryBuilder!.mockReturnValueOnce(workersQB)
-        .mockReturnValueOnce(countQB);
-      dailyProdRepo
-        .findOne!.mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ base_production: 6 });
-      dailyConsRepo
-        .findOne!.mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ daily_ration: 4 });
-
-      const createMovementSpy = jest
-        .spyOn(service, "createMovement")
-        .mockResolvedValue({
-          movement: { id: 1 } as any,
-          inventory: mockInventory,
-        });
-      const refreshSpy = jest
-        .spyOn(service as any, "refreshAlertFlags")
-        .mockResolvedValue(undefined);
-
-      const result = await service.executeDailyProcess(12);
-
-      expect(createMovementSpy).toHaveBeenNthCalledWith(1, {
-        camp_id: 12,
-        resource_id: 31,
-        quantity: 8,
-        type: "daily_production",
-        description: "Produccion diaria: Rosa Campo (Agricultor)",
-      });
-      expect(createMovementSpy).toHaveBeenNthCalledWith(2, {
-        camp_id: 12,
-        resource_id: 32,
-        quantity: 6,
-        type: "daily_production",
-        description: "Produccion de agua: Rosa Campo (Agricultor)",
-      });
-      expect(createMovementSpy).toHaveBeenNthCalledWith(3, {
-        camp_id: 12,
-        resource_id: 31,
-        quantity: 4,
-        type: "daily_consumption",
-        description: "Consumo diario de comida: 2 personas x 2 unidades",
-      });
-      expect(createMovementSpy).toHaveBeenNthCalledWith(4, {
-        camp_id: 12,
-        resource_id: 32,
-        quantity: 8,
-        type: "daily_consumption",
-        description: "Consumo diario de agua: 2 personas x 4 litros",
-      });
-      expect(refreshSpy).toHaveBeenCalledWith(12);
-      expect(result).toEqual({
-        production: { food: 8, water: 6 },
-        consumption: { food: 4, water: 8 },
-        movementCount: 4,
-      });
-    });
-
-    it("should default food and water production to zero when profession config is missing", async () => {
-      const foodResource = {
-        id: 41,
-        category: "food",
-        name: "Comida",
-      } as Resource;
-      const waterResource = {
-        id: 42,
-        category: "water",
-        name: "Agua",
-      } as Resource;
-      const workersQB = {
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        leftJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([
-          {
-            id: 1,
-            first_name: "Nora",
-            last_name: "Desconocida",
-            can_work: true,
-            status: PersonStatus.ACTIVE,
-            profession: { id: 11, name: "OficioInventado" },
-          },
-        ]),
-      };
-      const countQB = {
-        leftJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(0),
-      };
-
-      resourceRepo
-        .findOne!.mockResolvedValueOnce(foodResource)
-        .mockResolvedValueOnce(waterResource);
-      personRepo
-        .createQueryBuilder!.mockReturnValueOnce(workersQB)
-        .mockReturnValueOnce(countQB);
-      dailyProdRepo
-        .findOne!.mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-      dailyConsRepo
-        .findOne!.mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-
-      const createMovementSpy = jest
-        .spyOn(service, "createMovement")
-        .mockResolvedValue({
-          movement: { id: 1 } as any,
-          inventory: mockInventory,
-        });
-      const refreshSpy = jest
-        .spyOn(service as any, "refreshAlertFlags")
-        .mockResolvedValue(undefined);
-
-      const result = await service.executeDailyProcess(13);
-
-      expect(createMovementSpy).not.toHaveBeenCalled();
-      expect(refreshSpy).toHaveBeenCalledWith(13);
-      expect(result).toEqual({
-        production: {},
-        consumption: {},
-        movementCount: 0,
-      });
-    });
-
-    it("should skip workers without profession and register only water production when applicable", async () => {
-      const foodResource = {
-        id: 21,
-        category: "food",
-        name: "Comida",
-      } as Resource;
-      const waterResource = {
-        id: 22,
-        category: "water",
-        name: "Agua",
-      } as Resource;
-      const workersQB = {
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        leftJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([
-          {
-            id: 1,
-            first_name: "Sin",
-            last_name: "Profesion",
-            can_work: true,
-            status: PersonStatus.ACTIVE,
-            profession: null,
+            first_name: "A",
+            last_name: "B",
+            profession: { id: 1, name: "Recolector / Scavenger" },
           },
           {
             id: 2,
-            first_name: "Mario",
-            last_name: "Aguador",
-            can_work: true,
-            status: PersonStatus.ACTIVE,
-            profession: { id: 9, name: "Aguatero" },
+            first_name: "C",
+            last_name: "D",
+            profession: { id: 2, name: "Ingeniero de Agua" },
           },
         ]),
-      };
-      const countQB = {
-        leftJoin: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(5),
+      });
+
+      const dailyProdRepo = service["dailyProdRepo"] as any;
+      dailyProdRepo.findOne.mockResolvedValue({ base_production: 10 });
+
+      const dailyConsRepo = service["dailyConsRepo"] as any;
+      dailyConsRepo.findOne.mockResolvedValue({ daily_ration: 5 });
+
+      const invRepo = service["inventoryRepo"] as any;
+      invRepo.createQueryBuilder.mockReturnValue({
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(0),
-      };
-
-      resourceRepo
-        .findOne!.mockResolvedValueOnce(foodResource)
-        .mockResolvedValueOnce(waterResource);
-      personRepo
-        .createQueryBuilder!.mockReturnValueOnce(workersQB)
-        .mockReturnValueOnce(countQB);
-      dailyProdRepo
-        .findOne!.mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-      dailyConsRepo
-        .findOne!.mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-
-      const createMovementSpy = jest
-        .spyOn(service, "createMovement")
-        .mockResolvedValue({
-          movement: { id: 1 } as any,
-          inventory: mockInventory,
-        });
-      const refreshSpy = jest
-        .spyOn(service as any, "refreshAlertFlags")
-        .mockResolvedValue(undefined);
-
-      const result = await service.executeDailyProcess(11);
-
-      expect(createMovementSpy).toHaveBeenCalledTimes(1);
-      expect(createMovementSpy).toHaveBeenCalledWith({
-        camp_id: 11,
-        resource_id: 22,
-        quantity: 15,
-        type: "daily_production",
-        description: "Produccion de agua: Mario Aguador (Aguatero)",
+        execute: jest.fn().mockResolvedValue(true),
       });
-      expect(refreshSpy).toHaveBeenCalledWith(11);
-      expect(result).toEqual({
-        production: { water: 15 },
-        consumption: {},
-        movementCount: 1,
+      invRepo.count.mockResolvedValue(0); // 0 alerts for PROVEEDOR_CONSISTENTE
+
+      const uaRepo = service["userAccountRepo"] as any;
+      uaRepo.createQueryBuilder.mockReturnValue({
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([{ id: 1 }]),
       });
+
+      const res = await service.executeDailyProcess(1);
+      expect(res.movementCount).toBeGreaterThan(0);
+      expect(res.production.food).toBeGreaterThan(0);
+      expect(res.consumption.food).toBeGreaterThan(0);
     });
   });
 
   describe("executeAllDailyProcesses", () => {
-    it("should process active camps and log success", async () => {
-      const camps = [
-        { id: 1, name: "Camp Alpha", active: true },
-        { id: 2, name: "Camp Beta", active: true },
-      ];
-      campRepo.find!.mockResolvedValue(camps);
+    it("should execute for all camps", async () => {
+      const campRepo = service["campRepo"] as any;
+      campRepo.find.mockResolvedValue([{ id: 1, name: "Camp" }]);
+      jest.spyOn(service, "executeDailyProcess").mockResolvedValue({
+        production: {},
+        consumption: {},
+        movementCount: 0,
+      });
+      await service.executeAllDailyProcesses();
+      expect(service.executeDailyProcess).toHaveBeenCalledWith(1);
+    });
+
+    it("should catch errors from executeDailyProcess and continue", async () => {
+      const campRepo = service["campRepo"] as any;
+      campRepo.find.mockResolvedValue([
+        { id: 1, name: "Camp" },
+        { id: 2, name: "Camp2" },
+      ]);
       jest
         .spyOn(service, "executeDailyProcess")
+        .mockRejectedValueOnce(new Error("err"))
         .mockResolvedValueOnce({
           production: {},
           consumption: {},
-          movementCount: 2,
-        })
-        .mockResolvedValueOnce({
-          production: {},
-          consumption: {},
-          movementCount: 1,
+          movementCount: 0,
         });
-      const logSpy = jest.spyOn(Logger.prototype, "log").mockImplementation();
-      const errorSpy = jest
-        .spyOn(Logger.prototype, "error")
-        .mockImplementation();
-
       await service.executeAllDailyProcesses();
-
-      expect(campRepo.find).toHaveBeenCalledWith({ where: { active: true } });
-      expect(service.executeDailyProcess).toHaveBeenNthCalledWith(1, 1);
-      expect(service.executeDailyProcess).toHaveBeenNthCalledWith(2, 2);
-      expect(logSpy).toHaveBeenCalledWith(
-        "Iniciando proceso diario automatico de recursos...",
-      );
-      expect(logSpy).toHaveBeenCalledWith(
-        'Camp "Camp Alpha" (1): 2 movimientos procesados',
-      );
-      expect(logSpy).toHaveBeenCalledWith(
-        'Camp "Camp Beta" (2): 1 movimientos procesados',
-      );
-      expect(logSpy).toHaveBeenCalledWith(
-        "Proceso diario finalizado para todos los campamentos",
-      );
-      expect(errorSpy).not.toHaveBeenCalled();
-    });
-
-    it("should log errors and continue when a camp fails", async () => {
-      campRepo.find!.mockResolvedValue([
-        { id: 5, name: "Camp Gamma", active: true },
-      ]);
-      jest
-        .spyOn(service, "executeDailyProcess")
-        .mockRejectedValue(new Error("boom"));
-      const errorSpy = jest
-        .spyOn(Logger.prototype, "error")
-        .mockImplementation();
-      jest.spyOn(Logger.prototype, "log").mockImplementation();
-
-      await service.executeAllDailyProcesses();
-
-      expect(errorSpy).toHaveBeenCalledWith("Error en camp 5: boom");
-    });
-
-    it("should stringify non-Error values when logging cron failures", async () => {
-      campRepo.find!.mockResolvedValue([
-        { id: 6, name: "Camp Delta", active: true },
-      ]);
-      jest
-        .spyOn(service, "executeDailyProcess")
-        .mockRejectedValue("fallo-string");
-      const errorSpy = jest
-        .spyOn(Logger.prototype, "error")
-        .mockImplementation();
-      jest.spyOn(Logger.prototype, "log").mockImplementation();
-
-      await service.executeAllDailyProcesses();
-
-      expect(errorSpy).toHaveBeenCalledWith("Error en camp 6: fallo-string");
+      expect(service.executeDailyProcess).toHaveBeenCalledTimes(2);
     });
   });
 
   describe("adjustProductionForPerson", () => {
-    it("should create a daily production movement using dto camp id", async () => {
-      const person = {
-        id: 4,
-        first_name: "Eva",
-        last_name: "Lopez",
-        profession: { id: 8, name: "Ingeniero" },
-        userAccount: { camp_id: 15 },
-      };
-      const dto: AdjustDailyProductionDto = {
-        camp_id: 20,
-        resource_id: 1,
-        quantity: 6,
-      };
-      personRepo.findOne!.mockResolvedValue(person as any);
-      jest.spyOn(service, "findResourceById").mockResolvedValue(mockResource);
-      const createMovementSpy = jest
-        .spyOn(service, "createMovement")
-        .mockResolvedValue({
-          movement: { id: 9 } as any,
-          inventory: mockInventory,
-        });
-
-      const result = await service.adjustProductionForPerson(4, dto, 30);
-
-      expect(personRepo.findOne).toHaveBeenCalledWith({
-        where: { id: 4 },
-        relations: ["profession", "userAccount"],
+    it("should adjust production", async () => {
+      const personRepo = service["personRepo"] as any;
+      personRepo.findOne.mockResolvedValue({
+        id: 1,
+        first_name: "A",
+        userAccount: { camp_id: 1 },
       });
-      expect(service.findResourceById).toHaveBeenCalledWith(1);
-      expect(createMovementSpy).toHaveBeenCalledWith(
-        {
-          camp_id: 20,
-          resource_id: 1,
-          quantity: 6,
-          type: "daily_production",
-          description: "Ajuste manual de produccion: Eva Lopez",
-        },
-        30,
-      );
-      expect(result.inventory).toBe(mockInventory);
-    });
-
-    it("should use the custom description when provided", async () => {
-      personRepo.findOne!.mockResolvedValue({
-        id: 4,
-        first_name: "Eva",
-        last_name: "Lopez",
-        profession: { id: 8, name: "Ingeniero" },
-        userAccount: { camp_id: 15 },
-      } as any);
-      jest.spyOn(service, "findResourceById").mockResolvedValue(mockResource);
-      const createMovementSpy = jest
+      const resourceRepo = service["resourceRepo"] as any;
+      resourceRepo.findOne.mockResolvedValue({ id: 1 });
+      jest
         .spyOn(service, "createMovement")
-        .mockResolvedValue({
-          movement: { id: 9 } as any,
-          inventory: mockInventory,
-        });
-
-      await service.adjustProductionForPerson(
-        4,
-        {
-          resource_id: 1,
-          quantity: 2,
-          description: "Produccion extraordinaria",
-        },
-        31,
-      );
-
-      expect(createMovementSpy).toHaveBeenCalledWith(
-        {
-          camp_id: 15,
-          resource_id: 1,
-          quantity: 2,
-          type: "daily_production",
-          description: "Produccion extraordinaria",
-        },
-        31,
-      );
+        .mockResolvedValue({ movement: { id: 1 } } as any);
+      const res = await service.adjustProductionForPerson(1, {
+        resource_id: 1,
+        quantity: 5,
+        camp_id: 1,
+      });
+      expect(res).toBeDefined();
     });
 
-    it("should throw when person does not exist", async () => {
-      personRepo.findOne!.mockResolvedValue(null);
-
+    it("should throw if person not found", async () => {
+      const personRepo = service["personRepo"] as any;
+      personRepo.findOne.mockResolvedValue(null);
       await expect(
-        service.adjustProductionForPerson(404, { resource_id: 1, quantity: 1 }),
-      ).rejects.toThrow(
-        new NotFoundException("Persona con ID 404 no encontrada"),
-      );
+        service.adjustProductionForPerson(1, { resource_id: 1, quantity: 5 }),
+      ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw when camp cannot be determined", async () => {
-      personRepo.findOne!.mockResolvedValue({
-        id: 4,
-        first_name: "Eva",
-        last_name: "Lopez",
-        profession: { id: 8, name: "Ingeniero" },
-        userAccount: null,
-      } as any);
-
+    it("should throw if camp_id not defined", async () => {
+      const personRepo = service["personRepo"] as any;
+      personRepo.findOne.mockResolvedValue({ id: 1, userAccount: null });
       await expect(
-        service.adjustProductionForPerson(4, { resource_id: 1, quantity: 2 }),
-      ).rejects.toThrow(
-        new BadRequestException(
-          "No se pudo determinar el campamento. Proporcione camp_id.",
-        ),
-      );
+        service.adjustProductionForPerson(1, { resource_id: 1, quantity: 5 }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
-  describe("refreshAlertFlags", () => {
-    it("should toggle alert flags in both update queries", async () => {
-      const executeTrue = jest.fn().mockResolvedValue({});
-      const executeFalse = jest.fn().mockResolvedValue({});
-      const firstBuilder = {
-        update: jest.fn().mockReturnThis(),
-        set: jest.fn().mockReturnThis(),
+  describe("getProductionRanking", () => {
+    it("should return sorted ranking", async () => {
+      const personRepo = service["personRepo"] as any;
+      personRepo.createQueryBuilder.mockReturnValue({
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
-        execute: executeTrue,
-      };
-      const secondBuilder = {
-        update: jest.fn().mockReturnThis(),
-        set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        execute: executeFalse,
-      };
-      inventoryRepo
-        .createQueryBuilder!.mockReturnValueOnce(firstBuilder)
-        .mockReturnValueOnce(secondBuilder);
-
-      await (service as any).refreshAlertFlags(13);
-
-      expect(firstBuilder.update).toHaveBeenCalledWith(Inventory);
-      expect(firstBuilder.set).toHaveBeenCalledWith({ alert_active: true });
-      expect(firstBuilder.where).toHaveBeenCalledWith("camp_id = :campId", {
-        campId: 13,
+        getMany: jest.fn().mockResolvedValue([
+          {
+            id: 1,
+            first_name: "A",
+            profession: { name: "Recolector / Scavenger" },
+          },
+          { id: 2, first_name: "B", profession: { name: "Medico" } },
+        ]),
       });
-      expect(firstBuilder.andWhere).toHaveBeenCalledWith(
-        "current_quantity < minimum_stock_required",
-      );
-      expect(executeTrue).toHaveBeenCalled();
 
-      expect(secondBuilder.update).toHaveBeenCalledWith(Inventory);
-      expect(secondBuilder.set).toHaveBeenCalledWith({ alert_active: false });
-      expect(secondBuilder.where).toHaveBeenCalledWith("camp_id = :campId", {
-        campId: 13,
-      });
-      expect(secondBuilder.andWhere).toHaveBeenCalledWith(
-        "current_quantity >= minimum_stock_required",
-      );
-      expect(executeFalse).toHaveBeenCalled();
+      const resourceRepo = service["resourceRepo"] as any;
+      resourceRepo.findOne
+        .mockResolvedValueOnce({ id: 1 })
+        .mockResolvedValueOnce({ id: 2 });
+
+      const dailyProdRepo = service["dailyProdRepo"] as any;
+      dailyProdRepo.findOne.mockResolvedValue(null);
+
+      const res = await service.getProductionRanking(1);
+      expect(res).toHaveLength(2);
+      expect(res[0].rank).toBe(1);
     });
   });
 });

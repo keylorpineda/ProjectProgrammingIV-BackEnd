@@ -15,6 +15,9 @@ async function getAdminToken(request: any): Promise<string> {
     },
   });
   const body = await res.json();
+  if (!body.access_token) {
+    console.error("LOGIN FAILED:", body);
+  }
   return body.access_token;
 }
 
@@ -31,6 +34,7 @@ test.describe("Personas — Admision IA y Gestion Humana", () => {
   test("POST /ai/admissions/submit → envia candidato y recibe evaluacion IA con justificacion", async ({
     request,
   }) => {
+    test.setTimeout(60000);
     const campRes = await request.get(`${BASE}/camps`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -52,7 +56,8 @@ test.describe("Personas — Admision IA y Gestion Humana", () => {
         psychological_evaluation: 90,
         criminal_record: false,
         medical_conditions: [],
-        personal_history: "Era medico en el hospital central antes del colapso.",
+        personal_history:
+          "Era medico en el hospital central antes del colapso.",
       },
     });
 
@@ -116,15 +121,15 @@ test.describe("Personas — Admision IA y Gestion Humana", () => {
       {
         headers: { Authorization: `Bearer ${token}` },
         data: {
-          decision: "ACCEPTED",
-          admin_notes:
-            "Medico con buenas credenciales, necesario para el campamento",
+          decision: "accepted",
+          notes: "Medico con buenas credenciales, necesario para el campamento",
           override_profession_id: 1,
         },
       },
     );
 
-    console.log(await response.text()); expect([200, 201]).toContain(response.status());
+    console.log(await response.text());
+    expect([200, 201]).toContain(response.status());
   });
 
   test("GET /users/persons → lista de personas con paginacion", async ({
@@ -171,7 +176,8 @@ test.describe("Personas — Admision IA y Gestion Humana", () => {
       },
     );
 
-    console.log(await response.text()); expect([200, 201]).toContain(response.status());
+    console.log(await response.text());
+    expect([200, 201]).toContain(response.status());
     const body = await response.json();
     expect(body.status).toBe("sick");
   });

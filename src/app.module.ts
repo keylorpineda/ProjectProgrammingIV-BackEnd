@@ -128,18 +128,6 @@ export class AppModule implements NestModule, OnApplicationBootstrap {
   }
 
   async onApplicationBootstrap() {
-    // Rename legacy camp_manager role to resource_manager if it still exists
-    try {
-      const result = await this.dataSource.query(
-        `UPDATE "role" SET name = 'resource_manager' WHERE name = 'camp_manager'`,
-      );
-      if (result[1] > 0) {
-        this.logger.log(
-          `Migrated ${result[1]} row(s): camp_manager → resource_manager`,
-        );
-      }
-    } catch {
-      // Role table may not exist yet on first boot — safe to ignore
-    }
+    // onApplicationBootstrap
   }
 }

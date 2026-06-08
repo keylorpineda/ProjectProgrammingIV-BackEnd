@@ -33,6 +33,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1, // Un solo worker para garantizar orden de tests con estado compartido
   reporter: [["list"]],
+  globalTeardown: require.resolve("./playwright.teardown.ts"),
 
   use: {
     baseURL: BASE_URL,
@@ -54,7 +55,8 @@ export default defineConfig({
   webServer: useExternalServer
     ? undefined
     : {
-        command: "npx ts-node -r tsconfig-paths/register src/main.ts",
+        command:
+          "npx cross-env TS_NODE_TRANSPILE_ONLY=true nyc ts-node -r tsconfig-paths/register src/main.ts",
         url: "http://localhost:3000/api/v1/health",
         reuseExistingServer: true,
         timeout: 90_000,

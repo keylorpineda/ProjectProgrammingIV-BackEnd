@@ -1,4 +1,5 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { UnauthorizedException } from "@nestjs/common";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
@@ -70,15 +71,27 @@ describe("AuthController", () => {
 
       authService.login.mockResolvedValueOnce(mockLoginResponse);
 
-      const result = await controller.login(loginDto, ipAddress, userAgent, mockRes as any);
+      const result = await controller.login(
+        loginDto,
+        ipAddress,
+        userAgent,
+        mockRes as any,
+      );
 
-      expect(result).toEqual({ access_token: mockLoginResponse.access_token, user: mockLoginResponse.user });
+      expect(result).toEqual({
+        access_token: mockLoginResponse.access_token,
+        user: mockLoginResponse.user,
+      });
       expect(mockRes.cookie).toHaveBeenCalledWith(
         "refresh_token",
         "refresh_token_value",
         expect.objectContaining({ httpOnly: true, path: "/api/v1/auth" }),
       );
-      expect(authService.login).toHaveBeenCalledWith(loginDto, ipAddress, userAgent);
+      expect(authService.login).toHaveBeenCalledWith(
+        loginDto,
+        ipAddress,
+        userAgent,
+      );
     });
 
     it("should login without user agent", async () => {
@@ -88,11 +101,20 @@ describe("AuthController", () => {
 
       authService.login.mockResolvedValueOnce(mockLoginResponse);
 
-      const result = await controller.login(loginDto, ipAddress, undefined, mockRes as any);
+      const result = await controller.login(
+        loginDto,
+        ipAddress,
+        undefined,
+        mockRes as any,
+      );
 
       expect(result).toHaveProperty("access_token");
       expect(result).not.toHaveProperty("refresh_token");
-      expect(authService.login).toHaveBeenCalledWith(loginDto, ipAddress, undefined);
+      expect(authService.login).toHaveBeenCalledWith(
+        loginDto,
+        ipAddress,
+        undefined,
+      );
     });
 
     it("should reject login with invalid credentials", async () => {
@@ -110,7 +132,9 @@ describe("AuthController", () => {
       const loginDto = { username: "testuser", password: "password123" };
       const ipAddress = "192.168.1.1";
 
-      authService.login.mockRejectedValueOnce(new Error("Too many login attempts"));
+      authService.login.mockRejectedValueOnce(
+        new Error("Too many login attempts"),
+      );
 
       await expect(controller.login(loginDto, ipAddress)).rejects.toThrow(
         "Too many login attempts",
@@ -129,7 +153,9 @@ describe("AuthController", () => {
       await controller.logout(mockUser, mockReq as any, mockRes as any);
 
       expect(authService.logout).toHaveBeenCalledWith(1, "refresh_token_value");
-      expect(mockRes.clearCookie).toHaveBeenCalledWith("refresh_token", { path: "/api/v1/auth" });
+      expect(mockRes.clearCookie).toHaveBeenCalledWith("refresh_token", {
+        path: "/api/v1/auth",
+      });
     });
 
     it("should logout even when no refresh_token cookie present", async () => {
@@ -180,20 +206,22 @@ describe("AuthController", () => {
       const mockReq = makeMockReq();
       const mockRes = makeMockRes();
 
-      await expect(controller.refresh(mockReq as any, mockRes as any)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        controller.refresh(mockReq as any, mockRes as any),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it("should reject invalid refresh token", async () => {
       const mockReq = makeMockReq("invalid_token");
       const mockRes = makeMockRes();
 
-      authService.refresh.mockRejectedValueOnce(new Error("Invalid refresh token"));
-
-      await expect(controller.refresh(mockReq as any, mockRes as any)).rejects.toThrow(
-        "Invalid refresh token",
+      authService.refresh.mockRejectedValueOnce(
+        new Error("Invalid refresh token"),
       );
+
+      await expect(
+        controller.refresh(mockReq as any, mockRes as any),
+      ).rejects.toThrow("Invalid refresh token");
     });
 
     it("should reject expired refresh token", async () => {
@@ -202,9 +230,9 @@ describe("AuthController", () => {
 
       authService.refresh.mockRejectedValueOnce(new Error("Token expired"));
 
-      await expect(controller.refresh(mockReq as any, mockRes as any)).rejects.toThrow(
-        "Token expired",
-      );
+      await expect(
+        controller.refresh(mockReq as any, mockRes as any),
+      ).rejects.toThrow("Token expired");
     });
   });
 
@@ -269,7 +297,10 @@ describe("AuthController", () => {
 
       const result = await controller.switchCamp(mockUser, dto, mockRes as any);
 
-      expect(result).toEqual({ access_token: "access_token_value", user: mockResponse.user });
+      expect(result).toEqual({
+        access_token: "access_token_value",
+        user: mockResponse.user,
+      });
       expect(result).not.toHaveProperty("refresh_token");
       expect(mockRes.cookie).toHaveBeenCalledWith(
         "refresh_token",

@@ -1,5 +1,7 @@
-import { Test, TestingModule } from "@nestjs/testing";
-import { AiEvaluationService, EvaluationResult } from "./ai-evaluation.service";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
+import type { EvaluationResult } from "./ai-evaluation.service";
+import { AiEvaluationService } from "./ai-evaluation.service";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { Profession } from "../../users/entities/profession.entity";
 

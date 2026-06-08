@@ -43,6 +43,18 @@ export class UsersService {
     });
   }
 
+  async updateUserAvatar(
+    userId: number,
+    avatarUrl: string,
+    avatarPublicId: string | null,
+  ): Promise<{ avatar_url: string; avatar_public_id: string | null }> {
+    await this.userAccountRepo.update(userId, {
+      avatar_url: avatarUrl,
+      ...(avatarPublicId !== null ? { avatar_public_id: avatarPublicId } : {}),
+    });
+    return { avatar_url: avatarUrl, avatar_public_id: avatarPublicId };
+  }
+
   async findUserByUsername(username: string): Promise<UserAccount | null> {
     return this.userAccountRepo.findOne({
       where: { username },

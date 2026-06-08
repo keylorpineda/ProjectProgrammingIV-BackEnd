@@ -3,6 +3,7 @@
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -31,6 +32,25 @@ import { CreateProfessionDto } from "./dto/create-profession.dto";
 @Controller("users")
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Patch("me/avatar")
+  @ApiOperation({ summary: "Actualizar avatar del usuario autenticado" })
+  async updateMyAvatar(
+    @CurrentUser() user: any,
+    @Body() body: { avatar_url: string; avatar_public_id?: string },
+  ) {
+    return this.usersService.updateUserAvatar(
+      user.userId,
+      body.avatar_url,
+      body.avatar_public_id ?? null,
+    );
+  }
+
+  @Get("me")
+  @ApiOperation({ summary: "Obtener datos del usuario autenticado" })
+  async getMe(@CurrentUser() user: any) {
+    return this.usersService.findUserById(user.userId);
+  }
 
   @Get("persons")
   @Roles(

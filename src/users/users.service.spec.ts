@@ -1,7 +1,8 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { NotFoundException } from "@nestjs/common";
-import { Repository } from "typeorm";
+import type { Repository } from "typeorm";
 import { UsersService } from "./users.service";
 import { UserAccount } from "./entities/user-account.entity";
 import { UserAsset } from "./entities/user-asset.entity";
@@ -10,6 +11,7 @@ import { PersonsService } from "./services/persons.service";
 import { ProfessionsService } from "./services/professions.service";
 import { AssignmentsService } from "./services/assignments.service";
 import { ProductionService } from "./services/production.service";
+import { PersonAchievement } from "./entities/person-achievement.entity";
 
 describe("UsersService", () => {
   let service: UsersService;
@@ -21,6 +23,7 @@ describe("UsersService", () => {
   let professionsService: jest.Mocked<ProfessionsService>;
   let assignmentsService: jest.Mocked<AssignmentsService>;
   let productionService: jest.Mocked<ProductionService>;
+  let personAchievementRepo: jest.Mocked<Repository<PersonAchievement>>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -30,6 +33,7 @@ describe("UsersService", () => {
           provide: getRepositoryToken(UserAccount),
           useValue: {
             findOne: jest.fn(),
+            update: jest.fn(),
           },
         },
         {
@@ -41,6 +45,15 @@ describe("UsersService", () => {
             manager: {
               find: jest.fn(),
             },
+          },
+        },
+        {
+          provide: getRepositoryToken(PersonAchievement),
+          useValue: {
+            findOne: jest.fn(),
+            save: jest.fn(),
+            create: jest.fn(),
+            find: jest.fn(),
           },
         },
         {
@@ -93,6 +106,7 @@ describe("UsersService", () => {
     professionsService = module.get(ProfessionsService);
     assignmentsService = module.get(AssignmentsService);
     productionService = module.get(ProductionService);
+    personAchievementRepo = module.get(getRepositoryToken(PersonAchievement));
   });
 
   it("should be defined", () => {
@@ -122,6 +136,43 @@ describe("UsersService", () => {
     expect(userAccountRepo.findOne).toHaveBeenCalledWith({
       where: { username: "survivor" },
       relations: ["role", "person", "person.profession", "camp"],
+    });
+  });
+
+  it("should return null if user by username not found", async () => {
+    userAccountRepo.findOne.mockResolvedValue(null);
+    const res = await service.findUserByUsername("ghost");
+    expect(res).toBeNull();
+  });
+
+  describe("updateUserAvatar", () => {
+    it("should update user avatar with public id", async () => {
+      userAccountRepo.update.mockResolvedValue({ affected: 1 } as any);
+      const res = await service.updateUserAvatar(
+        1,
+        "http://avatar.com",
+        "public123",
+      );
+      expect(userAccountRepo.update).toHaveBeenCalledWith(1, {
+        avatar_url: "http://avatar.com",
+        avatar_public_id: "public123",
+      });
+      expect(res).toEqual({
+        avatar_url: "http://avatar.com",
+        avatar_public_id: "public123",
+      });
+    });
+
+    it("should update user avatar without public id", async () => {
+      userAccountRepo.update.mockResolvedValue({ affected: 1 } as any);
+      const res = await service.updateUserAvatar(1, "http://avatar.com", null);
+      expect(userAccountRepo.update).toHaveBeenCalledWith(1, {
+        avatar_url: "http://avatar.com",
+      });
+      expect(res).toEqual({
+        avatar_url: "http://avatar.com",
+        avatar_public_id: null,
+      });
     });
   });
 
@@ -384,5 +435,67 @@ describe("UsersService", () => {
         "Badge no encontrado o no pertenece a este usuario",
       ),
     );
+  });
+
+  it("should award first login achievement if not already awarded", async () => {
+    userAccountRepo.findOne.mockResolvedValueOnce({
+      id: 1,
+      person_id: "100",
+    } as unknown as UserAccount);
+    personAchievementRepo.findOne.mockResolvedValueOnce(null);
+    personAchievementRepo.create.mockReturnValueOnce({} as PersonAchievement);
+    personAchievementRepo.save.mockResolvedValueOnce({} as PersonAchievement);
+
+    const result = await service.awardFirstLoginAchievement(1);
+    expect(result).toEqual({ awarded: true });
+    expect(personAchievementRepo.save).toHaveBeenCalled();
+  });
+
+  it("should not award first login achievement if already awarded", async () => {
+    userAccountRepo.findOne.mockResolvedValueOnce({
+      id: 1,
+      person_id: "100",
+    } as unknown as UserAccount);
+    personAchievementRepo.findOne.mockResolvedValueOnce({
+      id: 99,
+    } as PersonAchievement);
+
+    const result = await service.awardFirstLoginAchievement(1);
+    expect(result).toEqual({ awarded: false });
+    expect(personAchievementRepo.save).not.toHaveBeenCalled();
+  });
+
+  it("should not award first login achievement if user has no person_id", async () => {
+    userAccountRepo.findOne.mockResolvedValueOnce({
+      id: 1,
+    } as unknown as UserAccount);
+
+    const result = await service.awardFirstLoginAchievement(1);
+    expect(result).toEqual({ awarded: false });
+  });
+
+  it("should return my achievements", async () => {
+    userAccountRepo.findOne.mockResolvedValueOnce({
+      id: 1,
+      person_id: "100",
+    } as unknown as UserAccount);
+    const achievements = [{ id: 1 }] as PersonAchievement[];
+    personAchievementRepo.find.mockResolvedValueOnce(achievements);
+
+    const result = await service.getMyAchievements(1);
+    expect(result).toBe(achievements);
+    expect(personAchievementRepo.find).toHaveBeenCalledWith({
+      where: { person_id: 100 },
+      order: { obtained_at: "ASC" },
+    });
+  });
+
+  it("should return empty array for achievements if no person_id", async () => {
+    userAccountRepo.findOne.mockResolvedValueOnce({
+      id: 1,
+    } as unknown as UserAccount);
+
+    const result = await service.getMyAchievements(1);
+    expect(result).toEqual([]);
   });
 });

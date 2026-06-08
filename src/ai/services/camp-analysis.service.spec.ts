@@ -1,4 +1,5 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { CampAnalysisService } from "./camp-analysis.service";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { Camp } from "../../camps/entities/camp.entity";

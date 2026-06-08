@@ -1,13 +1,13 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { IntercampRequest } from "./entities/intercamp-request.entity";
+import type { IntercampRequest } from "./entities/intercamp-request.entity";
 import { UserAccount } from "../users/entities/user-account.entity";
 import { RequestsService } from "./services/requests.service";
 import { ApprovalsService } from "./services/approvals.service";
 import { TransferExecutionService } from "./services/transfer-execution.service";
-import { CreateIntercampRequestDto } from "./dto/create-intercamp-request.dto";
-import { ApprovalDto } from "./dto/approval.dto";
+import type { CreateIntercampRequestDto } from "./dto/create-intercamp-request.dto";
+import type { ApprovalDto } from "./dto/approval.dto";
 
 @Injectable()
 export class TransfersService {

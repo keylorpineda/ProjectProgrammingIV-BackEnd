@@ -1,0 +1,25 @@
+{
+  "extends": "@istanbuljs/nyc-config-typescript",
+  "all": false,
+  "require": [
+    "ts-node/register",
+    "tsconfig-paths/register"
+  ],
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/database/migrations/*",
+    "src/database/seed.ts",
+    "src/database/seed-dummy-data.ts",
+    "src/main.ts",
+    "src/**/*.module.ts"
+  ],
+  "reporter": [
+    "text",
+    "lcov",
+    "html"
+  ],
+  "report-dir": "coverage-e2e"
+}

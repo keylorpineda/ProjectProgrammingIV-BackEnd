@@ -110,11 +110,7 @@ describe("Auth entities", () => {
       .map((column) => column.propertyName);
 
     expect(nullableColumns).toEqual(
-      expect.arrayContaining([
-        "user_agent",
-        "failure_reason",
-        "user_id",
-      ]),
+      expect.arrayContaining(["user_agent", "failure_reason", "user_id"]),
     );
 
     const attemptedAtDefault = columns.find(

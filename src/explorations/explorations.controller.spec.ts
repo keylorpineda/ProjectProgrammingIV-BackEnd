@@ -1,8 +1,9 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { ExplorationsController } from "./explorations.controller";
 import { ExplorationsService } from "./explorations.service";
-import { CreateExplorationDto } from "./dto/create-exploration.dto";
-import { ReturnExplorationDto } from "./dto/return-exploration.dto";
+import type { CreateExplorationDto } from "./dto/create-exploration.dto";
+import type { ReturnExplorationDto } from "./dto/return-exploration.dto";
 
 describe("ExplorationsController", () => {
   let controller: ExplorationsController;

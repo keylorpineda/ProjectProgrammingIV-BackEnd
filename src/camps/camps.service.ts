@@ -8,8 +8,8 @@ import { Repository, DataSource } from "typeorm";
 import { Camp } from "./entities/camp.entity";
 import { Inventory } from "../resources/entities/inventory.entity";
 import { Resource } from "../resources/entities/resource.entity";
-import { CreateCampDto } from "./dto/create-camp.dto";
-import { UpdateCampDto } from "./dto/update-camp.dto";
+import type { CreateCampDto } from "./dto/create-camp.dto";
+import type { UpdateCampDto } from "./dto/update-camp.dto";
 
 @Injectable()
 export class CampsService {

@@ -1,4 +1,5 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { BadRequestException } from "@nestjs/common";
 import { UploadController } from "./upload.controller";
 import { UploadService } from "./upload.service";

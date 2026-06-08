@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { AdmissionReviewService } from "./admission-review.service";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
@@ -271,9 +272,9 @@ describe("AdmissionReviewService extra coverage", () => {
     });
 
     await service.reviewAdmission(1, { decision: "accepted" } as any, 3);
-    
+
     expect(personRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({ profession_id: 1 })
+      expect.objectContaining({ profession_id: 1 }),
     );
   });
 

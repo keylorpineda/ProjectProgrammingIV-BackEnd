@@ -1,5 +1,5 @@
 ﻿import { Injectable, Logger } from "@nestjs/common";
-import { SubmitAdmissionDto } from "../dto/submit-admission.dto";
+import type { SubmitAdmissionDto } from "../dto/submit-admission.dto";
 
 export interface PythonNlpResult {
   nlp_score: number;

@@ -1,9 +1,9 @@
-﻿import {
-  Injectable,
+﻿import type {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
 } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { filterXSS } from "xss";
 
 @Injectable()

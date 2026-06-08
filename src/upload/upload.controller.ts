@@ -11,7 +11,7 @@
 } from "@nestjs/common";
 import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { UploadService } from "./upload.service";
-import { UploadResponseDto } from "./dto/upload-response.dto";
+import type { UploadResponseDto } from "./dto/upload-response.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import {
   ApiTags,

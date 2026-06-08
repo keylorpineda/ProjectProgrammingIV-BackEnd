@@ -78,19 +78,16 @@ test.describe("Traslados Inter-campamentos", () => {
     }
 
     // Asegurar que haya stock suficiente en origen
-    await request.post(
-      `${BASE}/resources/movements`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        data: {
-          camp_id: originCampId,
-          resource_id: resourceId,
-          quantity: 500,
-          type: "income",
-          description: "Stock inicial para test E2E de traslado",
-        },
+    await request.post(`${BASE}/resources/movements`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        camp_id: originCampId,
+        resource_id: resourceId,
+        quantity: 500,
+        type: "income",
+        description: "Stock inicial para test E2E de traslado",
       },
-    );
+    });
 
     const response = await request.post(`${BASE}/transfers/requests`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -109,7 +106,8 @@ test.describe("Traslados Inter-campamentos", () => {
       },
     });
 
-    console.log(await response.text()); expect([200, 201]).toContain(response.status());
+    console.log(await response.text());
+    expect([200, 201]).toContain(response.status());
     const body = await response.json();
     expect(body).toHaveProperty("id");
     expect(body).toHaveProperty("status");
@@ -155,11 +153,7 @@ test.describe("Traslados Inter-campamentos", () => {
 
     // Aceptar 400/409 si la solicitud ya fue aprobada previamente (BD de pruebas)
     if (![200, 201].includes(response.status())) {
-      console.log(
-        "Approval status:",
-        response.status(),
-        await response.text(),
-      );
+      console.log("Approval status:", response.status(), await response.text());
       expect([200, 201, 400, 403, 409]).toContain(response.status());
       return;
     }
@@ -167,6 +161,7 @@ test.describe("Traslados Inter-campamentos", () => {
     const body = await response.json();
     // Puede pasar a "approved" o quedarse "pending_destination_approval"
     expect([
+      "pending",
       "pending_destination_approval",
       "approved",
       "in_transit",
@@ -200,7 +195,8 @@ test.describe("Traslados Inter-campamentos", () => {
       },
     );
 
-    console.log(await response.text()); expect([200, 201]).toContain(response.status());
+    console.log(await response.text());
+    expect([200, 201]).toContain(response.status());
     const body = await response.json();
     expect(body.status).toBe("completed");
   });

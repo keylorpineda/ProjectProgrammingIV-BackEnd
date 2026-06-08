@@ -1,6 +1,6 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Logger } from "@nestjs/common";
-import { Job } from "bullmq";
+import type { Job } from "bullmq";
 import { ResourcesService } from "../resources.service";
 
 @Processor("daily-tasks")

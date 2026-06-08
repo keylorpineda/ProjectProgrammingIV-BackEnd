@@ -1,5 +1,6 @@
-import { Injectable, NestMiddleware, ForbiddenException } from "@nestjs/common";
-import { Request, Response, NextFunction } from "express";
+import type { NestMiddleware } from "@nestjs/common";
+import { Injectable, ForbiddenException } from "@nestjs/common";
+import type { Request, Response, NextFunction } from "express";
 
 @Injectable()
 export class CsrfMiddleware implements NestMiddleware {

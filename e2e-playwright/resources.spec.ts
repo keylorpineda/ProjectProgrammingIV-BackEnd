@@ -21,6 +21,9 @@ async function getToken(request: any, role = "admin"): Promise<string> {
     },
   });
   const body = await res.json();
+  if (!body.access_token) {
+    console.error("LOGIN FAILED in resources:", body);
+  }
   return body.access_token;
 }
 
@@ -102,19 +105,16 @@ test.describe("Recursos — Inventario y Gestion de Bodega", () => {
   }) => {
     if (!resourceId) return;
 
-    const response = await request.post(
-      `${BASE}/resources/movements`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        data: {
-          camp_id: campId,
-          resource_id: resourceId,
-          quantity: 50,
-          type: "income",
-          description: "Ingreso manual de prueba E2E",
-        },
+    const response = await request.post(`${BASE}/resources/movements`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        camp_id: campId,
+        resource_id: resourceId,
+        quantity: 50,
+        type: "income",
+        description: "Ingreso manual de prueba E2E",
       },
-    );
+    });
 
     expect([200, 201]).toContain(response.status());
     const body = await response.json();
@@ -150,9 +150,8 @@ test.describe("Recursos — Inventario y Gestion de Bodega", () => {
     expect([200, 201, 404]).toContain(response.status());
     if (response.status() !== 404) {
       const body = await response.json();
-      expect(body).toHaveProperty("production");
-      expect(body).toHaveProperty("consumption");
-      expect(body).toHaveProperty("movementCount");
+      expect(body).toHaveProperty("message");
+      expect(body).toHaveProperty("metrics");
     }
   });
 

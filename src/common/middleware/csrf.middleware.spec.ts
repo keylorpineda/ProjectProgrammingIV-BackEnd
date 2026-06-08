@@ -1,5 +1,6 @@
-import { Test, TestingModule } from "@nestjs/testing";
-import { Request, Response, NextFunction } from "express";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
+import type { Request, Response, NextFunction } from "express";
 import { ForbiddenException } from "@nestjs/common";
 import { CsrfMiddleware } from "./csrf.middleware";
 

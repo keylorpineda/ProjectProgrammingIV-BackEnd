@@ -3,7 +3,8 @@ import {
   ConflictException,
   NotFoundException,
 } from "@nestjs/common";
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { DataSource } from "typeorm";
 import { AuditLog } from "../common/entities/audit-log.entity";
@@ -11,8 +12,8 @@ import { PythonAiService } from "../ai/services/python-ai.service";
 import { ResourcesService } from "../resources/resources.service";
 import { PersonStatus } from "../users/constants/professions.constants";
 import { Person } from "../users/entities/person.entity";
-import { CreateExplorationDto } from "./dto/create-exploration.dto";
-import { ReturnExplorationDto } from "./dto/return-exploration.dto";
+import type { CreateExplorationDto } from "./dto/create-exploration.dto";
+import type { ReturnExplorationDto } from "./dto/return-exploration.dto";
 import { Exploration } from "./entities/exploration.entity";
 import { ExplorationPerson } from "./entities/exploration-person.entity";
 import { ExplorationResource } from "./entities/exploration-resource.entity";

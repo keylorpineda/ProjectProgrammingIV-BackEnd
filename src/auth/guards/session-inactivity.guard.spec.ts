@@ -1,5 +1,7 @@
-import { Test, TestingModule } from "@nestjs/testing";
-import { ExecutionContext, UnauthorizedException } from "@nestjs/common";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
+import type { ExecutionContext } from "@nestjs/common";
+import { UnauthorizedException } from "@nestjs/common";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { JwtService } from "@nestjs/jwt";
 import { Reflector } from "@nestjs/core";
@@ -12,14 +14,6 @@ describe("SessionInactivityGuard", () => {
   let sessionRepo: any;
   let jwtService: jest.Mocked<JwtService>;
   let reflector: jest.Mocked<Reflector>;
-
-  const mockSession = {
-    id: 1,
-    user_id: 1,
-    last_activity: new Date(),
-    is_active: true,
-    auto_logout: false,
-  };
 
   let redisClient: any;
 

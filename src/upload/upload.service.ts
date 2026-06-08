@@ -1,10 +1,7 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import {
-  v2 as cloudinary,
-  UploadApiResponse,
-  UploadApiErrorResponse,
-} from "cloudinary";
+import type { UploadApiResponse, UploadApiErrorResponse } from "cloudinary";
+import { v2 as cloudinary } from "cloudinary";
 import { Readable } from "stream";
 
 @Injectable()
