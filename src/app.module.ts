@@ -65,7 +65,7 @@ import Redis from "ioredis";
             : false,
         logging: config.get("NODE_ENV") === "development",
         extra: {
-          max: config.get<number>("DB_POOL_MAX", 20),
+          max: config.get<number>("DB_POOL_MAX", 5),
           idleTimeoutMillis: 30000,
           connectionTimeoutMillis: 5000,
         },
