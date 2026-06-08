@@ -35,6 +35,7 @@ import {
   DAILY_CONSUMPTION,
   PersonStatus,
 } from "../users/constants/professions.constants";
+import { NotificationsGateway } from "../notifications/notifications.gateway";
 
 const INCOME_TYPES = [
   "income",
@@ -72,6 +73,7 @@ export class ResourcesService implements OnModuleInit {
     private readonly userAssetRepo: Repository<UserAsset>,
     @InjectQueue("daily-tasks") private readonly dailyTasksQueue: Queue,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   private async invalidateCampDashboardCache(campId: number): Promise<void> {
@@ -369,6 +371,11 @@ export class ResourcesService implements OnModuleInit {
 
     await this.invalidateCampDashboardCache(dto.camp_id);
 
+    // Emit real-time alert update when alert state changes
+    if (wasAlertActive !== inventory.alert_active) {
+      this.emitCampAlerts(dto.camp_id).catch(() => {});
+    }
+
     return {
       movement: movementWithRelations ?? saved,
       inventory: inventoryWithRelations ?? inventory,
@@ -525,6 +532,9 @@ export class ResourcesService implements OnModuleInit {
 
     await this.refreshAlertFlags(campId);
 
+    // Emit real-time alert events after daily processing
+    await this.emitCampAlerts(campId).catch(() => {});
+
     // PROVEEDOR_CONSISTENTE
     this.checkProveedorConsistente(campId).catch((e) =>
       this.logger.warn(`checkProveedorConsistente failed: ${e?.message}`),
@@ -614,6 +624,36 @@ export class ResourcesService implements OnModuleInit {
   }
 
   // â”€â”€â”€ Gamification helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+  private async emitCampAlerts(campId: number): Promise<void> {
+    try {
+      const activeAlerts = await this.inventoryRepo
+        .createQueryBuilder("inv")
+        .leftJoinAndSelect("inv.resource", "resource")
+        .where("inv.camp_id = :campId", { campId })
+        .andWhere("inv.alert_active = true")
+        .getMany();
+
+      if (activeAlerts.length > 0) {
+        this.notificationsGateway.emitInventoryAlerts(
+          campId,
+          activeAlerts.map((inv) => ({
+            resource_id: Number(inv.resource_id),
+            resource_name:
+              (inv.resource as any)?.name ?? `Recurso ${inv.resource_id}`,
+            current_quantity: Number(inv.current_quantity),
+            minimum_stock_required: Number(inv.minimum_stock_required),
+          })),
+        );
+      } else {
+        this.notificationsGateway.emitAlertCleared(campId);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `emitCampAlerts failed for camp ${campId}: ${(err as any)?.message}`,
+      );
+    }
+  }
 
   private async grantXp(userId: number, points: number): Promise<void> {
     const user = await this.userAccountRepo.findOne({

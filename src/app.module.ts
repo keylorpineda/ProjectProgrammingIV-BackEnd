@@ -64,6 +64,11 @@ import Redis from "ioredis";
             ? { rejectUnauthorized: false }
             : false,
         logging: config.get("NODE_ENV") === "development",
+        extra: {
+          max: config.get<number>("DB_POOL_MAX", 20),
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 5000,
+        },
       }),
       inject: [ConfigService],
     }),

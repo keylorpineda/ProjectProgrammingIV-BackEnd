@@ -434,7 +434,22 @@ export class ExplorationsService {
     }
   }
 
-  async findAll(campId?: number, status?: string): Promise<Exploration[]> {
+  async findAll(
+    campId?: number,
+    status?: string,
+    page = 1,
+    limit = 20,
+  ): Promise<{
+    data: Exploration[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.min(Math.max(1, limit), 100);
+    const skip = (safePage - 1) * safeLimit;
+
     const qb = this.explorationRepo
       .createQueryBuilder("e")
       .leftJoinAndSelect("e.explorationPersons", "ep")
@@ -443,7 +458,9 @@ export class ExplorationsService {
       .leftJoinAndSelect("e.explorationResources", "er")
       .leftJoinAndSelect("er.resource", "resource")
       .leftJoinAndSelect("e.camp", "camp")
-      .orderBy("e.departure_date", "DESC");
+      .orderBy("e.departure_date", "DESC")
+      .skip(skip)
+      .take(safeLimit);
 
     if (campId) {
       qb.andWhere("e.camp_id = :campId", { campId });
@@ -453,7 +470,15 @@ export class ExplorationsService {
       qb.andWhere("e.status = :status", { status });
     }
 
-    return qb.getMany();
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
   }
 
   async findById(id: number): Promise<Exploration> {

@@ -250,7 +250,19 @@ export class RequestsService {
     campId: number,
     role?: "origin" | "destination",
     status?: string,
-  ): Promise<IntercampRequest[]> {
+    page = 1,
+    limit = 20,
+  ): Promise<{
+    data: IntercampRequest[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.min(Math.max(1, limit), 100);
+    const skip = (safePage - 1) * safeLimit;
+
     const queryBuilder = this.requestRepo
       .createQueryBuilder("req")
       .leftJoinAndSelect("req.campOrigin", "campOrigin")
@@ -288,7 +300,19 @@ export class RequestsService {
       queryBuilder.andWhere("req.status = :status", { status });
     }
 
-    return queryBuilder.orderBy("req.request_date", "DESC").getMany();
+    const [data, total] = await queryBuilder
+      .orderBy("req.request_date", "DESC")
+      .skip(skip)
+      .take(safeLimit)
+      .getManyAndCount();
+
+    return {
+      data,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
   }
 
   async findPendingRequestsByCamp(campId: number): Promise<IntercampRequest[]> {

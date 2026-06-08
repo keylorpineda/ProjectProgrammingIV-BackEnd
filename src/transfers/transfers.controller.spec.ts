@@ -70,15 +70,24 @@ describe("TransfersController", () => {
   });
 
   it("should get requests by camp with role filter", async () => {
-    service.findRequestsByCamp.mockResolvedValueOnce([mockRequest]);
+    const paginated = {
+      data: [mockRequest],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    };
+    service.findRequestsByCamp.mockResolvedValueOnce(paginated);
 
     const result = await controller.getRequestsByCamp(10, "origin");
 
-    expect(result).toEqual([mockRequest]);
+    expect(result).toEqual(paginated);
     expect(service.findRequestsByCamp).toHaveBeenCalledWith(
       10,
       "origin",
       undefined,
+      1,
+      20,
     );
   });
 

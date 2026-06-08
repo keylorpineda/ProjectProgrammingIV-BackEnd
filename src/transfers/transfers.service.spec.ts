@@ -89,15 +89,24 @@ describe("TransfersService", () => {
   });
 
   it("should delegate findRequestsByCamp", async () => {
-    requestsService.findRequestsByCamp.mockResolvedValueOnce([mockRequest]);
+    const paginated = {
+      data: [mockRequest],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    };
+    requestsService.findRequestsByCamp.mockResolvedValueOnce(paginated);
 
     await expect(
       service.findRequestsByCamp(10, "destination"),
-    ).resolves.toEqual([mockRequest]);
+    ).resolves.toEqual(paginated);
     expect(requestsService.findRequestsByCamp).toHaveBeenCalledWith(
       10,
       "destination",
       undefined,
+      1,
+      20,
     );
   });
   it("should delegate findPendingRequestsByCamp", async () => {

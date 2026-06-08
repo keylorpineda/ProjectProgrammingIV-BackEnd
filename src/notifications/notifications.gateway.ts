@@ -53,4 +53,28 @@ export class NotificationsGateway
   emitTransferRequest(campId: number, requestData: any) {
     this.server.to(`camp_${campId}`).emit("transfer.requested", requestData);
   }
+
+  emitInventoryAlerts(
+    campId: number,
+    alerts: Array<{
+      resource_id: number;
+      resource_name: string;
+      current_quantity: number;
+      minimum_stock_required: number;
+    }>,
+  ) {
+    this.server.to(`camp_${campId}`).emit("inventory.alert", {
+      campId,
+      alerts,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  emitAlertCleared(campId: number) {
+    this.server.to(`camp_${campId}`).emit("inventory.alert", {
+      campId,
+      alerts: [],
+      timestamp: new Date().toISOString(),
+    });
+  }
 }

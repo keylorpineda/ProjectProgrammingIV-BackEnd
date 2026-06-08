@@ -5,6 +5,7 @@
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from "typeorm";
 import { UserAccount } from "../../users/entities/user-account.entity";
 
@@ -28,6 +29,7 @@ export class Camp {
   @Column({ type: "int", nullable: true })
   max_capacity: number;
 
+  @Index()
   @Column({ type: "boolean", default: true })
   active: boolean;
 

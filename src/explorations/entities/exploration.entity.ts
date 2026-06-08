@@ -40,6 +40,7 @@ export class Exploration {
   @Column({ type: "timestamptz", nullable: true })
   real_return_date!: Date;
 
+  @Index()
   @Column({ type: "text", default: "scheduled" })
   status!: string;
 

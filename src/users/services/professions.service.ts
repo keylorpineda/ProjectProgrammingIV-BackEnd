@@ -4,6 +4,7 @@ import { Repository } from "typeorm";
 import { Profession } from "../entities/profession.entity";
 import type { CreateProfessionDto } from "../dto/create-profession.dto";
 import { PersonsService } from "./persons.service";
+import { WORKING_STATUSES } from "../constants/professions.constants";
 
 @Injectable()
 export class ProfessionsService {
@@ -68,6 +69,25 @@ export class ProfessionsService {
     };
   }
 
+  private async getProfessionsWithWorkerCounts(): Promise<
+    Array<Profession & { activeWorkerCount: number }>
+  > {
+    return (await this.professionRepo
+      .createQueryBuilder("p")
+      .loadRelationCountAndMap(
+        "p.activeWorkerCount",
+        "p.persons",
+        "worker",
+        (qb) =>
+          qb
+            .andWhere("worker.can_work = :canWork", { canWork: true })
+            .andWhere("worker.status IN (:...statuses)", {
+              statuses: WORKING_STATUSES,
+            }),
+      )
+      .getMany()) as Array<Profession & { activeWorkerCount: number }>;
+  }
+
   async getProfessionsNeedingWorkers(): Promise<
     Array<{
       profession: Profession;
@@ -76,25 +96,16 @@ export class ProfessionsService {
       deficit: number;
     }>
   > {
-    const allProfessions = await this.findAll();
-    const professionsNeedingWorkers = [];
+    const professions = await this.getProfessionsWithWorkerCounts();
 
-    for (const profession of allProfessions) {
-      const activeWorkers = await this.personsService.countActiveWorkers(
-        profession.id,
-      );
-
-      if (activeWorkers < profession.minimum_active_required) {
-        professionsNeedingWorkers.push({
-          profession,
-          currentWorkers: activeWorkers,
-          minimumRequired: profession.minimum_active_required,
-          deficit: profession.minimum_active_required - activeWorkers,
-        });
-      }
-    }
-
-    return professionsNeedingWorkers;
+    return professions
+      .filter((p) => p.activeWorkerCount < p.minimum_active_required)
+      .map((p) => ({
+        profession: p,
+        currentWorkers: p.activeWorkerCount,
+        minimumRequired: p.minimum_active_required,
+        deficit: p.minimum_active_required - p.activeWorkerCount,
+      }));
   }
 
   async getProfessionsWithExcess(): Promise<
@@ -105,24 +116,15 @@ export class ProfessionsService {
       excess: number;
     }>
   > {
-    const allProfessions = await this.findAll();
-    const professionsWithExcess = [];
+    const professions = await this.getProfessionsWithWorkerCounts();
 
-    for (const profession of allProfessions) {
-      const activeWorkers = await this.personsService.countActiveWorkers(
-        profession.id,
-      );
-
-      if (activeWorkers > profession.minimum_active_required) {
-        professionsWithExcess.push({
-          profession,
-          currentWorkers: activeWorkers,
-          minimumRequired: profession.minimum_active_required,
-          excess: activeWorkers - profession.minimum_active_required,
-        });
-      }
-    }
-
-    return professionsWithExcess;
+    return professions
+      .filter((p) => p.activeWorkerCount > p.minimum_active_required)
+      .map((p) => ({
+        profession: p,
+        currentWorkers: p.activeWorkerCount,
+        minimumRequired: p.minimum_active_required,
+        excess: p.activeWorkerCount - p.minimum_active_required,
+      }));
   }
 }

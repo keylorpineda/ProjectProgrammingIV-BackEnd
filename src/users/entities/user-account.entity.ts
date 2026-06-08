@@ -75,6 +75,7 @@ export class UserAccount {
   @OneToMany(() => UserAsset, (ua) => ua.userAccount)
   userAssets: UserAsset[];
 
+  @Index()
   @Column({ type: "text", default: "ACTIVE" })
   status: string;
 

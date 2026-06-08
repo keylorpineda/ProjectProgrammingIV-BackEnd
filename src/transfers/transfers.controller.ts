@@ -72,12 +72,22 @@ export class TransfersController {
     ],
     description: "Filtrar por estado de la solicitud",
   })
+  @ApiQuery({ name: "page", required: false, type: Number })
+  @ApiQuery({ name: "limit", required: false, type: Number })
   async getRequestsByCamp(
     @Param("campId", ParseIntPipe) campId: number,
     @Query("role") role?: "origin" | "destination",
     @Query("status") status?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
   ) {
-    return this.transfersService.findRequestsByCamp(campId, role, status);
+    return this.transfersService.findRequestsByCamp(
+      campId,
+      role,
+      status,
+      page ? +page : 1,
+      limit ? +limit : 20,
+    );
   }
 
   @Get("requests/camp/:campId/pending")

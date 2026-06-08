@@ -223,7 +223,14 @@
     "viajes",
     "comunicación",
     "Expediciones",
-    "alcance"
+    "alcance",
+    "Millis",
+    "probar",
+    "todas",
+    "funcionalidades",
+    "DESCS",
+    "PICSUM",
+    "Accs"
   ],
   "ignorePaths": [
     "node_modules",

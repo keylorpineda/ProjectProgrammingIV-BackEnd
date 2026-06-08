@@ -38,10 +38,17 @@ export class ExplorationsController {
     "worker",
   )
   @ApiOperation({ summary: "Listar exploraciones con filtros opcionales" })
-  findAll(@Query("campId") campId?: string, @Query("status") status?: string) {
+  findAll(
+    @Query("campId") campId?: string,
+    @Query("status") status?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+  ) {
     return this.explorationsService.findAll(
       campId ? +campId : undefined,
       status,
+      page ? +page : 1,
+      limit ? +limit : 20,
     );
   }
 

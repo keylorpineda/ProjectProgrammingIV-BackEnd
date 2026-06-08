@@ -28,6 +28,7 @@ export class IntercampRequest {
   @Column({ type: "text" })
   type: string;
 
+  @Index()
   @Column({ type: "text", default: "pending" })
   status: string;
 

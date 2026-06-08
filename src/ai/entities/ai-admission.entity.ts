@@ -33,6 +33,7 @@ export class AiAdmission {
   @Column({ type: "int", nullable: true })
   score: number;
 
+  @Index()
   @Column({ type: "text", default: "PENDING_REVIEW" })
   status: string;
 
@@ -77,6 +78,7 @@ export class AiAdmission {
   auto_decision_reason: string | null;
 
   // ── Archiving fields ──────────────────────────────────────────────────────
+  @Index()
   @Column({ type: "boolean", default: false })
   archived: boolean;
 
