@@ -69,6 +69,23 @@ export class AiAdmission {
   @Column({ type: "timestamptz", nullable: true })
   token_expires_at: Date | null;
 
+  // ── Auto-decision fields ──────────────────────────────────────────────────
+  @Column({ type: "boolean", default: false })
+  is_auto_decision: boolean;
+
+  @Column({ type: "text", nullable: true })
+  auto_decision_reason: string | null;
+
+  // ── Archiving fields ──────────────────────────────────────────────────────
+  @Column({ type: "boolean", default: false })
+  archived: boolean;
+
+  @Column({ type: "timestamptz", nullable: true })
+  archived_at: Date | null;
+
+  @Column({ type: "bigint", nullable: true })
+  archived_by_user_id: number | null;
+
   @Index()
   @ManyToOne(() => Camp)
   @JoinColumn({ name: "camp_id" })
@@ -88,6 +105,11 @@ export class AiAdmission {
   @ManyToOne(() => UserAccount, { nullable: true })
   @JoinColumn({ name: "reviewed_by_user_id" })
   reviewedBy: UserAccount;
+
+  @Index()
+  @ManyToOne(() => UserAccount, { nullable: true })
+  @JoinColumn({ name: "archived_by_user_id" })
+  archivedBy: UserAccount;
 
   @CreateDateColumn({ type: "timestamptz" })
   created_at: Date;

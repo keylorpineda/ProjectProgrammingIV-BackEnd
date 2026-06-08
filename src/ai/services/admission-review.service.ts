@@ -10,11 +10,9 @@ import { AiAdmission } from "../entities/ai-admission.entity";
 import { Person } from "../../users/entities/person.entity";
 import { Profession } from "../../users/entities/profession.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
-import {
-  AdmissionDecision,
-  ReviewAdmissionDto,
-} from "../dto/review-admission.dto";
-import { CreateUserAccountDto } from "../dto/create-user-account.dto";
+import type { ReviewAdmissionDto } from "../dto/review-admission.dto";
+import { AdmissionDecision } from "../dto/review-admission.dto";
+import type { CreateUserAccountDto } from "../dto/create-user-account.dto";
 import { PersonStatus } from "../../users/constants/professions.constants";
 import * as bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
@@ -35,6 +33,8 @@ export class AdmissionReviewService {
     private readonly mailService: MailService,
   ) {}
 
+  // ── Manual review (human admin) ──────────────────────────────────────────
+
   async reviewAdmission(
     id: number,
     dto: ReviewAdmissionDto,
@@ -50,88 +50,207 @@ export class AdmissionReviewService {
     }
 
     if (admission.status !== "PENDING_REVIEW") {
-      throw new BadRequestException("Admission already reviewed");
+      throw new BadRequestException(
+        `Admission already processed (status: ${admission.status})`,
+      );
     }
-
-    const candidateData: any = admission.candidate_data;
 
     if (dto.decision === AdmissionDecision.ACCEPTED) {
-      let professionId =
-        dto.override_profession_id || admission.suggested_profession_id;
-
-      if (!professionId) {
-        // Buscar una profesión por defecto si la IA no sugirió ninguna
-        const defaultProf = await this.personRepo.manager.findOne(Profession, {
-          where: {},
-        });
-        professionId = defaultProf ? defaultProf.id : 1;
-      }
-
-      const person = this.personRepo.create({
-        first_name: candidateData.first_name,
-        last_name: candidateData.last_name,
-        last_name2: candidateData.last_name2 || null,
-        birth_date: new Date(
-          new Date().getFullYear() - candidateData.age,
-          0,
-          1,
-        ),
-        profession_id: professionId,
-        status: PersonStatus.ACTIVE,
-        can_work: true,
-        join_date: new Date(),
-        identification_code: this.generateSurvivorCode(),
-        photo_url: candidateData.photo_url,
-        id_card_url: candidateData.id_card_url,
-        previous_skills: JSON.stringify(candidateData.skills),
+      const { person } = await this._executeAccept(admission, {
+        overrideProfessionId: dto.override_profession_id,
+        assignToCampId: dto.assign_to_camp_id,
+        adminNotes: dto.notes,
+        reviewedByUserId: adminUserId,
+        isAuto: false,
+        autoReason: null,
       });
-
-      const savedPerson = await this.personRepo.save(person);
-
-      if (dto.assign_to_camp_id) {
-        admission.camp_id = dto.assign_to_camp_id;
-      }
-      admission.person_id = savedPerson.id;
-      admission.status = "ACCEPTED";
-      admission.final_human_decision = "ACCEPTED";
-      admission.reviewed_by_user_id = adminUserId;
-      admission.admin_notes = dto.notes || "";
-      admission.review_date = new Date();
-
-      const candidateEmail = candidateData.contact_email;
-      if (candidateEmail) {
-        admission.registration_token = randomUUID();
-        const expiresAt = new Date();
-        expiresAt.setHours(expiresAt.getHours() + 48); // Token válido por 48 horas
-        admission.token_expires_at = expiresAt;
-      }
-
-      await this.admissionRepo.save(admission);
-
-      if (candidateEmail) {
-        this.mailService
-          .sendAdmissionDecision(
-            candidateEmail,
-            "accepted",
-            admission.justification || "Aprobado satisfactoriamente.",
-            admission.camp?.name || "Campamento Refugio",
-            admission.registration_token || undefined,
-          )
-          .catch((err) =>
-            this.logger.error(
-              `[AdmissionReview] Email de aceptación no pudo enviarse a ${candidateEmail}: ${String(err?.message ?? err)}`,
-            ),
-          );
-      }
-
-      return { admission, person: savedPerson };
+      return { admission, person };
     }
 
-    admission.status = "REJECTED";
-    admission.final_human_decision = "REJECTED";
-    admission.reviewed_by_user_id = adminUserId;
-    admission.admin_notes = dto.notes || "";
+    await this._executeReject(admission, {
+      adminNotes: dto.notes,
+      reviewedByUserId: adminUserId,
+      isAuto: false,
+      autoReason: null,
+    });
+
+    return { admission };
+  }
+
+  // ── Auto-decision (called from AI service on submit) ─────────────────────
+
+  async processAutoDecision(
+    admission: AiAdmission,
+    decision: "ACCEPT" | "REJECT",
+    reason: string,
+  ): Promise<{ admission: AiAdmission; person?: Person }> {
+    if (decision === "ACCEPT") {
+      const { person } = await this._executeAccept(admission, {
+        overrideProfessionId: undefined,
+        assignToCampId: undefined,
+        adminNotes: `[AUTO] ${reason}`,
+        reviewedByUserId: null,
+        isAuto: true,
+        autoReason: reason,
+      });
+      this.logger.log(
+        `[AutoDecision] ACCEPTED admission ${admission.id} — ${reason}`,
+      );
+      return { admission, person };
+    }
+
+    await this._executeReject(admission, {
+      adminNotes: `[AUTO] ${reason}`,
+      reviewedByUserId: null,
+      isAuto: true,
+      autoReason: reason,
+    });
+    this.logger.log(
+      `[AutoDecision] REJECTED admission ${admission.id} — ${reason}`,
+    );
+    return { admission };
+  }
+
+  // ── Archive (admin action) ────────────────────────────────────────────────
+
+  async archiveAdmission(
+    id: number,
+    adminUserId: number,
+  ): Promise<AiAdmission> {
+    const admission = await this.admissionRepo.findOne({ where: { id } });
+
+    if (!admission) {
+      throw new NotFoundException(`Admission ${id} not found`);
+    }
+
+    const archivableStatuses = [
+      "AUTO_ACCEPTED",
+      "AUTO_REJECTED",
+      "ACCEPTED",
+      "REJECTED",
+    ];
+    if (!archivableStatuses.includes(admission.status)) {
+      throw new BadRequestException(
+        `Cannot archive an admission with status "${admission.status}". Only completed admissions can be archived.`,
+      );
+    }
+
+    if (admission.archived) {
+      throw new BadRequestException("Admission is already archived");
+    }
+
+    admission.archived = true;
+    admission.archived_at = new Date();
+    admission.archived_by_user_id = adminUserId;
+
+    return this.admissionRepo.save(admission);
+  }
+
+  // ── Shared accept / reject helpers ───────────────────────────────────────
+
+  private async _executeAccept(
+    admission: AiAdmission,
+    opts: {
+      overrideProfessionId?: number;
+      assignToCampId?: number;
+      adminNotes?: string;
+      reviewedByUserId: number | null;
+      isAuto: boolean;
+      autoReason: string | null;
+    },
+  ): Promise<{ admission: AiAdmission; person: Person }> {
+    const candidateData: any = admission.candidate_data;
+
+    let professionId =
+      opts.overrideProfessionId ?? admission.suggested_profession_id;
+
+    if (!professionId) {
+      const defaultProf = await this.personRepo.manager.findOne(Profession, {
+        where: {},
+      });
+      professionId = defaultProf ? defaultProf.id : 1;
+    }
+
+    const person = this.personRepo.create({
+      first_name: candidateData.first_name,
+      last_name: candidateData.last_name,
+      last_name2: candidateData.last_name2 || null,
+      birth_date: new Date(new Date().getFullYear() - candidateData.age, 0, 1),
+      profession_id: professionId,
+      status: PersonStatus.ACTIVE,
+      can_work: true,
+      join_date: new Date(),
+      identification_code: this.generateSurvivorCode(),
+      photo_url: candidateData.photo_url,
+      id_card_url: candidateData.id_card_url,
+      previous_skills: JSON.stringify(candidateData.skills),
+    });
+
+    const savedPerson = await this.personRepo.save(person);
+
+    if (opts.assignToCampId) {
+      admission.camp_id = opts.assignToCampId;
+    }
+
+    const newStatus = opts.isAuto ? "AUTO_ACCEPTED" : "ACCEPTED";
+
+    admission.person_id = savedPerson.id;
+    admission.status = newStatus;
+    admission.final_human_decision = newStatus;
+    admission.reviewed_by_user_id = opts.reviewedByUserId;
+    admission.admin_notes = opts.adminNotes || "";
     admission.review_date = new Date();
+    admission.is_auto_decision = opts.isAuto;
+    admission.auto_decision_reason = opts.autoReason;
+
+    const candidateEmail = candidateData.contact_email;
+    if (candidateEmail) {
+      admission.registration_token = randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 48);
+      admission.token_expires_at = expiresAt;
+    }
+
+    await this.admissionRepo.save(admission);
+
+    if (candidateEmail) {
+      this.mailService
+        .sendAdmissionDecision(
+          candidateEmail,
+          "accepted",
+          admission.justification || "Aprobado satisfactoriamente.",
+          admission.camp?.name || "Campamento Refugio",
+          admission.registration_token ?? undefined,
+        )
+        .catch((err) =>
+          this.logger.error(
+            `[AdmissionReview] Email de aceptación no pudo enviarse a ${candidateEmail}: ${String(err?.message ?? err)}`,
+          ),
+        );
+    }
+
+    return { admission, person: savedPerson };
+  }
+
+  private async _executeReject(
+    admission: AiAdmission,
+    opts: {
+      adminNotes?: string;
+      reviewedByUserId: number | null;
+      isAuto: boolean;
+      autoReason: string | null;
+    },
+  ): Promise<void> {
+    const candidateData: any = admission.candidate_data;
+    const newStatus = opts.isAuto ? "AUTO_REJECTED" : "REJECTED";
+
+    admission.status = newStatus;
+    admission.final_human_decision = newStatus;
+    admission.reviewed_by_user_id = opts.reviewedByUserId;
+    admission.admin_notes = opts.adminNotes || "";
+    admission.review_date = new Date();
+    admission.is_auto_decision = opts.isAuto;
+    admission.auto_decision_reason = opts.autoReason;
 
     await this.admissionRepo.save(admission);
 
@@ -151,9 +270,9 @@ export class AdmissionReviewService {
           ),
         );
     }
-
-    return { admission };
   }
+
+  // ── Account creation ──────────────────────────────────────────────────────
 
   async createUserAccountForPerson(
     admissionId: number,
@@ -214,7 +333,6 @@ export class AdmissionReviewService {
       throw err;
     }
 
-    // Enviar correo con credenciales al email registrado
     if (dto.email) {
       try {
         await this.mailService.sendAccountCredentials(
@@ -227,8 +345,6 @@ export class AdmissionReviewService {
         this.logger.error(
           `[AdmissionReview] Email de credenciales no pudo enviarse a ${dto.email}: ${String((mailErr as any)?.message ?? mailErr)}`,
         );
-        // La cuenta fue creada exitosamente pero el correo falló.
-        // Lanzamos un error descriptivo para que el admin sepa que debe enviar las credenciales manualmente.
         throw new BadRequestException(
           `La cuenta fue creada correctamente, pero el correo no pudo enviarse a ${dto.email}. Verifica la configuración SMTP o contacta al candidato directamente.`,
         );
@@ -258,12 +374,11 @@ export class AdmissionReviewService {
       throw new BadRequestException("Registration token has expired");
     }
 
-    if (admission.status !== "ACCEPTED") {
+    const acceptedStatuses = ["ACCEPTED", "AUTO_ACCEPTED"];
+    if (!acceptedStatuses.includes(admission.status)) {
       throw new BadRequestException("Admission not accepted");
     }
 
-    // Role ID 2 is usually "worker". We will use the provided role_id or default to 2.
-    // However, the dto requires role_id.
     const finalRoleId = dto.role_id || 2;
 
     const existingAccount = await this.userAccountRepo.findOne({
@@ -290,7 +405,6 @@ export class AdmissionReviewService {
 
     const savedAccount = await this.userAccountRepo.save(userAccount);
 
-    // Invalidate token
     admission.registration_token = null;
     admission.token_expires_at = null;
     await this.admissionRepo.save(admission);
