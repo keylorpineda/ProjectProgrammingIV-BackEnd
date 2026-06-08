@@ -59,6 +59,7 @@ export class TransferExecutionService {
               camp_id: request.camp_origin_id,
               resource_id: Number(rd.resource_id),
             },
+            lock: { mode: "pessimistic_write" },
           });
 
           if (
@@ -124,6 +125,7 @@ export class TransferExecutionService {
               camp_id: request.camp_origin_id,
               resource_id: Number(foodRes.id),
             },
+            lock: { mode: "pessimistic_write" },
           });
           if (!invFood || Number(invFood.current_quantity) < neededFood) {
             throw new BadRequestException(
@@ -154,6 +156,7 @@ export class TransferExecutionService {
               camp_id: request.camp_origin_id,
               resource_id: Number(waterRes.id),
             },
+            lock: { mode: "pessimistic_write" },
           });
           if (!invWater || Number(invWater.current_quantity) < neededWater) {
             throw new BadRequestException(
@@ -221,6 +224,7 @@ export class TransferExecutionService {
               camp_id: request.camp_destination_id,
               resource_id: Number(rd.resource_id),
             },
+            lock: { mode: "pessimistic_write" },
           });
 
           if (!destInv) {

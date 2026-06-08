@@ -150,6 +150,7 @@ export class RequestsService {
           camp_id: dto.camp_origin_id,
           resource_id: rd.resource_id,
         },
+        lock: { mode: "pessimistic_write" },
       });
 
       if (
