@@ -1,4 +1,4 @@
-﻿import {
+import {
   Injectable,
   Logger,
   NotFoundException,
@@ -8,6 +8,9 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, IsNull } from "typeorm";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
+import { Inject } from "@nestjs/common";
+import { REDIS_CLIENT } from "../redis/redis.constants";
+import { Redis } from "ioredis";
 import type { OnModuleInit } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { Resource } from "./entities/resource.entity";
@@ -68,7 +71,19 @@ export class ResourcesService implements OnModuleInit {
     @InjectRepository(UserAsset)
     private readonly userAssetRepo: Repository<UserAsset>,
     @InjectQueue("daily-tasks") private readonly dailyTasksQueue: Queue,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
+
+  private async invalidateCampDashboardCache(campId: number): Promise<void> {
+    try {
+      const keys = await this.redis.keys(`dashboard:metrics:${campId}:*`);
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
+    } catch (err) {
+      // Ignore cache invalidation errors so main flow doesn't break
+    }
+  }
 
   async onModuleInit() {
     this.logger.log("Scheduling daily-resources job...");
@@ -189,7 +204,9 @@ export class ResourcesService implements OnModuleInit {
       Number(inventory.minimum_stock_required);
     inventory.last_update = new Date();
 
-    return this.inventoryRepo.save(inventory);
+    const saved = await this.inventoryRepo.save(inventory);
+    await this.invalidateCampDashboardCache(campId);
+    return saved;
   }
 
   async initializeInventoryForCamp(campId: number): Promise<Inventory[]> {
@@ -350,6 +367,8 @@ export class ResourcesService implements OnModuleInit {
       relations: ["resource", "camp"],
     });
 
+    await this.invalidateCampDashboardCache(dto.camp_id);
+
     return {
       movement: movementWithRelations ?? saved,
       inventory: inventoryWithRelations ?? inventory,
@@ -506,10 +525,12 @@ export class ResourcesService implements OnModuleInit {
 
     await this.refreshAlertFlags(campId);
 
-    // PROVEEDOR_CONSISTENTE â€” award to camp managers if no critical alerts remain
+    // PROVEEDOR_CONSISTENTE
     this.checkProveedorConsistente(campId).catch((e) =>
       this.logger.warn(`checkProveedorConsistente failed: ${e?.message}`),
     );
+
+    await this.invalidateCampDashboardCache(campId);
 
     return { production, consumption, movementCount };
   }

@@ -14,6 +14,9 @@ import {
   PersonStatus,
   DAILY_CONSUMPTION,
 } from "../../users/constants/professions.constants";
+import { Inject } from "@nestjs/common";
+import { REDIS_CLIENT } from "../../redis/redis.constants";
+import { Redis } from "ioredis";
 
 @Injectable()
 export class TransferExecutionService {
@@ -35,7 +38,19 @@ export class TransferExecutionService {
     @InjectRepository(AuditLog)
     private readonly auditRepo: Repository<AuditLog>,
     private readonly dataSource: DataSource,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
+
+  private async invalidateCampDashboardCache(campId: number): Promise<void> {
+    try {
+      const keys = await this.redis.keys(`dashboard:metrics:${campId}:*`);
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
+    } catch (err) {
+      // Ignore
+    }
+  }
 
   async departTransfer(
     request: IntercampRequest,
@@ -192,6 +207,8 @@ export class TransferExecutionService {
       });
 
       await queryRunner.commitTransaction();
+
+      await this.invalidateCampDashboardCache(request.camp_origin_id);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -300,6 +317,9 @@ export class TransferExecutionService {
       });
 
       await queryRunner.commitTransaction();
+
+      await this.invalidateCampDashboardCache(request.camp_origin_id);
+      await this.invalidateCampDashboardCache(request.camp_destination_id);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;

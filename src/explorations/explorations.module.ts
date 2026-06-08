@@ -9,6 +9,7 @@ import { ResourcesModule } from "../resources/resources.module";
 import { Person } from "../users/entities/person.entity";
 import { AuditLog } from "../common/entities/audit-log.entity";
 import { PythonAiService } from "../ai/services/python-ai.service";
+import { RedisModule } from "../redis/redis.module";
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PythonAiService } from "../ai/services/python-ai.service";
       AuditLog,
     ]),
     ResourcesModule,
+    RedisModule,
   ],
   controllers: [ExplorationsController],
   providers: [ExplorationsService, PythonAiService],

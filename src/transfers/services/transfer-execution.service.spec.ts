@@ -12,6 +12,7 @@ import { InventoryMovement } from "../../resources/entities/inventory-movement.e
 import { RequestResourceDetail } from "../entities/request-resource-detail.entity";
 import { RequestPersonDetail } from "../entities/request-person-detail.entity";
 import { AuditLog } from "../../common/entities/audit-log.entity";
+import { REDIS_CLIENT } from "../../redis/redis.constants";
 
 describe("TransferExecutionService", () => {
   let service: TransferExecutionService;
@@ -48,6 +49,10 @@ describe("TransferExecutionService", () => {
         { provide: getRepositoryToken(RequestResourceDetail), useValue: {} },
         { provide: getRepositoryToken(RequestPersonDetail), useValue: {} },
         { provide: getRepositoryToken(AuditLog), useValue: {} },
+        {
+          provide: REDIS_CLIENT,
+          useValue: { keys: jest.fn().mockResolvedValue([]), del: jest.fn() },
+        },
       ],
     }).compile();
 

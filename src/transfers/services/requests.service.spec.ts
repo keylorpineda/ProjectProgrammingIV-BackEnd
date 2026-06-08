@@ -13,6 +13,7 @@ import { Inventory } from "../../resources/entities/inventory.entity";
 import { Resource } from "../../resources/entities/resource.entity";
 import { AuditLog } from "../../common/entities/audit-log.entity";
 import { NotificationsGateway } from "../../notifications/notifications.gateway";
+import { REDIS_CLIENT } from "../../redis/redis.constants";
 
 describe("RequestsService", () => {
   let service: RequestsService;
@@ -85,6 +86,10 @@ describe("RequestsService", () => {
         { provide: getRepositoryToken(AuditLog), useValue: auditRepo },
         { provide: DataSource, useValue: dataSource },
         { provide: NotificationsGateway, useValue: notificationsGateway },
+        {
+          provide: REDIS_CLIENT,
+          useValue: { keys: jest.fn().mockResolvedValue([]), del: jest.fn() },
+        },
       ],
     }).compile();
 

@@ -11,6 +11,7 @@ import { Approval } from "../entities/approval.entity";
 import { IntercampRequest } from "../entities/intercamp-request.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
 import { AuditLog } from "../../common/entities/audit-log.entity";
+import { REDIS_CLIENT } from "../../redis/redis.constants";
 
 describe("ApprovalsService", () => {
   let service: ApprovalsService;
@@ -41,6 +42,10 @@ describe("ApprovalsService", () => {
         },
         { provide: getRepositoryToken(Approval), useValue: approvalRepo },
         { provide: getRepositoryToken(AuditLog), useValue: auditRepo },
+        {
+          provide: REDIS_CLIENT,
+          useValue: { keys: jest.fn().mockResolvedValue([]), del: jest.fn() },
+        },
       ],
     }).compile();
 

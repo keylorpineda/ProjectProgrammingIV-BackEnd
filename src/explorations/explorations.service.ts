@@ -15,6 +15,9 @@ import { ResourcesService } from "../resources/resources.service";
 import { PythonAiService } from "../ai/services/python-ai.service";
 import type { CreateExplorationDto } from "./dto/create-exploration.dto";
 import type { ReturnExplorationDto } from "./dto/return-exploration.dto";
+import { Inject } from "@nestjs/common";
+import { REDIS_CLIENT } from "../redis/redis.constants";
+import { Redis } from "ioredis";
 import {
   DAILY_CONSUMPTION,
   PersonStatus,
@@ -36,7 +39,19 @@ export class ExplorationsService {
     private readonly resourcesService: ResourcesService,
     private readonly pythonAiService: PythonAiService,
     private readonly dataSource: DataSource,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
+
+  private async invalidateCampDashboardCache(campId: number): Promise<void> {
+    try {
+      const keys = await this.redis.keys(`dashboard:metrics:${campId}:*`);
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
+    } catch (err) {
+      // Ignore
+    }
+  }
 
   async create(
     dto: CreateExplorationDto,
@@ -230,6 +245,8 @@ export class ExplorationsService {
 
       await queryRunner.commitTransaction();
 
+      await this.invalidateCampDashboardCache(dto.camp_id);
+
       return this.findById(Number(saved.id));
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -333,6 +350,8 @@ export class ExplorationsService {
 
       await queryRunner.commitTransaction();
       transactionCommitted = true;
+
+      await this.invalidateCampDashboardCache(exploration.camp_id);
 
       await this.awardAchievements(
         exploration.explorationPersons.map((ep) => String(ep.person_id)),
@@ -525,6 +544,8 @@ export class ExplorationsService {
 
       await queryRunner.commitTransaction();
 
+      await this.invalidateCampDashboardCache(exploration.camp_id);
+
       return this.findById(Number(exploration.id));
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -572,6 +593,8 @@ export class ExplorationsService {
         date: new Date(),
       }),
     );
+
+    await this.invalidateCampDashboardCache(exploration.camp_id);
 
     return this.findById(Number(exploration.id));
   }

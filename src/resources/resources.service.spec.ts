@@ -16,6 +16,7 @@ import { Person } from "../users/entities/person.entity";
 import { PersonAchievement } from "../users/entities/person-achievement.entity";
 import { UserAccount } from "../users/entities/user-account.entity";
 import { UserAsset } from "../users/entities/user-asset.entity";
+import { REDIS_CLIENT } from "../redis/redis.constants";
 
 describe("ResourcesService", () => {
   let service: ResourcesService;
@@ -61,6 +62,10 @@ describe("ResourcesService", () => {
         { provide: getRepositoryToken(UserAccount), useFactory: mockRepo },
         { provide: getRepositoryToken(UserAsset), useFactory: mockRepo },
         { provide: getQueueToken("daily-tasks"), useValue: mockQueue },
+        {
+          provide: REDIS_CLIENT,
+          useValue: { keys: jest.fn().mockResolvedValue([]), del: jest.fn() },
+        },
       ],
     }).compile();
 

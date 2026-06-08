@@ -18,6 +18,7 @@ import { Exploration } from "./entities/exploration.entity";
 import { ExplorationPerson } from "./entities/exploration-person.entity";
 import { ExplorationResource } from "./entities/exploration-resource.entity";
 import { ExplorationsService } from "./explorations.service";
+import { REDIS_CLIENT } from "../redis/redis.constants";
 
 type RepoMock = {
   find: jest.Mock;
@@ -131,6 +132,10 @@ describe("ExplorationsService", () => {
         {
           provide: DataSource,
           useValue: dataSource,
+        },
+        {
+          provide: REDIS_CLIENT,
+          useValue: { keys: jest.fn().mockResolvedValue([]), del: jest.fn() },
         },
       ],
     }).compile();

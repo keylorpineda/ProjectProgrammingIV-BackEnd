@@ -1,4 +1,4 @@
-﻿import {
+import {
   Injectable,
   NotFoundException,
   BadRequestException,
@@ -11,6 +11,9 @@ import { IntercampRequest } from "../entities/intercamp-request.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
 import { AuditLog } from "../../common/entities/audit-log.entity";
 import type { ApprovalDto } from "../dto/approval.dto";
+import { Inject } from "@nestjs/common";
+import { REDIS_CLIENT } from "../../redis/redis.constants";
+import { Redis } from "ioredis";
 
 @Injectable()
 export class ApprovalsService {
@@ -23,7 +26,19 @@ export class ApprovalsService {
     private readonly userRepo: Repository<UserAccount>,
     @InjectRepository(AuditLog)
     private readonly auditRepo: Repository<AuditLog>,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
+
+  private async invalidateCampDashboardCache(campId: number): Promise<void> {
+    try {
+      const keys = await this.redis.keys(`dashboard:metrics:${campId}:*`);
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
+    } catch (err) {
+      // Ignore
+    }
+  }
 
   async approveOrReject(
     request: IntercampRequest,
@@ -96,6 +111,9 @@ export class ApprovalsService {
         }),
       );
 
+      await this.invalidateCampDashboardCache(request.camp_origin_id);
+      await this.invalidateCampDashboardCache(request.camp_destination_id);
+
       return { approved: approval, bothApproved: false };
     }
 
@@ -114,6 +132,9 @@ export class ApprovalsService {
           date: new Date(),
         }),
       );
+
+      await this.invalidateCampDashboardCache(request.camp_origin_id);
+      await this.invalidateCampDashboardCache(request.camp_destination_id);
 
       return { approved: approval, bothApproved: true };
     } else {

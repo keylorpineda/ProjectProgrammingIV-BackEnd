@@ -16,6 +16,7 @@ import { UserAsset } from "../users/entities/user-asset.entity";
 import { Asset } from "../users/entities/asset.entity";
 import { BullModule } from "@nestjs/bullmq";
 import { DailyTasksProcessor } from "./processors/daily-tasks.processor";
+import { RedisModule } from "../redis/redis.module";
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { DailyTasksProcessor } from "./processors/daily-tasks.processor";
     BullModule.registerQueue({
       name: "daily-tasks",
     }),
+    RedisModule,
   ],
   controllers: [ResourcesController],
   providers: [ResourcesService, DailyTasksProcessor],

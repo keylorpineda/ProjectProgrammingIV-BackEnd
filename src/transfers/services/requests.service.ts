@@ -15,6 +15,9 @@ import { Resource } from "../../resources/entities/resource.entity";
 import { AuditLog } from "../../common/entities/audit-log.entity";
 import type { CreateIntercampRequestDto } from "../dto/create-intercamp-request.dto";
 import { NotificationsGateway } from "../../notifications/notifications.gateway";
+import { Inject } from "@nestjs/common";
+import { REDIS_CLIENT } from "../../redis/redis.constants";
+import { Redis } from "ioredis";
 
 @Injectable()
 export class RequestsService {
@@ -37,7 +40,19 @@ export class RequestsService {
     private readonly auditRepo: Repository<AuditLog>,
     private readonly dataSource: DataSource,
     private readonly notificationsGateway: NotificationsGateway,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
+
+  private async invalidateCampDashboardCache(campId: number): Promise<void> {
+    try {
+      const keys = await this.redis.keys(`dashboard:metrics:${campId}:*`);
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
+    } catch (err) {
+      // Ignore
+    }
+  }
 
   async createRequest(
     dto: CreateIntercampRequestDto,
@@ -110,6 +125,9 @@ export class RequestsService {
       });
 
       await queryRunner.commitTransaction();
+
+      await this.invalidateCampDashboardCache(dto.camp_origin_id);
+      await this.invalidateCampDashboardCache(dto.camp_destination_id);
 
       const finalRequest = await this.findRequestById(Number(savedRequest.id));
 
@@ -325,6 +343,9 @@ export class RequestsService {
         date: new Date(),
       }),
     );
+
+    await this.invalidateCampDashboardCache(request.camp_origin_id);
+    await this.invalidateCampDashboardCache(request.camp_destination_id);
 
     return this.findRequestById(requestId);
   }
