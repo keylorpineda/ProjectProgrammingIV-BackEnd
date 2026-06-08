@@ -1,4 +1,5 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { BadRequestException, Logger, NotFoundException } from "@nestjs/common";
 import { getQueueToken } from "@nestjs/bullmq";
@@ -11,9 +12,12 @@ import { DailyConsumption } from "./entities/daily-consumption.entity";
 import { AuditLog } from "../common/entities/audit-log.entity";
 import { Camp } from "../camps/entities/camp.entity";
 import { Person } from "../users/entities/person.entity";
-import { CreateResourceDto } from "./dto/create-resource.dto";
-import { UpdateInventoryDto } from "./dto/update-inventory.dto";
-import { AdjustDailyProductionDto } from "./dto/adjust-daily-production.dto";
+import { PersonAchievement } from "../users/entities/person-achievement.entity";
+import { UserAccount } from "../users/entities/user-account.entity";
+import { UserAsset } from "../users/entities/user-asset.entity";
+import type { CreateResourceDto } from "./dto/create-resource.dto";
+import type { UpdateInventoryDto } from "./dto/update-inventory.dto";
+import type { AdjustDailyProductionDto } from "./dto/adjust-daily-production.dto";
 import {
   DAILY_CONSUMPTION,
   PersonStatus,
@@ -31,6 +35,7 @@ type RepoMock = {
   save: jest.Mock;
   remove: jest.Mock;
   find: jest.Mock;
+  count: jest.Mock;
   createQueryBuilder: jest.Mock;
   getMany: jest.Mock;
   getCount: jest.Mock;
@@ -43,6 +48,7 @@ const createRepoMock = (): RepoMock => ({
   save: jest.fn(asyncPassThrough),
   remove: jest.fn(),
   find: jest.fn(),
+  count: jest.fn().mockResolvedValue(0),
   createQueryBuilder: jest.fn(),
   getMany: jest.fn(),
   getCount: jest.fn(),
@@ -97,6 +103,15 @@ describe("ResourcesService", () => {
         { provide: getRepositoryToken(AuditLog), useValue: createRepoMock() },
         { provide: getRepositoryToken(Camp), useValue: createRepoMock() },
         { provide: getRepositoryToken(Person), useValue: createRepoMock() },
+        {
+          provide: getRepositoryToken(PersonAchievement),
+          useValue: createRepoMock(),
+        },
+        {
+          provide: getRepositoryToken(UserAccount),
+          useValue: createRepoMock(),
+        },
+        { provide: getRepositoryToken(UserAsset), useValue: createRepoMock() },
         {
           provide: getQueueToken("daily-tasks"),
           useValue: {
@@ -623,14 +638,14 @@ describe("ResourcesService", () => {
         resource_id: 11,
         quantity: 20,
         type: "daily_consumption",
-        description: "Consumo diario de comida: 4 personas × 5 unidades",
+        description: "Consumo diario de comida: 4 personas x 5 unidades",
       });
       expect(createMovementSpy).toHaveBeenNthCalledWith(3, {
         camp_id: 10,
         resource_id: 12,
         quantity: 12,
         type: "daily_consumption",
-        description: `Consumo diario de agua: 4 personas × ${DAILY_CONSUMPTION.WATER_PER_PERSON} litros`,
+        description: `Consumo diario de agua: 4 personas x ${DAILY_CONSUMPTION.WATER_PER_PERSON} litros`,
       });
       expect(refreshSpy).toHaveBeenCalledWith(10);
       expect(result).toEqual({
@@ -718,14 +733,14 @@ describe("ResourcesService", () => {
         resource_id: 31,
         quantity: 4,
         type: "daily_consumption",
-        description: "Consumo diario de comida: 2 personas × 2 unidades",
+        description: "Consumo diario de comida: 2 personas x 2 unidades",
       });
       expect(createMovementSpy).toHaveBeenNthCalledWith(4, {
         camp_id: 12,
         resource_id: 32,
         quantity: 8,
         type: "daily_consumption",
-        description: "Consumo diario de agua: 2 personas × 4 litros",
+        description: "Consumo diario de agua: 2 personas x 4 litros",
       });
       expect(refreshSpy).toHaveBeenCalledWith(12);
       expect(result).toEqual({
@@ -1002,7 +1017,7 @@ describe("ResourcesService", () => {
           resource_id: 1,
           quantity: 6,
           type: "daily_production",
-          description: "Ajuste manual de producci�n: Eva Lopez",
+          description: "Ajuste manual de produccion: Eva Lopez",
         },
         30,
       );
