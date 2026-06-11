@@ -601,28 +601,34 @@ export class ExplorationsService {
       );
     }
 
-    exploration.status = "in_progress";
-    exploration.departure_date = new Date();
-    await this.explorationRepo.save(exploration);
-
+    // La llamada al microservicio de IA se hace ANTES de abrir la transacción
+    // para no mantener locks de BD abiertos durante una operación de red.
     const expeditionPayload = this.buildExpeditionPayload(exploration);
     const expeditionAiAnalysis =
       await this.pythonAiService.analyzeExpedition(expeditionPayload);
 
-    await this.auditRepo.save(
-      this.auditRepo.create({
-        user_id: userId,
-        camp_id: exploration.camp_id,
-        action: "exploration_departed",
-        entity_type: "exploration",
-        entity_id: Number(exploration.id),
-        new_value: {
-          departed_at: new Date(),
-          expedition_ai_analysis: expeditionAiAnalysis,
-        },
-        date: new Date(),
-      }),
-    );
+    exploration.status = "in_progress";
+    exploration.departure_date = new Date();
+
+    // El cambio de estado y el registro de auditoría se confirman juntos para
+    // que no quede uno sin el otro si algo falla.
+    await this.dataSource.transaction(async (manager) => {
+      await manager.save(exploration);
+      await manager.save(
+        manager.create(AuditLog, {
+          user_id: userId,
+          camp_id: exploration.camp_id,
+          action: "exploration_departed",
+          entity_type: "exploration",
+          entity_id: Number(exploration.id),
+          new_value: {
+            departed_at: new Date(),
+            expedition_ai_analysis: expeditionAiAnalysis,
+          },
+          date: new Date(),
+        }),
+      );
+    });
 
     await this.invalidateCampDashboardCache(exploration.camp_id);
 

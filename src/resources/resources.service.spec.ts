@@ -389,10 +389,26 @@ describe("ResourcesService", () => {
         expect(res.inventory.current_quantity).toBe(15);
       });
 
-      it("creates a fresh inventory row when none exists", async () => {
+      it("throws when no inventory exists and an outgoing movement is requested", async () => {
+        const manager = makeManager({ inventory: null });
+        await expect(
+          service.createMovement(
+            {
+              camp_id: 1,
+              resource_id: 1,
+              type: "exploration_out",
+              quantity: 3,
+            },
+            9,
+            manager,
+          ),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it("creates a fresh inventory row on an income movement when none exists", async () => {
         const manager = makeManager({ inventory: null });
         const res = await service.createMovement(
-          { camp_id: 1, resource_id: 1, type: "exploration_out", quantity: 3 },
+          { camp_id: 1, resource_id: 1, type: "exploration_in", quantity: 10 },
           9,
           manager,
         );
@@ -400,7 +416,7 @@ describe("ResourcesService", () => {
           Inventory,
           expect.objectContaining({ camp_id: 1, resource_id: 1 }),
         );
-        expect(res.inventory.current_quantity).toBe(-3);
+        expect(res.inventory.current_quantity).toBe(10);
       });
 
       it("throws when the resource does not exist", async () => {

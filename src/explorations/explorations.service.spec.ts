@@ -61,8 +61,9 @@ describe("ExplorationsService", () => {
   let auditRepo: RepoMock;
   let resourcesService: { findAll: jest.Mock; createMovement: jest.Mock };
   let pythonAiService: { analyzeExpedition: jest.Mock };
-  let dataSource: { createQueryRunner: jest.Mock };
+  let dataSource: { createQueryRunner: jest.Mock; transaction: jest.Mock };
   let queryRunner: ReturnType<typeof createQueryRunnerMock>;
+  let departManagerSave: jest.Mock;
 
   const baseDto: CreateExplorationDto = {
     camp_id: 1,
@@ -100,8 +101,14 @@ describe("ExplorationsService", () => {
         .fn()
         .mockResolvedValue({ success_probability: 80 }),
     };
+    departManagerSave = jest.fn(asyncPassThrough);
+    const departManager = {
+      create: jest.fn((_Entity: any, dto: any) => dto),
+      save: departManagerSave,
+    };
     dataSource = {
       createQueryRunner: jest.fn(() => queryRunner),
+      transaction: jest.fn(async (cb: any) => cb(departManager)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -870,7 +877,7 @@ describe("ExplorationsService", () => {
 
       expect(exploration.status).toBe("in_progress");
       expect(exploration.departure_date).toBeInstanceOf(Date);
-      expect(explorationRepo.save).toHaveBeenCalledWith(exploration);
+      expect(departManagerSave).toHaveBeenCalledWith(exploration);
       expect(pythonAiService.analyzeExpedition).toHaveBeenCalledWith(
         expect.objectContaining({
           explorers: [
@@ -889,7 +896,7 @@ describe("ExplorationsService", () => {
           ],
         }),
       );
-      expect(auditRepo.save).toHaveBeenCalledWith(
+      expect(departManagerSave).toHaveBeenCalledWith(
         expect.objectContaining({
           action: "exploration_departed",
           entity_id: 80,

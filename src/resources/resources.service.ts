@@ -305,7 +305,7 @@ export class ResourcesService implements OnModuleInit {
       return this.createMovementWithinTransaction(dto, userId, manager);
     }
 
-    await this.findResourceById(dto.resource_id);
+    const resource = await this.findResourceById(dto.resource_id);
 
     let inventory = await this.inventoryRepo.findOne({
       where: { camp_id: dto.camp_id, resource_id: dto.resource_id },
@@ -327,6 +327,15 @@ export class ResourcesService implements OnModuleInit {
     }
 
     const isIncome = INCOME_TYPES.includes(dto.type);
+
+    if (
+      !isIncome &&
+      Number(inventory.current_quantity) < Number(dto.quantity)
+    ) {
+      throw new BadRequestException(
+        `Stock insuficiente para "${resource.name}": disponible ${inventory.current_quantity}, requerido ${dto.quantity}`,
+      );
+    }
 
     if (isIncome) {
       inventory.current_quantity =
@@ -472,6 +481,16 @@ export class ResourcesService implements OnModuleInit {
     }
 
     const isIncome = INCOME_TYPES.includes(dto.type);
+
+    if (
+      !isIncome &&
+      Number(inventory.current_quantity) < Number(dto.quantity)
+    ) {
+      throw new BadRequestException(
+        `Stock insuficiente para "${resource.name}": disponible ${inventory.current_quantity}, requerido ${dto.quantity}`,
+      );
+    }
+
     inventory.current_quantity = isIncome
       ? Number(inventory.current_quantity) + Number(dto.quantity)
       : Number(inventory.current_quantity) - Number(dto.quantity);

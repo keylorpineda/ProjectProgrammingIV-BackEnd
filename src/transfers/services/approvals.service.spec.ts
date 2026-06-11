@@ -12,6 +12,7 @@ import { IntercampRequest } from "../entities/intercamp-request.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
 import { AuditLog } from "../../common/entities/audit-log.entity";
 import { REDIS_CLIENT } from "../../redis/redis.constants";
+import { DataSource } from "typeorm";
 
 describe("ApprovalsService", () => {
   let service: ApprovalsService;
@@ -19,6 +20,7 @@ describe("ApprovalsService", () => {
   let requestRepo: any;
   let approvalRepo: any;
   let auditRepo: any;
+  let managerSave: jest.Mock;
 
   beforeEach(async () => {
     userRepo = { findOne: jest.fn() };
@@ -31,6 +33,16 @@ describe("ApprovalsService", () => {
       create: jest.fn().mockImplementation((dto) => dto),
       save: jest.fn(),
     };
+    // The transactional manager: create() echoes the dto, save() echoes the
+    // entity. approveOrReject does all its writes through this manager.
+    managerSave = jest.fn(async (entity) => entity);
+    const managerMock = {
+      create: jest.fn((_entity, dto) => dto),
+      save: managerSave,
+    };
+    const dataSourceMock = {
+      transaction: jest.fn(async (cb: any) => cb(managerMock)),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -42,6 +54,7 @@ describe("ApprovalsService", () => {
         },
         { provide: getRepositoryToken(Approval), useValue: approvalRepo },
         { provide: getRepositoryToken(AuditLog), useValue: auditRepo },
+        { provide: DataSource, useValue: dataSourceMock },
         {
           provide: REDIS_CLIENT,
           useValue: { keys: jest.fn().mockResolvedValue([]), del: jest.fn() },
@@ -102,8 +115,9 @@ describe("ApprovalsService", () => {
 
       expect(res.bothApproved).toBe(false);
       expect(request.status).toBe("rejected");
-      expect(requestRepo.save).toHaveBeenCalledWith(request);
-      expect(auditRepo.save).toHaveBeenCalled();
+      expect(managerSave).toHaveBeenCalledWith(request);
+      // approval + request + audit all persisted through the transaction manager
+      expect(managerSave).toHaveBeenCalledTimes(3);
     });
 
     it("should partially approve if other camp hasn't approved", async () => {
@@ -120,7 +134,9 @@ describe("ApprovalsService", () => {
       });
 
       expect(res.bothApproved).toBe(false);
-      expect(requestRepo.save).not.toHaveBeenCalled(); // status hasn't changed to approved yet
+      // status hasn't changed to approved yet (only approval + audit persisted)
+      expect(request.status).toBeUndefined();
+      expect(managerSave).toHaveBeenCalledTimes(2);
     });
 
     it("should fully approve if other camp has approved", async () => {
@@ -138,8 +154,8 @@ describe("ApprovalsService", () => {
 
       expect(res.bothApproved).toBe(true);
       expect(request.status).toBe("approved");
-      expect(requestRepo.save).toHaveBeenCalledWith(request);
-      expect(auditRepo.save).toHaveBeenCalled();
+      expect(managerSave).toHaveBeenCalledWith(request);
+      expect(managerSave).toHaveBeenCalledTimes(3);
     });
 
     it("should fully approve if destination user approves and origin already approved", async () => {
