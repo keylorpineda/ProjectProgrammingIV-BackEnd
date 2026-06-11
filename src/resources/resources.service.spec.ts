@@ -17,6 +17,7 @@ import { PersonAchievement } from "../users/entities/person-achievement.entity";
 import { UserAccount } from "../users/entities/user-account.entity";
 import { UserAsset } from "../users/entities/user-asset.entity";
 import { REDIS_CLIENT } from "../redis/redis.constants";
+import { NotificationsGateway } from "../notifications/notifications.gateway";
 
 describe("ResourcesService", () => {
   let service: ResourcesService;
@@ -65,6 +66,13 @@ describe("ResourcesService", () => {
         {
           provide: REDIS_CLIENT,
           useValue: { keys: jest.fn().mockResolvedValue([]), del: jest.fn() },
+        },
+        {
+          provide: NotificationsGateway,
+          useValue: {
+            emitInventoryAlerts: jest.fn(),
+            emitAlertCleared: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -321,6 +329,95 @@ describe("ResourcesService", () => {
         1,
       );
       expect(assetRepo.save).toHaveBeenCalled();
+    });
+
+    describe("transactional variant (EntityManager provided)", () => {
+      const makeManager = (overrides: Record<string, any> = {}) => {
+        const inventory =
+          overrides.inventory === undefined
+            ? { current_quantity: 10, minimum_stock_required: 5 }
+            : overrides.inventory;
+        return {
+          findOne: jest.fn((entity: any) => {
+            if (entity === Resource) {
+              return Promise.resolve(
+                overrides.resource === undefined
+                  ? { id: 1 }
+                  : overrides.resource,
+              );
+            }
+            if (entity === Inventory) {
+              return Promise.resolve(inventory);
+            }
+            return Promise.resolve(null);
+          }),
+          create: jest.fn((_entity: any, dto: any) => dto),
+          save: jest.fn((_entity: any, dto: any) =>
+            Promise.resolve({ id: 7, ...dto }),
+          ),
+        } as any;
+      };
+
+      it("subtracts within the transaction for an outcome movement and locks the row", async () => {
+        const manager = makeManager();
+        const res = await service.createMovement(
+          {
+            camp_id: 1,
+            resource_id: 1,
+            type: "exploration_out",
+            quantity: 4,
+          },
+          9,
+          manager,
+        );
+        expect(manager.findOne).toHaveBeenCalledWith(
+          Inventory,
+          expect.objectContaining({ lock: { mode: "pessimistic_write" } }),
+        );
+        expect(res.inventory.current_quantity).toBe(6);
+        // inventory + movement + audit all saved through the same manager
+        expect(manager.save).toHaveBeenCalledTimes(3);
+      });
+
+      it("adds within the transaction for an income movement", async () => {
+        const manager = makeManager();
+        const res = await service.createMovement(
+          { camp_id: 1, resource_id: 1, type: "exploration_in", quantity: 5 },
+          9,
+          manager,
+        );
+        expect(res.inventory.current_quantity).toBe(15);
+      });
+
+      it("creates a fresh inventory row when none exists", async () => {
+        const manager = makeManager({ inventory: null });
+        const res = await service.createMovement(
+          { camp_id: 1, resource_id: 1, type: "exploration_out", quantity: 3 },
+          9,
+          manager,
+        );
+        expect(manager.create).toHaveBeenCalledWith(
+          Inventory,
+          expect.objectContaining({ camp_id: 1, resource_id: 1 }),
+        );
+        expect(res.inventory.current_quantity).toBe(-3);
+      });
+
+      it("throws when the resource does not exist", async () => {
+        const manager = makeManager({ resource: null });
+        await expect(
+          service.createMovement(
+            {
+              camp_id: 1,
+              resource_id: 999,
+              type: "exploration_out",
+              quantity: 1,
+            },
+            9,
+            manager,
+          ),
+        ).rejects.toThrow(NotFoundException);
+      });
     });
   });
 

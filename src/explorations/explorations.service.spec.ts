@@ -306,6 +306,7 @@ describe("ExplorationsService", () => {
           type: "exploration_out",
         }),
         99,
+        queryRunner.manager,
       );
       expect(resourcesService.createMovement).toHaveBeenNthCalledWith(
         2,
@@ -315,6 +316,7 @@ describe("ExplorationsService", () => {
           type: "exploration_out",
         }),
         99,
+        queryRunner.manager,
       );
       expect(resourcesService.createMovement).toHaveBeenNthCalledWith(
         3,
@@ -324,6 +326,7 @@ describe("ExplorationsService", () => {
           type: "exploration_out",
         }),
         99,
+        queryRunner.manager,
       );
       expect(queryRunner.manager.save).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -447,11 +450,13 @@ describe("ExplorationsService", () => {
         1,
         expect.objectContaining({ quantity: 4 }),
         5,
+        queryRunner.manager,
       );
       expect(resourcesService.createMovement).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({ quantity: 6 }),
         5,
+        queryRunner.manager,
       );
     });
 
@@ -566,6 +571,7 @@ describe("ExplorationsService", () => {
           type: "exploration_in",
         }),
         4,
+        queryRunner.manager,
       );
       expect(auditRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -633,8 +639,10 @@ describe("ExplorationsService", () => {
       const queryBuilder = {
         leftJoinAndSelect: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([{ id: 1 }]),
+        getManyAndCount: jest.fn().mockResolvedValue([[{ id: 1 }], 1]),
       };
       explorationRepo.createQueryBuilder.mockReturnValue(queryBuilder);
 
@@ -642,15 +650,18 @@ describe("ExplorationsService", () => {
 
       expect(explorationRepo.createQueryBuilder).toHaveBeenCalledWith("e");
       expect(queryBuilder.andWhere).not.toHaveBeenCalled();
-      expect(result).toEqual([{ id: 1 }]);
+      expect(result.data).toEqual([{ id: 1 }]);
+      expect(result.total).toBe(1);
     });
 
     it("should apply camp and status filters", async () => {
       const queryBuilder = {
         leftJoinAndSelect: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([{ id: 2 }]),
+        getManyAndCount: jest.fn().mockResolvedValue([[{ id: 2 }], 1]),
       };
       explorationRepo.createQueryBuilder.mockReturnValue(queryBuilder);
 
@@ -760,6 +771,7 @@ describe("ExplorationsService", () => {
           type: "exploration_in",
         }),
         8,
+        queryRunner.manager,
       );
       expect(exploration.explorationPersons[0].person.status).toBe(
         PersonStatus.ACTIVE,

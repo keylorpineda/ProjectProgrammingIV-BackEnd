@@ -167,6 +167,7 @@ export class ExplorationsService {
           description: `Raciones de comida para exploración "${dto.name}" (${totalPersons} personas x ${totalDays} días)`,
         },
         userId,
+        queryRunner.manager,
       );
 
       await this.resourcesService.createMovement(
@@ -178,6 +179,7 @@ export class ExplorationsService {
           description: `Raciones de agua para exploración "${dto.name}" (${totalPersons} personas x ${totalDays} días)`,
         },
         userId,
+        queryRunner.manager,
       );
 
       const foodExpRes = this.expResourceRepo.create({
@@ -207,6 +209,7 @@ export class ExplorationsService {
               description: `Recurso adicional para exploración "${dto.name}"`,
             },
             userId,
+            queryRunner.manager,
           );
 
           const er = this.expResourceRepo.create({
@@ -321,6 +324,7 @@ export class ExplorationsService {
               description: `Recursos encontrados en exploración "${exploration.name}"`,
             },
             userId,
+            queryRunner.manager,
           );
 
           const er = this.expResourceRepo.create({
@@ -541,6 +545,7 @@ export class ExplorationsService {
             description: `Devolución por cancelación de exploración "${exploration.name}"`,
           },
           userId,
+          queryRunner.manager,
         );
       }
 

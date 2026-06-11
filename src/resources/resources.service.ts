@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import type { EntityManager } from "typeorm";
 import { Repository, IsNull } from "typeorm";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
@@ -12,7 +13,6 @@ import { Inject } from "@nestjs/common";
 import { REDIS_CLIENT } from "../redis/redis.constants";
 import { Redis } from "ioredis";
 import type { OnModuleInit } from "@nestjs/common";
-import { Cron, CronExpression } from "@nestjs/schedule";
 import { Resource } from "./entities/resource.entity";
 import { Inventory } from "./entities/inventory.entity";
 import { InventoryMovement } from "./entities/inventory-movement.entity";
@@ -292,7 +292,19 @@ export class ResourcesService implements OnModuleInit {
   async createMovement(
     dto: CreateInventoryMovementDto,
     userId?: number,
+    manager?: EntityManager,
   ): Promise<{ movement: InventoryMovement; inventory: Inventory }> {
+    // Cuando el llamador (exploraciones, etc.) ya abrio una transaccion y nos
+    // pasa su EntityManager, ejecutamos todas las escrituras dentro de ESA
+    // transaccion. Asi el ajuste de inventario es atomico con la operacion
+    // padre: o se confirman juntos (recurso descontado/agregado + registro de
+    // la exploracion) o se revierten juntos. Antes corria en una conexion
+    // aparte con auto-commit, dejando inventario y exploracion inconsistentes
+    // si algo fallaba a mitad del proceso.
+    if (manager) {
+      return this.createMovementWithinTransaction(dto, userId, manager);
+    }
+
     await this.findResourceById(dto.resource_id);
 
     let inventory = await this.inventoryRepo.findOne({
@@ -423,6 +435,84 @@ export class ResourcesService implements OnModuleInit {
     };
   }
 
+  /**
+   * Variante transaccional de createMovement: usa el EntityManager de la
+   * transaccion del llamador y bloquea la fila de inventario con
+   * pessimistic_write para evitar lost updates bajo concurrencia. No dispara
+   * gamificacion ni notificaciones (eso queda para el flujo principal una vez
+   * confirmada la transaccion) para no escribir en conexiones aparte a mitad
+   * de la transaccion.
+   */
+  private async createMovementWithinTransaction(
+    dto: CreateInventoryMovementDto,
+    userId: number | undefined,
+    manager: EntityManager,
+  ): Promise<{ movement: InventoryMovement; inventory: Inventory }> {
+    const resource = await manager.findOne(Resource, {
+      where: { id: dto.resource_id },
+    });
+    if (!resource) {
+      throw new NotFoundException(
+        `Recurso con ID ${dto.resource_id} no encontrado`,
+      );
+    }
+
+    let inventory = await manager.findOne(Inventory, {
+      where: { camp_id: dto.camp_id, resource_id: dto.resource_id },
+      lock: { mode: "pessimistic_write" },
+    });
+
+    if (!inventory) {
+      inventory = manager.create(Inventory, {
+        camp_id: dto.camp_id,
+        resource_id: dto.resource_id,
+        current_quantity: 0,
+        minimum_stock_required: 0,
+      });
+    }
+
+    const isIncome = INCOME_TYPES.includes(dto.type);
+    inventory.current_quantity = isIncome
+      ? Number(inventory.current_quantity) + Number(dto.quantity)
+      : Number(inventory.current_quantity) - Number(dto.quantity);
+    inventory.alert_active =
+      Number(inventory.current_quantity) <
+      Number(inventory.minimum_stock_required);
+    inventory.last_update = new Date();
+    await manager.save(Inventory, inventory);
+
+    const saved = await manager.save(
+      manager.create(InventoryMovement, {
+        camp_id: dto.camp_id,
+        resource_id: dto.resource_id,
+        quantity: dto.quantity,
+        type: dto.type,
+        description: dto.description,
+        date: new Date(),
+        user_id: userId,
+      }),
+    );
+
+    await manager.save(
+      manager.create(AuditLog, {
+        user_id: userId,
+        camp_id: dto.camp_id,
+        action: `inventory_movement_${dto.type}`,
+        entity_type: "inventory_movement",
+        entity_id: Number(saved.id),
+        new_value: {
+          resource_id: dto.resource_id,
+          quantity: dto.quantity,
+          type: dto.type,
+          resulting_quantity: inventory.current_quantity,
+        },
+        date: new Date(),
+      }),
+    );
+
+    return { movement: saved, inventory };
+  }
+
   async executeDailyProcess(campId: number): Promise<{
     production: Record<string, number>;
     consumption: Record<string, number>;
@@ -441,7 +531,7 @@ export class ResourcesService implements OnModuleInit {
 
     if (!foodResource || !waterResource) {
       throw new NotFoundException(
-        'Recursos de tipo "food" y "water" no configurados. Cree recursos con esas categorias.',
+        'Recursos de tipo "food" y "water" no configurados. Cree recursos con esas categorias.', // cspell:disable-line
       );
     }
 
@@ -586,7 +676,12 @@ export class ResourcesService implements OnModuleInit {
     return { production, consumption, movementCount };
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  // El disparo programado lo realiza EXCLUSIVAMENTE el job repetible de BullMQ
+  // ("daily-resources", registrado en onModuleInit y procesado por
+  // DailyTasksProcessor). Anteriormente este metodo tambien tenia un
+  // @Cron(EVERY_DAY_AT_MIDNIGHT), por lo que el proceso diario se ejecutaba DOS
+  // veces a medianoche (produccion/consumo duplicados). Se elimino el decorador
+  // para que corra una sola vez.
   async executeAllDailyProcesses(): Promise<void> {
     this.logger.log("Iniciando proceso diario automatico de recursos...");
 
