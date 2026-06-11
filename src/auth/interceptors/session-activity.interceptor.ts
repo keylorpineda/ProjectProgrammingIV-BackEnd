@@ -47,20 +47,21 @@ export class SessionActivityInterceptor implements NestInterceptor {
           // Redis unavailable — session tracking degraded, continue normally
         });
 
-        // Solo escribir last_activity en BD una vez cada 5 minutos por usuario.
-        // El TTL de Redis ya cubre la detección de inactividad en tiempo real;
-        // el UPDATE de Postgres solo sirve para persistencia histórica.
+        // Escribe last_activity en BD como máximo una vez cada 5 minutos por
+        // usuario. SET NX EX es atómico: el primer request que lo ejecuta gana
+        // y escribe a Postgres; los demás ven null y lo omiten.
+        // Si Redis está caído, catch devuelve null (no 'OK') → se omite el
+        // write a BD para evitar una tormenta de UPDATEs durante la degradación.
         const dbUpdateKey = `session:db_update:${userId}`;
-        const recentlyUpdated = await this.redis
-          .get(dbUpdateKey)
+        const acquired = await this.redis
+          .set(dbUpdateKey, "1", "EX", 300, "NX")
           .catch(() => null);
 
-        if (!recentlyUpdated) {
+        if (acquired === "OK") {
           await this.sessionRepo.update(
             { user_id: userId, is_active: true },
             { last_activity: new Date() },
           );
-          await this.redis.set(dbUpdateKey, "1", "EX", 300).catch(() => {});
         }
       } catch (error) {
         // Token inv�lido o expirado - no hacer nada, el guard JWT manejar� esto

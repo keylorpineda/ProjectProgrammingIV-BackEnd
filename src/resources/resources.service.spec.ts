@@ -2,6 +2,7 @@ import type { TestingModule } from "@nestjs/testing";
 import { Test } from "@nestjs/testing";
 import { ResourcesService } from "./resources.service";
 import { getRepositoryToken } from "@nestjs/typeorm";
+import { DataSource } from "typeorm";
 import type { Queue } from "bullmq";
 import { getQueueToken } from "@nestjs/bullmq";
 import { NotFoundException, BadRequestException } from "@nestjs/common";
@@ -22,6 +23,7 @@ import { NotificationsGateway } from "../notifications/notifications.gateway";
 describe("ResourcesService", () => {
   let service: ResourcesService;
   let mockQueue: jest.Mocked<Queue>;
+  let dataSourceMock: { transaction: jest.Mock };
 
   const mockRepo = () => ({
     find: jest.fn(),
@@ -41,6 +43,22 @@ describe("ResourcesService", () => {
     mockQueue = {
       add: jest.fn().mockResolvedValue({ id: "job-1" }),
     } as any;
+
+    // Default: transaction is a pass-through that calls the callback.
+    // createMovement.beforeEach overrides this with a txManager-aware version.
+    dataSourceMock = {
+      transaction: jest.fn(async (cb: any) =>
+        cb({
+          findOne: jest.fn().mockResolvedValue(null),
+          create: jest.fn((_e: any, dto: any) => dto ?? _e),
+          save: jest.fn(async (_e: any, dto?: any) => ({
+            id: 1,
+            ...(dto ?? _e),
+          })),
+          upsert: jest.fn().mockResolvedValue(undefined),
+        }),
+      ),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -74,6 +92,7 @@ describe("ResourcesService", () => {
             emitAlertCleared: jest.fn(),
           },
         },
+        { provide: DataSource, useValue: dataSourceMock },
       ],
     }).compile();
 
@@ -245,14 +264,47 @@ describe("ResourcesService", () => {
   });
 
   describe("createMovement", () => {
-    beforeEach(() => {
-      const resourceRepo = service["resourceRepo"] as any;
-      resourceRepo.findOne.mockResolvedValue({ id: 1 }); // resource exists
-      const invRepo = service["inventoryRepo"] as any;
-      invRepo.findOne.mockResolvedValue({
+    // txManager used by dataSource.transaction in the non-transactional path
+    let txManager: any;
+
+    const makeTxManager = (invOverride?: any) => {
+      const inventory = invOverride ?? {
         current_quantity: 10,
         minimum_stock_required: 5,
-      });
+        alert_active: false,
+      };
+      return {
+        findOne: jest.fn((entity: any) => {
+          if (entity === Inventory) return Promise.resolve(inventory);
+          if (entity === InventoryMovement)
+            return Promise.resolve({
+              id: 7,
+              resource: { id: 1 },
+              user: null,
+              camp: null,
+            });
+          return Promise.resolve(null);
+        }),
+        create: jest.fn((_entity: any, dto: any) => dto),
+        save: jest.fn((_entity: any, dto?: any) =>
+          Promise.resolve({ id: 7, ...(dto ?? _entity) }),
+        ),
+        upsert: jest.fn().mockResolvedValue(undefined),
+      } as any;
+    };
+
+    beforeEach(() => {
+      txManager = makeTxManager();
+      dataSourceMock.transaction.mockImplementation(async (cb: any) =>
+        cb(txManager),
+      );
+
+      const resourceRepo = service["resourceRepo"] as any;
+      resourceRepo.findOne.mockResolvedValue({ id: 1, name: "Food" }); // resource exists
+      // inventoryRepo.findOne is only called for the post-commit re-fetch;
+      // returning null causes the fallback to the transaction result.
+      const invRepo = service["inventoryRepo"] as any;
+      invRepo.findOne.mockResolvedValue(null);
       const userAccountRepo = service["userAccountRepo"] as any;
       userAccountRepo.findOne.mockResolvedValue({ id: 1, person_id: 1 });
       const personRepo = service["personRepo"] as any;
@@ -311,12 +363,16 @@ describe("ResourcesService", () => {
     });
 
     it("should grant LOGISTICA_PRECISA if replenishing active alert before zero", async () => {
-      const invRepo = service["inventoryRepo"] as any;
-      invRepo.findOne.mockResolvedValue({
+      // Override txManager so inventory inside the transaction has an active alert
+      txManager = makeTxManager({
         current_quantity: 2,
         minimum_stock_required: 5,
         alert_active: true,
       });
+      dataSourceMock.transaction.mockImplementation(async (cb: any) =>
+        cb(txManager),
+      );
+
       const assetRepo = service["userAssetRepo"] as any;
       assetRepo.manager.getRepository.mockReturnValue({
         findOne: jest.fn().mockResolvedValue(null),
@@ -333,21 +389,41 @@ describe("ResourcesService", () => {
 
     describe("transactional variant (EntityManager provided)", () => {
       const makeManager = (overrides: Record<string, any> = {}) => {
-        const inventory =
+        const baseInventory =
           overrides.inventory === undefined
             ? { current_quantity: 10, minimum_stock_required: 5 }
             : overrides.inventory;
+        // After upsert, the second findOne(Inventory) should return a fresh row
+        const freshInventory = {
+          current_quantity: 0,
+          minimum_stock_required: 0,
+        };
+        let inventoryCallCount = 0;
         return {
           findOne: jest.fn((entity: any) => {
             if (entity === Resource) {
               return Promise.resolve(
                 overrides.resource === undefined
-                  ? { id: 1 }
+                  ? { id: 1, name: "Food" }
                   : overrides.resource,
               );
             }
             if (entity === Inventory) {
-              return Promise.resolve(inventory);
+              // First call: return the configured inventory (may be null)
+              // Second call (after upsert): return a fresh row
+              inventoryCallCount++;
+              if (inventoryCallCount === 1)
+                return Promise.resolve(baseInventory);
+              return Promise.resolve(freshInventory);
+            }
+            if (entity === InventoryMovement) {
+              // Re-fetch after save — return saved movement with stub relations
+              return Promise.resolve({
+                id: 7,
+                resource: { id: 1 },
+                user: null,
+                camp: null,
+              });
             }
             return Promise.resolve(null);
           }),
@@ -355,6 +431,7 @@ describe("ResourcesService", () => {
           save: jest.fn((_entity: any, dto: any) =>
             Promise.resolve({ id: 7, ...dto }),
           ),
+          upsert: jest.fn().mockResolvedValue(undefined),
         } as any;
       };
 
@@ -412,9 +489,13 @@ describe("ResourcesService", () => {
           9,
           manager,
         );
-        expect(manager.create).toHaveBeenCalledWith(
+        // New inventory is created via upsert (INSERT ON CONFLICT) instead of create()
+        expect(manager.upsert).toHaveBeenCalledWith(
           Inventory,
           expect.objectContaining({ camp_id: 1, resource_id: 1 }),
+          expect.objectContaining({
+            conflictPaths: ["camp_id", "resource_id"],
+          }),
         );
         expect(res.inventory.current_quantity).toBe(10);
       });

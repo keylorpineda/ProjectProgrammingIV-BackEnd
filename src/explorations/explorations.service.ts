@@ -607,13 +607,24 @@ export class ExplorationsService {
     const expeditionAiAnalysis =
       await this.pythonAiService.analyzeExpedition(expeditionPayload);
 
-    exploration.status = "in_progress";
-    exploration.departure_date = new Date();
-
-    // El cambio de estado y el registro de auditoría se confirman juntos para
-    // que no quede uno sin el otro si algo falla.
+    const departedAt = new Date();
+    // El cambio de estado y el registro de auditoría se confirman juntos.
+    // Dentro de la transacción re-fetcheamos con pessimistic_write para
+    // serializar llamadas concurrentes: el segundo request verá
+    // status='in_progress' tras adquirir el lock y lanzará ConflictException.
     await this.dataSource.transaction(async (manager) => {
-      await manager.save(exploration);
+      const locked = await manager.findOne(Exploration, {
+        where: { id },
+        lock: { mode: "pessimistic_write" },
+      });
+      if (!locked || locked.status !== "scheduled") {
+        throw new ConflictException(
+          `Solo se pueden iniciar exploraciones programadas. Estado actual: ${locked?.status ?? "not found"}`,
+        );
+      }
+      locked.status = "in_progress";
+      locked.departure_date = departedAt;
+      await manager.save(locked);
       await manager.save(
         manager.create(AuditLog, {
           user_id: userId,
@@ -622,12 +633,16 @@ export class ExplorationsService {
           entity_type: "exploration",
           entity_id: Number(exploration.id),
           new_value: {
-            departed_at: new Date(),
+            departed_at: departedAt,
             expedition_ai_analysis: expeditionAiAnalysis,
           },
           date: new Date(),
         }),
       );
+      // Propagar al objeto externo para que invalidateCampDashboardCache
+      // y findById vean el estado actualizado.
+      exploration.status = locked.status;
+      exploration.departure_date = locked.departure_date;
     });
 
     await this.invalidateCampDashboardCache(exploration.camp_id);

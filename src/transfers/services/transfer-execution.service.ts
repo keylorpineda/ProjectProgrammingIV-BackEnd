@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import type { EntityManager } from "typeorm";
 import { Repository, DataSource } from "typeorm";
 import { IntercampRequest } from "../entities/intercamp-request.entity";
 import { RequestResourceDetail } from "../entities/request-resource-detail.entity";
@@ -55,6 +56,7 @@ export class TransferExecutionService {
   async departTransfer(
     request: IntercampRequest,
     userId: number,
+    outerManager?: EntityManager,
   ): Promise<void> {
     if (request.status !== "approved") {
       throw new BadRequestException(
@@ -62,14 +64,11 @@ export class TransferExecutionService {
       );
     }
 
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
+    // Lógica de negocio extraída para poder reusar con o sin queryRunner externo.
+    const doWork = async (manager: EntityManager) => {
       if (request.resourceDetails?.length > 0) {
         for (const rd of request.resourceDetails) {
-          const originInv = await queryRunner.manager.findOne(Inventory, {
+          const originInv = await manager.findOne(Inventory, {
             where: {
               camp_id: request.camp_origin_id,
               resource_id: Number(rd.resource_id),
@@ -92,9 +91,9 @@ export class TransferExecutionService {
             Number(originInv.current_quantity) <
             Number(originInv.minimum_stock_required);
           originInv.last_update = new Date();
-          await queryRunner.manager.save(Inventory, originInv);
+          await manager.save(Inventory, originInv);
 
-          await queryRunner.manager.save(InventoryMovement, {
+          await manager.save(InventoryMovement, {
             camp_id: request.camp_origin_id,
             resource_id: Number(rd.resource_id),
             quantity: rd.requested_quantity,
@@ -110,23 +109,23 @@ export class TransferExecutionService {
       if (request.personDetails?.length > 0) {
         personsCount = request.personDetails.length;
         for (const pd of request.personDetails) {
-          const person = await queryRunner.manager.findOne(Person, {
+          const person = await manager.findOne(Person, {
             where: { id: pd.person_id },
           });
           if (person) {
             person.status = PersonStatus.TRAVELING;
-            await queryRunner.manager.save(Person, person);
+            await manager.save(Person, person);
           }
           pd.transfer_status = "in_transit";
-          await queryRunner.manager.save(RequestPersonDetail, pd);
+          await manager.save(RequestPersonDetail, pd);
         }
       }
 
       if (personsCount > 0 && request.travel_days && request.travel_days > 0) {
-        const foodRes = await queryRunner.manager.findOne(Resource, {
+        const foodRes = await manager.findOne(Resource, {
           where: { category: "food" },
         });
-        const waterRes = await queryRunner.manager.findOne(Resource, {
+        const waterRes = await manager.findOne(Resource, {
           where: { category: "water" },
         });
 
@@ -135,7 +134,7 @@ export class TransferExecutionService {
             personsCount *
             request.travel_days *
             DAILY_CONSUMPTION.FOOD_PER_PERSON;
-          const invFood = await queryRunner.manager.findOne(Inventory, {
+          const invFood = await manager.findOne(Inventory, {
             where: {
               camp_id: request.camp_origin_id,
               resource_id: Number(foodRes.id),
@@ -149,8 +148,8 @@ export class TransferExecutionService {
           }
           invFood.current_quantity =
             Number(invFood.current_quantity) - neededFood;
-          await queryRunner.manager.save(Inventory, invFood);
-          await queryRunner.manager.save(InventoryMovement, {
+          await manager.save(Inventory, invFood);
+          await manager.save(InventoryMovement, {
             camp_id: request.camp_origin_id,
             resource_id: Number(foodRes.id),
             quantity: neededFood,
@@ -166,7 +165,7 @@ export class TransferExecutionService {
             personsCount *
             request.travel_days *
             DAILY_CONSUMPTION.WATER_PER_PERSON;
-          const invWater = await queryRunner.manager.findOne(Inventory, {
+          const invWater = await manager.findOne(Inventory, {
             where: {
               camp_id: request.camp_origin_id,
               resource_id: Number(waterRes.id),
@@ -180,8 +179,8 @@ export class TransferExecutionService {
           }
           invWater.current_quantity =
             Number(invWater.current_quantity) - neededWater;
-          await queryRunner.manager.save(Inventory, invWater);
-          await queryRunner.manager.save(InventoryMovement, {
+          await manager.save(Inventory, invWater);
+          await manager.save(InventoryMovement, {
             camp_id: request.camp_origin_id,
             resource_id: Number(waterRes.id),
             quantity: neededWater,
@@ -195,9 +194,9 @@ export class TransferExecutionService {
 
       request.status = "in_transit";
       request.departure_date = new Date();
-      await queryRunner.manager.save(IntercampRequest, request);
+      await manager.save(IntercampRequest, request);
 
-      await queryRunner.manager.save(AuditLog, {
+      await manager.save(AuditLog, {
         user_id: userId,
         camp_id: request.camp_origin_id,
         action: "intercamp_transfer_departed",
@@ -205,15 +204,26 @@ export class TransferExecutionService {
         entity_id: Number(request.id),
         date: new Date(),
       });
+    };
 
-      await queryRunner.commitTransaction();
-
-      await this.invalidateCampDashboardCache(request.camp_origin_id);
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
+    if (outerManager) {
+      // El llamador gestiona la transacción; tampoco invalidamos caché aquí
+      // (lo hará el llamador después del commit externo).
+      await doWork(outerManager);
+    } else {
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+      try {
+        await doWork(queryRunner.manager);
+        await queryRunner.commitTransaction();
+        await this.invalidateCampDashboardCache(request.camp_origin_id);
+      } catch (error) {
+        await queryRunner.rollbackTransaction();
+        throw error;
+      } finally {
+        await queryRunner.release();
+      }
     }
   }
 

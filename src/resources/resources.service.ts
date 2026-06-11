@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { EntityManager } from "typeorm";
-import { Repository, IsNull } from "typeorm";
+import { Repository, IsNull, DataSource } from "typeorm";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { Inject } from "@nestjs/common";
@@ -74,6 +74,7 @@ export class ResourcesService implements OnModuleInit {
     @InjectQueue("daily-tasks") private readonly dailyTasksQueue: Queue,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly dataSource: DataSource,
   ) {}
 
   private async invalidateCampDashboardCache(campId: number): Promise<void> {
@@ -306,82 +307,92 @@ export class ResourcesService implements OnModuleInit {
     }
 
     const resource = await this.findResourceById(dto.resource_id);
-
-    let inventory = await this.inventoryRepo.findOne({
-      where: { camp_id: dto.camp_id, resource_id: dto.resource_id },
-    });
-
-    // Capture alert state before the movement (for LOGISTICA_PRECISA badge)
-    const wasAlertActive = inventory?.alert_active ?? false;
-    const wasQuantityAboveZero = inventory
-      ? Number(inventory.current_quantity) > 0
-      : false;
-
-    if (!inventory) {
-      inventory = this.inventoryRepo.create({
-        camp_id: dto.camp_id,
-        resource_id: dto.resource_id,
-        current_quantity: 0,
-        minimum_stock_required: 0,
-      });
-    }
-
     const isIncome = INCOME_TYPES.includes(dto.type);
 
-    if (
-      !isIncome &&
-      Number(inventory.current_quantity) < Number(dto.quantity)
-    ) {
-      throw new BadRequestException(
-        `Stock insuficiente para "${resource.name}": disponible ${inventory.current_quantity}, requerido ${dto.quantity}`,
-      );
-    }
+    // Ejecutamos lectura + escritura en una transacción con pessimistic_write
+    // para evitar que dos requests concurrentes ambos pasen el stock-check y
+    // dejen el inventario en negativo (lost update sin lock).
+    const { saved, inventory, wasAlertActive, wasQuantityAboveZero } =
+      await this.dataSource.transaction(async (manager) => {
+        let inv = await manager.findOne(Inventory, {
+          where: { camp_id: dto.camp_id, resource_id: dto.resource_id },
+          lock: { mode: "pessimistic_write" },
+        });
 
-    if (isIncome) {
-      inventory.current_quantity =
-        Number(inventory.current_quantity) + Number(dto.quantity);
-    } else {
-      inventory.current_quantity =
-        Number(inventory.current_quantity) - Number(dto.quantity);
-    }
+        if (!inv) {
+          await manager.upsert(
+            Inventory,
+            {
+              camp_id: dto.camp_id,
+              resource_id: dto.resource_id,
+              current_quantity: 0,
+              minimum_stock_required: 0,
+            },
+            {
+              conflictPaths: ["camp_id", "resource_id"],
+              skipUpdateIfNoValuesChanged: true,
+            },
+          );
+          inv = await manager.findOne(Inventory, {
+            where: { camp_id: dto.camp_id, resource_id: dto.resource_id },
+            lock: { mode: "pessimistic_write" },
+          });
+          if (!inv) {
+            throw new BadRequestException(
+              `No se pudo crear el registro de inventario para camp_id=${dto.camp_id} resource_id=${dto.resource_id}`,
+            );
+          }
+        }
 
-    inventory.alert_active =
-      Number(inventory.current_quantity) <
-      Number(inventory.minimum_stock_required);
-    inventory.last_update = new Date();
+        const wasAlertActive = inv.alert_active ?? false;
+        const wasQuantityAboveZero = Number(inv.current_quantity) > 0;
 
-    await this.inventoryRepo.save(inventory);
+        if (!isIncome && Number(inv.current_quantity) < Number(dto.quantity)) {
+          throw new BadRequestException(
+            `Stock insuficiente para "${resource.name}": disponible ${inv.current_quantity}, requerido ${dto.quantity}`,
+          );
+        }
 
-    const movement = this.movementRepo.create({
-      camp_id: dto.camp_id,
-      resource_id: dto.resource_id,
-      quantity: dto.quantity,
-      type: dto.type,
-      description: dto.description,
-      date: new Date(),
-      user_id: userId,
-    });
+        inv.current_quantity = isIncome
+          ? Number(inv.current_quantity) + Number(dto.quantity)
+          : Number(inv.current_quantity) - Number(dto.quantity);
+        inv.alert_active =
+          Number(inv.current_quantity) < Number(inv.minimum_stock_required);
+        inv.last_update = new Date();
+        await manager.save(Inventory, inv);
 
-    const saved = await this.movementRepo.save(movement);
-
-    await this.auditRepo.save(
-      this.auditRepo.create({
-        user_id: userId,
-        camp_id: dto.camp_id,
-        action: `inventory_movement_${dto.type}`,
-        entity_type: "inventory_movement",
-        entity_id: Number(saved.id),
-        new_value: {
+        const mvt = manager.create(InventoryMovement, {
+          camp_id: dto.camp_id,
           resource_id: dto.resource_id,
           quantity: dto.quantity,
           type: dto.type,
-          resulting_quantity: inventory.current_quantity,
-        },
-        date: new Date(),
-      }),
-    );
+          description: dto.description,
+          date: new Date(),
+          user_id: userId,
+        });
+        const saved = await manager.save(mvt);
 
-    // Gamification â€” wrapped in try/catch so they never break the main flow
+        await manager.save(
+          manager.create(AuditLog, {
+            user_id: userId,
+            camp_id: dto.camp_id,
+            action: `inventory_movement_${dto.type}`,
+            entity_type: "inventory_movement",
+            entity_id: Number(saved.id),
+            new_value: {
+              resource_id: dto.resource_id,
+              quantity: dto.quantity,
+              type: dto.type,
+              resulting_quantity: inv.current_quantity,
+            },
+            date: new Date(),
+          }),
+        );
+
+        return { saved, inventory: inv, wasAlertActive, wasQuantityAboveZero };
+      });
+
+    // Gamification — fuera de la transacción para no mantener locks abiertos
     if (userId) {
       const xpGain = isIncome ? 15 : 5;
       this.grantXp(userId, xpGain).catch((e) =>
@@ -389,7 +400,6 @@ export class ResourcesService implements OnModuleInit {
       );
 
       if (dto.type === "income") {
-        // PRIMER_SUMINISTRO â€” check after saving; count === 1 means this is the first
         this.movementRepo
           .count({ where: { user_id: userId, type: "income" } })
           .then((count) => {
@@ -402,8 +412,6 @@ export class ResourcesService implements OnModuleInit {
           .catch(() => {});
       }
 
-      // LOGISTICA_PRECISA â€” replenished a resource that had an active alert
-      // before it hit zero
       if (
         isIncome &&
         wasAlertActive &&
@@ -413,15 +421,14 @@ export class ResourcesService implements OnModuleInit {
         this.grantBadgeOnce(
           userId,
           "LOGISTICA_PRECISA",
-          "Reabasteciste un recurso crÃ­tico antes de que se agotara por completo.",
+          "Reabasteciste un recurso crítico antes de que se agotara por completo.",
         ).catch((e) =>
           this.logger.warn(`grantBadgeOnce failed: ${e?.message}`),
         );
       }
     }
 
-    // Re-fetch movement + inventory with their relations so the response
-    // includes user/camp/resource (see docs/ALIGNMENT_SPEC.md P2-6).
+    // Re-fetch con relaciones para que la respuesta incluya user/camp/resource.
     const movementWithRelations = await this.movementRepo.findOne({
       where: { id: saved.id },
       relations: ["resource", "user", "camp"],
@@ -433,7 +440,6 @@ export class ResourcesService implements OnModuleInit {
 
     await this.invalidateCampDashboardCache(dto.camp_id);
 
-    // Emit real-time alert update when alert state changes
     if (wasAlertActive !== inventory.alert_active) {
       this.emitCampAlerts(dto.camp_id).catch(() => {});
     }
@@ -472,12 +478,32 @@ export class ResourcesService implements OnModuleInit {
     });
 
     if (!inventory) {
-      inventory = manager.create(Inventory, {
-        camp_id: dto.camp_id,
-        resource_id: dto.resource_id,
-        current_quantity: 0,
-        minimum_stock_required: 0,
+      // La fila no existe: garantizamos que se cree exactamente una vez usando
+      // INSERT ... ON CONFLICT DO NOTHING. Si dos transacciones concurrentes
+      // llegan aquí simultáneamente, solo una inserta y la otra obtiene null;
+      // ambas luego hacen SELECT FOR UPDATE sobre la fila ya existente.
+      await manager.upsert(
+        Inventory,
+        {
+          camp_id: dto.camp_id,
+          resource_id: dto.resource_id,
+          current_quantity: 0,
+          minimum_stock_required: 0,
+        },
+        {
+          conflictPaths: ["camp_id", "resource_id"],
+          skipUpdateIfNoValuesChanged: true,
+        },
+      );
+      inventory = await manager.findOne(Inventory, {
+        where: { camp_id: dto.camp_id, resource_id: dto.resource_id },
+        lock: { mode: "pessimistic_write" },
       });
+      if (!inventory) {
+        throw new BadRequestException(
+          `No se pudo crear el registro de inventario para camp_id=${dto.camp_id} resource_id=${dto.resource_id}`,
+        );
+      }
     }
 
     const isIncome = INCOME_TYPES.includes(dto.type);
@@ -529,7 +555,14 @@ export class ResourcesService implements OnModuleInit {
       }),
     );
 
-    return { movement: saved, inventory };
+    // Re-fetch with relations so callers get the same shape as the
+    // non-transactional path (movement.resource, .user, .camp populated).
+    const movementWithRelations = await manager.findOne(InventoryMovement, {
+      where: { id: saved.id },
+      relations: ["resource", "user", "camp"],
+    });
+
+    return { movement: movementWithRelations ?? saved, inventory };
   }
 
   async executeDailyProcess(campId: number): Promise<{
@@ -563,6 +596,17 @@ export class ResourcesService implements OnModuleInit {
       .andWhere("person.status = :st", { st: PersonStatus.ACTIVE })
       .getMany();
 
+    // Fase 1 (lectura): calcular cantidades de produccion y consumo fuera de la
+    // transaccion para no mantener locks mas tiempo del necesario.
+    interface DailyItem {
+      resourceId: number;
+      qty: number;
+      type: string;
+      description: string;
+      key: string;
+    }
+    const productionItems: DailyItem[] = [];
+
     for (const person of activeWorkers) {
       if (!person.profession) continue;
 
@@ -593,27 +637,23 @@ export class ResourcesService implements OnModuleInit {
         : (profConfig?.daily_water_production ?? 0);
 
       if (foodProd > 0) {
-        await this.createMovement({
-          camp_id: campId,
-          resource_id: Number(foodResource.id),
-          quantity: foodProd,
+        productionItems.push({
+          resourceId: Number(foodResource.id),
+          qty: foodProd,
           type: "daily_production",
           description: `Produccion diaria: ${person.first_name} ${person.last_name} (${person.profession.name})`,
+          key: "food",
         });
-        production["food"] = (production["food"] || 0) + foodProd;
-        movementCount++;
       }
 
       if (waterProd > 0) {
-        await this.createMovement({
-          camp_id: campId,
-          resource_id: Number(waterResource.id),
-          quantity: waterProd,
+        productionItems.push({
+          resourceId: Number(waterResource.id),
+          qty: waterProd,
           type: "daily_production",
           description: `Produccion de agua: ${person.first_name} ${person.last_name} (${person.profession.name})`,
+          key: "water",
         });
-        production["water"] = (production["water"] || 0) + waterProd;
-        movementCount++;
       }
     }
 
@@ -656,29 +696,61 @@ export class ResourcesService implements OnModuleInit {
     const totalFoodCons = personsInCamp * foodRation;
     const totalWaterCons = personsInCamp * waterRation;
 
+    const consumptionItems: DailyItem[] = [];
     if (totalFoodCons > 0) {
-      await this.createMovement({
-        camp_id: campId,
-        resource_id: Number(foodResource.id),
-        quantity: totalFoodCons,
+      consumptionItems.push({
+        resourceId: Number(foodResource.id),
+        qty: totalFoodCons,
         type: "daily_consumption",
         description: `Consumo diario de comida: ${personsInCamp} personas x ${foodRation} unidades`,
+        key: "food",
       });
-      consumption["food"] = totalFoodCons;
-      movementCount++;
     }
-
     if (totalWaterCons > 0) {
-      await this.createMovement({
-        camp_id: campId,
-        resource_id: Number(waterResource.id),
-        quantity: totalWaterCons,
+      consumptionItems.push({
+        resourceId: Number(waterResource.id),
+        qty: totalWaterCons,
         type: "daily_consumption",
         description: `Consumo diario de agua: ${personsInCamp} personas x ${waterRation} litros`,
+        key: "water",
       });
-      consumption["water"] = totalWaterCons;
-      movementCount++;
     }
+
+    // Fase 2 (escritura): todos los movimientos del dia en UNA transaccion.
+    // Si el consumo lanza BadRequestException (stock insuficiente), se hace
+    // rollback de la produccion del mismo ciclo — sin inventario inflado.
+    await this.dataSource.transaction(async (manager) => {
+      for (const item of productionItems) {
+        await this.createMovement(
+          {
+            camp_id: campId,
+            resource_id: item.resourceId,
+            quantity: item.qty,
+            type: item.type,
+            description: item.description,
+          },
+          undefined,
+          manager,
+        );
+        production[item.key] = (production[item.key] || 0) + item.qty;
+        movementCount++;
+      }
+      for (const item of consumptionItems) {
+        await this.createMovement(
+          {
+            camp_id: campId,
+            resource_id: item.resourceId,
+            quantity: item.qty,
+            type: item.type,
+            description: item.description,
+          },
+          undefined,
+          manager,
+        );
+        consumption[item.key] = item.qty;
+        movementCount++;
+      }
+    });
 
     await this.refreshAlertFlags(campId);
 
@@ -778,7 +850,7 @@ export class ResourcesService implements OnModuleInit {
       .execute();
   }
 
-  // â”€â”€â”€ Gamification helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€â"€ Gamification helpers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
   private async emitCampAlerts(campId: number): Promise<void> {
     try {
@@ -934,7 +1006,7 @@ export class ResourcesService implements OnModuleInit {
     }
   }
 
-  // â”€â”€â”€ Production ranking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€â"€ Production ranking â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
   async getProductionRanking(campId: number): Promise<
     {

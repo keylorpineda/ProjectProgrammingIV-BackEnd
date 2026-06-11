@@ -1,11 +1,13 @@
 import type { TestingModule } from "@nestjs/testing";
 import { Test } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
+import { DataSource } from "typeorm";
 import { TransfersService } from "./transfers.service";
 import { UserAccount } from "../users/entities/user-account.entity";
 import { RequestsService } from "./services/requests.service";
 import { ApprovalsService } from "./services/approvals.service";
 import { TransferExecutionService } from "./services/transfer-execution.service";
+import { REDIS_CLIENT } from "../redis/redis.constants";
 
 describe("TransfersService", () => {
   let service: TransfersService;
@@ -13,6 +15,7 @@ describe("TransfersService", () => {
   let requestsService: jest.Mocked<RequestsService>;
   let approvalsService: jest.Mocked<ApprovalsService>;
   let executionService: jest.Mocked<TransferExecutionService>;
+  let dataSourceMock: { transaction: jest.Mock };
 
   const mockRequest = {
     id: 1,
@@ -23,6 +26,11 @@ describe("TransfersService", () => {
   } as any;
 
   beforeEach(async () => {
+    // Default: transaction pass-through — calls the callback with a dummy manager.
+    dataSourceMock = {
+      transaction: jest.fn(async (cb: any) => cb({})),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TransfersService,
@@ -37,6 +45,7 @@ describe("TransfersService", () => {
             findRequestById: jest.fn(),
             findRequestsByCamp: jest.fn(),
             findPendingRequestsByCamp: jest.fn(),
+            findActiveTransfersForMap: jest.fn(),
             cancelRequest: jest.fn(),
             getTransferStatistics: jest.fn(),
           },
@@ -53,6 +62,11 @@ describe("TransfersService", () => {
             departTransfer: jest.fn(),
             arriveTransfer: jest.fn(),
           },
+        },
+        { provide: DataSource, useValue: dataSourceMock },
+        {
+          provide: REDIS_CLIENT,
+          useValue: { keys: jest.fn().mockResolvedValue([]), del: jest.fn() },
         },
       ],
     }).compile();
@@ -132,16 +146,18 @@ describe("TransfersService", () => {
       status: "approved",
     } as any);
 
+    // approveOrReject is called with an outerManager (4th arg) from the shared tx
     expect(approvalsService.approveOrReject).toHaveBeenCalledWith(
       mockRequest,
       9,
-      {
-        status: "approved",
-      },
+      { status: "approved" },
+      expect.anything(),
     );
+    // departTransfer is also called with the same outerManager (3rd arg)
     expect(executionService.departTransfer).toHaveBeenCalledWith(
       mockRequest,
       9,
+      expect.anything(),
     );
     expect(result.status).toBe("completed");
   });

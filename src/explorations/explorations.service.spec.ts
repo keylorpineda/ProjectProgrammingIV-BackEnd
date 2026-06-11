@@ -103,6 +103,13 @@ describe("ExplorationsService", () => {
     };
     departManagerSave = jest.fn(asyncPassThrough);
     const departManager = {
+      // findOne is called inside the transaction to re-fetch with pessimistic_write.
+      // By default return a scheduled exploration; individual tests can override.
+      findOne: jest.fn().mockResolvedValue({
+        id: 0,
+        status: "scheduled",
+        departure_date: null,
+      }),
       create: jest.fn((_Entity: any, dto: any) => dto),
       save: departManagerSave,
     };
@@ -865,8 +872,26 @@ describe("ExplorationsService", () => {
         ],
       } as unknown as Exploration;
 
+      // The locked row re-fetched inside the transaction
+      const lockedRow = {
+        id: 80,
+        camp_id: 3,
+        status: "scheduled",
+        departure_date: null,
+      };
       explorationRepo.findOne.mockResolvedValue(exploration);
       explorationRepo.save.mockResolvedValue(exploration);
+      // Override the dataSource.transaction for this test so txManager.findOne
+      // returns the locked row (with status "scheduled") as it would in production.
+      dataSource.transaction = jest.fn(async (cb: any) => {
+        const txManager = {
+          findOne: jest.fn().mockResolvedValue(lockedRow),
+          create: jest.fn((_Entity: any, dto: any) => dto),
+          save: departManagerSave,
+        };
+        return cb(txManager);
+      });
+
       auditRepo.create.mockImplementation((value) => value);
       auditRepo.save.mockResolvedValue({});
       jest
@@ -877,7 +902,13 @@ describe("ExplorationsService", () => {
 
       expect(exploration.status).toBe("in_progress");
       expect(exploration.departure_date).toBeInstanceOf(Date);
-      expect(departManagerSave).toHaveBeenCalledWith(exploration);
+      // departManagerSave is called with the locked row (after mutations)
+      expect(departManagerSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "in_progress",
+          departure_date: expect.any(Date),
+        }),
+      );
       expect(pythonAiService.analyzeExpedition).toHaveBeenCalledWith(
         expect.objectContaining({
           explorers: [

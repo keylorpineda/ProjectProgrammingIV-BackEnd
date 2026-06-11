@@ -201,23 +201,44 @@ export class AdmissionReviewService {
       admission.token_expires_at = expiresAt;
     }
 
+    // Guardamos los valores originales del objeto para restaurarlos si la
+    // transacción hace rollback. TypeORM no deshace las mutaciones en memoria.
+    const snapshot = {
+      person_id: admission.person_id,
+      status: admission.status,
+      final_human_decision: admission.final_human_decision,
+      reviewed_by_user_id: admission.reviewed_by_user_id,
+      admin_notes: admission.admin_notes,
+      review_date: admission.review_date,
+      is_auto_decision: admission.is_auto_decision,
+      auto_decision_reason: admission.auto_decision_reason,
+    };
+
     // La persona y la admisión se guardan en una sola transacción para evitar
     // que quede una persona "huérfana" si el guardado de la admisión falla.
-    const savedPerson = await this.dataSource.transaction(async (manager) => {
-      const sp = await manager.save(person);
+    let savedPerson: Person;
+    try {
+      savedPerson = await this.dataSource.transaction(async (manager) => {
+        const sp = await manager.save(person);
 
-      admission.person_id = sp.id;
-      admission.status = newStatus;
-      admission.final_human_decision = newStatus;
-      admission.reviewed_by_user_id = opts.reviewedByUserId;
-      admission.admin_notes = opts.adminNotes || "";
-      admission.review_date = new Date();
-      admission.is_auto_decision = opts.isAuto;
-      admission.auto_decision_reason = opts.autoReason;
+        admission.person_id = sp.id;
+        admission.status = newStatus;
+        admission.final_human_decision = newStatus;
+        admission.reviewed_by_user_id = opts.reviewedByUserId;
+        admission.admin_notes = opts.adminNotes || "";
+        admission.review_date = new Date();
+        admission.is_auto_decision = opts.isAuto;
+        admission.auto_decision_reason = opts.autoReason;
 
-      await manager.save(admission);
-      return sp;
-    });
+        await manager.save(admission);
+        return sp;
+      });
+    } catch (err) {
+      // Restaurar el objeto en memoria al estado previo para que el caller
+      // no reciba una admisión con datos no persistidos.
+      Object.assign(admission, snapshot);
+      throw err;
+    }
 
     if (candidateEmail) {
       this.mailService
@@ -250,15 +271,32 @@ export class AdmissionReviewService {
     const candidateData: any = admission.candidate_data;
     const newStatus = opts.isAuto ? "AUTO_REJECTED" : "REJECTED";
 
-    admission.status = newStatus;
-    admission.final_human_decision = newStatus;
-    admission.reviewed_by_user_id = opts.reviewedByUserId;
-    admission.admin_notes = opts.adminNotes || "";
-    admission.review_date = new Date();
-    admission.is_auto_decision = opts.isAuto;
-    admission.auto_decision_reason = opts.autoReason;
+    const snapshot = {
+      status: admission.status,
+      final_human_decision: admission.final_human_decision,
+      reviewed_by_user_id: admission.reviewed_by_user_id,
+      admin_notes: admission.admin_notes,
+      review_date: admission.review_date,
+      is_auto_decision: admission.is_auto_decision,
+      auto_decision_reason: admission.auto_decision_reason,
+    };
 
-    await this.admissionRepo.save(admission);
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        admission.status = newStatus;
+        admission.final_human_decision = newStatus;
+        admission.reviewed_by_user_id = opts.reviewedByUserId;
+        admission.admin_notes = opts.adminNotes || "";
+        admission.review_date = new Date();
+        admission.is_auto_decision = opts.isAuto;
+        admission.auto_decision_reason = opts.autoReason;
+
+        await manager.save(admission);
+      });
+    } catch (err) {
+      Object.assign(admission, snapshot);
+      throw err;
+    }
 
     const candidateEmail = candidateData?.contact_email;
     if (candidateEmail) {

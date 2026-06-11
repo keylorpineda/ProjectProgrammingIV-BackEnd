@@ -33,8 +33,7 @@ describe("SessionActivityInterceptor", () => {
           provide: REDIS_CLIENT,
           useValue: {
             expire: jest.fn().mockResolvedValue(1),
-            // get returns null → no recent DB update → DB write proceeds
-            get: jest.fn().mockResolvedValue(null),
+            // SET NX EX returns 'OK' → this request won the race → DB write proceeds
             set: jest.fn().mockResolvedValue("OK"),
             setex: jest.fn().mockResolvedValue("OK"),
             del: jest.fn().mockResolvedValue(1),
