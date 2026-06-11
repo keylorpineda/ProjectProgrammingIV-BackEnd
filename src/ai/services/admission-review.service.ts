@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Repository, DataSource } from "typeorm";
 import { AiAdmission } from "../entities/ai-admission.entity";
 import { Person } from "../../users/entities/person.entity";
 import { Profession } from "../../users/entities/profession.entity";
@@ -31,6 +31,7 @@ export class AdmissionReviewService {
     @InjectRepository(UserAccount)
     private readonly userAccountRepo: Repository<UserAccount>,
     private readonly mailService: MailService,
+    private readonly dataSource: DataSource,
   ) {}
 
   // ── Manual review (human admin) ──────────────────────────────────────────
@@ -186,22 +187,11 @@ export class AdmissionReviewService {
       previous_skills: JSON.stringify(candidateData.skills),
     });
 
-    const savedPerson = await this.personRepo.save(person);
-
     if (opts.assignToCampId) {
       admission.camp_id = opts.assignToCampId;
     }
 
     const newStatus = opts.isAuto ? "AUTO_ACCEPTED" : "ACCEPTED";
-
-    admission.person_id = savedPerson.id;
-    admission.status = newStatus;
-    admission.final_human_decision = newStatus;
-    admission.reviewed_by_user_id = opts.reviewedByUserId;
-    admission.admin_notes = opts.adminNotes || "";
-    admission.review_date = new Date();
-    admission.is_auto_decision = opts.isAuto;
-    admission.auto_decision_reason = opts.autoReason;
 
     const candidateEmail = candidateData.contact_email;
     if (candidateEmail) {
@@ -211,7 +201,23 @@ export class AdmissionReviewService {
       admission.token_expires_at = expiresAt;
     }
 
-    await this.admissionRepo.save(admission);
+    // La persona y la admisión se guardan en una sola transacción para evitar
+    // que quede una persona "huérfana" si el guardado de la admisión falla.
+    const savedPerson = await this.dataSource.transaction(async (manager) => {
+      const sp = await manager.save(person);
+
+      admission.person_id = sp.id;
+      admission.status = newStatus;
+      admission.final_human_decision = newStatus;
+      admission.reviewed_by_user_id = opts.reviewedByUserId;
+      admission.admin_notes = opts.adminNotes || "";
+      admission.review_date = new Date();
+      admission.is_auto_decision = opts.isAuto;
+      admission.auto_decision_reason = opts.autoReason;
+
+      await manager.save(admission);
+      return sp;
+    });
 
     if (candidateEmail) {
       this.mailService

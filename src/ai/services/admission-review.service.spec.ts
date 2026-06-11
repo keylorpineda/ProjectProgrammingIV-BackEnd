@@ -9,6 +9,16 @@ import { Person } from "../../users/entities/person.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
 import { PersonStatus } from "../../users/constants/professions.constants";
 import { MailService } from "../../mail/mail.service";
+import { DataSource } from "typeorm";
+
+// DataSource mock whose transaction() runs the callback with a manager that
+// behaves like the repositories (save returns the entity with an id).
+const createDataSourceMock = (
+  managerSave: jest.Mock = jest.fn(async (entity) => ({ id: 1, ...entity })),
+) =>
+  ({
+    transaction: jest.fn(async (cb: any) => cb({ save: managerSave })),
+  }) as unknown as DataSource;
 
 describe("AdmissionReviewService", () => {
   let service: AdmissionReviewService;
@@ -60,6 +70,7 @@ describe("AdmissionReviewService", () => {
             sendAccountCredentials: jest.fn().mockResolvedValue(true),
           },
         },
+        { provide: DataSource, useValue: createDataSourceMock() },
       ],
     }).compile();
 
@@ -202,8 +213,10 @@ describe("AdmissionReviewService extra coverage", () => {
     create: jest.Mock;
     save: jest.Mock;
   };
+  let managerSave: jest.Mock;
 
   beforeEach(async () => {
+    managerSave = jest.fn(async (entity) => ({ id: 99, ...entity }));
     admissionRepo = {
       findOne: jest.fn(),
       save: jest.fn(async (entity) => entity),
@@ -232,6 +245,7 @@ describe("AdmissionReviewService extra coverage", () => {
             sendAccountCredentials: jest.fn().mockResolvedValue(true),
           },
         },
+        { provide: DataSource, useValue: createDataSourceMock(managerSave) },
       ],
     }).compile();
 
@@ -321,7 +335,7 @@ describe("AdmissionReviewService extra coverage", () => {
         first_name: "Jane",
       }),
     );
-    expect(admissionRepo.save).toHaveBeenCalledWith(
+    expect(managerSave).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 10,
         person_id: 99,

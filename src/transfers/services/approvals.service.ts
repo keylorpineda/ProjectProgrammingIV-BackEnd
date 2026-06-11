@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Repository, DataSource } from "typeorm";
 import { Approval } from "../entities/approval.entity";
 import { IntercampRequest } from "../entities/intercamp-request.entity";
 import { UserAccount } from "../../users/entities/user-account.entity";
@@ -26,6 +26,7 @@ export class ApprovalsService {
     private readonly userRepo: Repository<UserAccount>,
     @InjectRepository(AuditLog)
     private readonly auditRepo: Repository<AuditLog>,
+    private readonly dataSource: DataSource,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
@@ -85,72 +86,74 @@ export class ApprovalsService {
             a.user.camp_id === request.camp_origin_id)),
     );
 
-    const approval = this.approvalRepo.create({
-      user_id: userId,
-      entity_type: "intercamp_request",
-      entity_id: Number(request.id),
-      approval_date: new Date(),
-      status: dto.status,
-    });
-
-    await this.approvalRepo.save(approval);
-
-    if (dto.status === "rejected") {
-      request.status = "rejected";
-      await this.requestRepo.save(request);
-
-      await this.auditRepo.save(
-        this.auditRepo.create({
+    // La inserción del voto (approval), el cambio de estado de la solicitud y el
+    // registro de auditoría se confirman juntos en una transacción. Antes eran
+    // escrituras sueltas: si una fallaba a mitad, la solicitud quedaba en un
+    // estado inconsistente (p.ej. approval guardado pero estado sin actualizar).
+    const { approval, bothApproved, campsTouched } =
+      await this.dataSource.transaction(async (manager) => {
+        const created = manager.create(Approval, {
           user_id: userId,
-          camp_id: userCampId,
-          action: "intercamp_request_rejected",
           entity_type: "intercamp_request",
           entity_id: Number(request.id),
-          new_value: { notes: dto.notes },
-          date: new Date(),
-        }),
-      );
+          approval_date: new Date(),
+          status: dto.status,
+        });
+        await manager.save(created);
 
+        if (dto.status === "rejected") {
+          request.status = "rejected";
+          await manager.save(request);
+          await manager.save(
+            manager.create(AuditLog, {
+              user_id: userId,
+              camp_id: userCampId,
+              action: "intercamp_request_rejected",
+              entity_type: "intercamp_request",
+              entity_id: Number(request.id),
+              new_value: { notes: dto.notes },
+              date: new Date(),
+            }),
+          );
+          return { approval: created, bothApproved: false, campsTouched: true };
+        }
+
+        if (dto.status === "approved" && otherCampApprovalExists) {
+          request.status = "approved";
+          await manager.save(request);
+          await manager.save(
+            manager.create(AuditLog, {
+              user_id: userId,
+              camp_id: userCampId,
+              action: "intercamp_request_approved_dual",
+              entity_type: "intercamp_request",
+              entity_id: Number(request.id),
+              new_value: { both_camps_approved: true },
+              date: new Date(),
+            }),
+          );
+          return { approval: created, bothApproved: true, campsTouched: true };
+        }
+
+        await manager.save(
+          manager.create(AuditLog, {
+            user_id: userId,
+            camp_id: userCampId,
+            action: "intercamp_request_approved_partial",
+            entity_type: "intercamp_request",
+            entity_id: Number(request.id),
+            new_value: { waiting_other_camp: true },
+            date: new Date(),
+          }),
+        );
+        return { approval: created, bothApproved: false, campsTouched: false };
+      });
+
+    if (campsTouched) {
       await this.invalidateCampDashboardCache(request.camp_origin_id);
       await this.invalidateCampDashboardCache(request.camp_destination_id);
-
-      return { approved: approval, bothApproved: false };
     }
 
-    if (dto.status === "approved" && otherCampApprovalExists) {
-      request.status = "approved";
-      await this.requestRepo.save(request);
-
-      await this.auditRepo.save(
-        this.auditRepo.create({
-          user_id: userId,
-          camp_id: userCampId,
-          action: "intercamp_request_approved_dual",
-          entity_type: "intercamp_request",
-          entity_id: Number(request.id),
-          new_value: { both_camps_approved: true },
-          date: new Date(),
-        }),
-      );
-
-      await this.invalidateCampDashboardCache(request.camp_origin_id);
-      await this.invalidateCampDashboardCache(request.camp_destination_id);
-
-      return { approved: approval, bothApproved: true };
-    } else {
-      await this.auditRepo.save(
-        this.auditRepo.create({
-          user_id: userId,
-          camp_id: userCampId,
-          action: "intercamp_request_approved_partial",
-          entity_type: "intercamp_request",
-          entity_id: Number(request.id),
-          new_value: { waiting_other_camp: true },
-          date: new Date(),
-        }),
-      );
-
-      return { approved: approval, bothApproved: false };
-    }
+    return { approved: approval, bothApproved };
   }
 }
