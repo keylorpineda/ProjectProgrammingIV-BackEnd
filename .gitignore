@@ -46,7 +46,7 @@ pip-wheel-metadata/
 /test-results
 /playwright-report
 /.nyc_output
-
+/.claude
 # AI Agent Configs
 .geminiignore
 ANTIGRAVITY_SKILLS.md
