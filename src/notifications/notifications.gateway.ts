@@ -33,10 +33,10 @@ export class NotificationsGateway
       }
 
       const payload = this.jwtService.verify(token);
-      const campId = payload.campId;
+      const campId = payload.camp_id || payload.campId;
 
       const room = `camp_${campId}`;
-      client.join(room);
+      await client.join(room);
       this.logger.log(`Client ${client.id} joined room ${room}`);
     } catch (error) {
       this.logger.error(
