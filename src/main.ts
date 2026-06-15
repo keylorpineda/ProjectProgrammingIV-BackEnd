@@ -38,6 +38,7 @@ async function bootstrap() {
     origin: [
       "http://localhost:5173", // Para desarrollo local
       "https://doomsday-system-ui.vercel.app", // URL de producción en Vercel
+      "https://doomsday-system-ui-keylor-pineda-s-projects.vercel.app", // URL del proyecto actual en Vercel
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
