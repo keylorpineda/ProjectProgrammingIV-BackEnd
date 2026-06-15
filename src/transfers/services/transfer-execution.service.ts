@@ -45,10 +45,17 @@ export class TransferExecutionService {
   private async invalidateCampDashboardCache(campId: number): Promise<void> {
     try {
       const keys = await this.redis.keys(`dashboard:metrics:${campId}:*`);
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
-      }
-    } catch (err) {
+      if (keys.length > 0) await this.redis.del(...keys);
+    } catch {
+      // Ignore
+    }
+  }
+
+  private async invalidateTransfersCache(campId: number): Promise<void> {
+    try {
+      const keys = await this.redis.keys(`transfers:camp:${campId}:*`);
+      if (keys.length > 0) await this.redis.del(...keys);
+    } catch {
       // Ignore
     }
   }
@@ -218,6 +225,9 @@ export class TransferExecutionService {
         await doWork(queryRunner.manager);
         await queryRunner.commitTransaction();
         await this.invalidateCampDashboardCache(request.camp_origin_id);
+        await this.invalidateCampDashboardCache(request.camp_destination_id);
+        await this.invalidateTransfersCache(request.camp_origin_id);
+        await this.invalidateTransfersCache(request.camp_destination_id);
       } catch (error) {
         await queryRunner.rollbackTransaction();
         throw error;

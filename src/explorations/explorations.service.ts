@@ -45,10 +45,17 @@ export class ExplorationsService {
   private async invalidateCampDashboardCache(campId: number): Promise<void> {
     try {
       const keys = await this.redis.keys(`dashboard:metrics:${campId}:*`);
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
-      }
-    } catch (err) {
+      if (keys.length > 0) await this.redis.del(...keys);
+    } catch {
+      // Ignore
+    }
+  }
+
+  private async invalidateExplorationsCache(campId: number): Promise<void> {
+    try {
+      const keys = await this.redis.keys(`explorations:camp:${campId}:*`);
+      if (keys.length > 0) await this.redis.del(...keys);
+    } catch {
       // Ignore
     }
   }
@@ -249,6 +256,7 @@ export class ExplorationsService {
       await queryRunner.commitTransaction();
 
       await this.invalidateCampDashboardCache(dto.camp_id);
+      await this.invalidateExplorationsCache(dto.camp_id);
 
       return this.findById(Number(saved.id));
     } catch (err) {
@@ -356,6 +364,7 @@ export class ExplorationsService {
       transactionCommitted = true;
 
       await this.invalidateCampDashboardCache(exploration.camp_id);
+      await this.invalidateExplorationsCache(exploration.camp_id);
 
       await this.awardAchievements(
         exploration.explorationPersons.map((ep) => String(ep.person_id)),
@@ -452,8 +461,16 @@ export class ExplorationsService {
   }> {
     const safePage = Math.max(1, page);
     const safeLimit = Math.min(Math.max(1, limit), 100);
-    const skip = (safePage - 1) * safeLimit;
+    const cacheKey = `explorations:camp:${campId ?? "all"}:s${status ?? "all"}:p${safePage}:l${safeLimit}`;
 
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch {
+      /* Redis indisponible */
+    }
+
+    const skip = (safePage - 1) * safeLimit;
     const qb = this.explorationRepo
       .createQueryBuilder("e")
       .leftJoinAndSelect("e.explorationPersons", "ep")
@@ -466,23 +483,25 @@ export class ExplorationsService {
       .skip(skip)
       .take(safeLimit);
 
-    if (campId) {
-      qb.andWhere("e.camp_id = :campId", { campId });
-    }
-
-    if (status) {
-      qb.andWhere("e.status = :status", { status });
-    }
+    if (campId) qb.andWhere("e.camp_id = :campId", { campId });
+    if (status) qb.andWhere("e.status = :status", { status });
 
     const [data, total] = await qb.getManyAndCount();
-
-    return {
+    const result = {
       data,
       total,
       page: safePage,
       limit: safeLimit,
       totalPages: Math.ceil(total / safeLimit),
     };
+
+    try {
+      await this.redis.setex(cacheKey, 20, JSON.stringify(result));
+    } catch {
+      /* Ignore */
+    }
+
+    return result;
   }
 
   async findById(id: number): Promise<Exploration> {
@@ -575,6 +594,7 @@ export class ExplorationsService {
       await queryRunner.commitTransaction();
 
       await this.invalidateCampDashboardCache(exploration.camp_id);
+      await this.invalidateExplorationsCache(exploration.camp_id);
 
       return this.findById(Number(exploration.id));
     } catch (err) {
@@ -646,6 +666,7 @@ export class ExplorationsService {
     });
 
     await this.invalidateCampDashboardCache(exploration.camp_id);
+    await this.invalidateExplorationsCache(exploration.camp_id);
 
     return this.findById(Number(exploration.id));
   }

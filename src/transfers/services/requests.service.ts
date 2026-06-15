@@ -46,10 +46,17 @@ export class RequestsService {
   private async invalidateCampDashboardCache(campId: number): Promise<void> {
     try {
       const keys = await this.redis.keys(`dashboard:metrics:${campId}:*`);
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
-      }
-    } catch (err) {
+      if (keys.length > 0) await this.redis.del(...keys);
+    } catch {
+      // Ignore
+    }
+  }
+
+  private async invalidateTransfersCache(campId: number): Promise<void> {
+    try {
+      const keys = await this.redis.keys(`transfers:camp:${campId}:*`);
+      if (keys.length > 0) await this.redis.del(...keys);
+    } catch {
       // Ignore
     }
   }
@@ -128,6 +135,8 @@ export class RequestsService {
 
       await this.invalidateCampDashboardCache(dto.camp_origin_id);
       await this.invalidateCampDashboardCache(dto.camp_destination_id);
+      await this.invalidateTransfersCache(dto.camp_origin_id);
+      await this.invalidateTransfersCache(dto.camp_destination_id);
 
       const finalRequest = await this.findRequestById(Number(savedRequest.id));
 
@@ -261,8 +270,16 @@ export class RequestsService {
   }> {
     const safePage = Math.max(1, page);
     const safeLimit = Math.min(Math.max(1, limit), 100);
-    const skip = (safePage - 1) * safeLimit;
+    const cacheKey = `transfers:camp:${campId}:r${role ?? "all"}:s${status ?? "all"}:p${safePage}:l${safeLimit}`;
 
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch {
+      /* Redis indisponible */
+    }
+
+    const skip = (safePage - 1) * safeLimit;
     const queryBuilder = this.requestRepo
       .createQueryBuilder("req")
       .leftJoinAndSelect("req.campOrigin", "campOrigin")
@@ -294,9 +311,8 @@ export class RequestsService {
         "rejected",
         "cancelled",
       ];
-      if (!allowed.includes(status)) {
+      if (!allowed.includes(status))
         throw new BadRequestException("Estado de solicitud invalido");
-      }
       queryBuilder.andWhere("req.status = :status", { status });
     }
 
@@ -306,13 +322,21 @@ export class RequestsService {
       .take(safeLimit)
       .getManyAndCount();
 
-    return {
+    const result = {
       data,
       total,
       page: safePage,
       limit: safeLimit,
       totalPages: Math.ceil(total / safeLimit),
     };
+
+    try {
+      await this.redis.setex(cacheKey, 15, JSON.stringify(result));
+    } catch {
+      /* Ignore */
+    }
+
+    return result;
   }
 
   async findPendingRequestsByCamp(campId: number): Promise<IntercampRequest[]> {
@@ -386,6 +410,8 @@ export class RequestsService {
 
     await this.invalidateCampDashboardCache(request.camp_origin_id);
     await this.invalidateCampDashboardCache(request.camp_destination_id);
+    await this.invalidateTransfersCache(request.camp_origin_id);
+    await this.invalidateTransfersCache(request.camp_destination_id);
 
     return this.findRequestById(requestId);
   }
