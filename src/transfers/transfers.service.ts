@@ -107,15 +107,6 @@ export class TransfersService {
     }
   }
 
-  async arriveRequest(
-    requestId: number,
-    userId: number,
-  ): Promise<IntercampRequest> {
-    const request = await this.requestsService.findRequestById(requestId);
-    await this.executionService.arriveTransfer(request, userId);
-    return this.requestsService.findRequestById(requestId);
-  }
-
   async cancelRequest(
     requestId: number,
     userId: number,

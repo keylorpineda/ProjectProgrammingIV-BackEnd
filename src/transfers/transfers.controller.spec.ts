@@ -27,7 +27,6 @@ describe("TransfersController", () => {
             findPendingRequestsByCamp: jest.fn(),
             approveOrRejectRequest: jest.fn(),
             cancelRequest: jest.fn(),
-            arriveRequest: jest.fn(),
             getTransferStatistics: jest.fn(),
           },
         },
@@ -123,18 +122,6 @@ describe("TransfersController", () => {
 
     expect(result.status).toBe("cancelled");
     expect(service.cancelRequest).toHaveBeenCalledWith(1, 5);
-  });
-
-  it("should mark a request as arrived using the current user", async () => {
-    service.arriveRequest.mockResolvedValueOnce({
-      ...mockRequest,
-      status: "completed",
-    });
-
-    const result = await controller.arriveRequest(1, { userId: 12 });
-
-    expect(result.status).toBe("completed");
-    expect(service.arriveRequest).toHaveBeenCalledWith(1, 12);
   });
 
   it("should get transfer statistics for a camp", async () => {
