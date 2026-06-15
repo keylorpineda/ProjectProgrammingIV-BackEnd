@@ -15,6 +15,7 @@ import type { ApprovalDto } from "../dto/approval.dto";
 import { Inject } from "@nestjs/common";
 import { REDIS_CLIENT } from "../../redis/redis.constants";
 import { Redis } from "ioredis";
+import { scanKeys } from "../../redis/redis.utils";
 
 @Injectable()
 export class ApprovalsService {
@@ -33,7 +34,7 @@ export class ApprovalsService {
 
   private async invalidateCampDashboardCache(campId: number): Promise<void> {
     try {
-      const keys = await this.redis.keys(`dashboard:metrics:${campId}:*`);
+      const keys = await scanKeys(this.redis, `dashboard:metrics:${campId}:*`);
       if (keys.length > 0) await this.redis.del(...keys);
     } catch {
       // Ignore
@@ -42,7 +43,7 @@ export class ApprovalsService {
 
   private async invalidateTransfersCache(campId: number): Promise<void> {
     try {
-      const keys = await this.redis.keys(`transfers:camp:${campId}:*`);
+      const keys = await scanKeys(this.redis, `transfers:camp:${campId}:*`);
       if (keys.length > 0) await this.redis.del(...keys);
     } catch {
       // Ignore

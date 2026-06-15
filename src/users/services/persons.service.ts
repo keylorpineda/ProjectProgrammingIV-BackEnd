@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Not, In } from "typeorm";
 import { Redis } from "ioredis";
+import { scanKeys } from "../../redis/redis.utils";
 import { Person } from "../entities/person.entity";
 import { Profession } from "../entities/profession.entity";
 import type { CreatePersonDto } from "../dto/create-person.dto";
@@ -42,7 +43,7 @@ export class PersonsService {
   private async invalidatePersonsCache(campId?: number): Promise<void> {
     try {
       const pattern = `persons:camp:${campId ?? "*"}:*`;
-      const keys = await this.redis.keys(pattern);
+      const keys = await scanKeys(this.redis, pattern);
       if (keys.length > 0) await this.redis.del(...keys);
     } catch {
       // Ignore

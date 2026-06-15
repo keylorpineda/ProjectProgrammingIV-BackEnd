@@ -18,6 +18,7 @@ import type { ReturnExplorationDto } from "./dto/return-exploration.dto";
 import { Inject } from "@nestjs/common";
 import { REDIS_CLIENT } from "../redis/redis.constants";
 import { Redis } from "ioredis";
+import { scanKeys } from "../redis/redis.utils";
 import {
   DAILY_CONSUMPTION,
   PersonStatus,
@@ -44,7 +45,7 @@ export class ExplorationsService {
 
   private async invalidateCampDashboardCache(campId: number): Promise<void> {
     try {
-      const keys = await this.redis.keys(`dashboard:metrics:${campId}:*`);
+      const keys = await scanKeys(this.redis, `dashboard:metrics:${campId}:*`);
       if (keys.length > 0) await this.redis.del(...keys);
     } catch {
       // Ignore
@@ -53,7 +54,7 @@ export class ExplorationsService {
 
   private async invalidateExplorationsCache(campId: number): Promise<void> {
     try {
-      const keys = await this.redis.keys(`explorations:camp:${campId}:*`);
+      const keys = await scanKeys(this.redis, `explorations:camp:${campId}:*`);
       if (keys.length > 0) await this.redis.del(...keys);
     } catch {
       // Ignore
