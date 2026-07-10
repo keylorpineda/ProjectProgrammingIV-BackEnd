@@ -12,6 +12,7 @@ import { Queue } from "bullmq";
 import { Inject } from "@nestjs/common";
 import { REDIS_CLIENT } from "../redis/redis.constants";
 import { Redis } from "ioredis";
+import { scanKeys } from "../redis/redis.utils";
 import type { OnModuleInit } from "@nestjs/common";
 import { Resource } from "./entities/resource.entity";
 import { Inventory } from "./entities/inventory.entity";
@@ -79,7 +80,7 @@ export class ResourcesService implements OnModuleInit {
 
   private async invalidateCampDashboardCache(campId: number): Promise<void> {
     try {
-      const keys = await this.redis.keys(`dashboard:metrics:${campId}:*`);
+      const keys = await scanKeys(this.redis, `dashboard:metrics:${campId}:*`);
       if (keys.length > 0) {
         await this.redis.del(...keys);
       }

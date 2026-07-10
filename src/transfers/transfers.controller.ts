@@ -162,24 +162,6 @@ export class TransfersController {
     return this.transfersService.cancelRequest(id, user.userId);
   }
 
-  @Patch("requests/:id/arrive")
-  @Roles(
-    "admin",
-    "resource_manager",
-    "travel_manager",
-    "worker",
-    "resource_manager",
-  )
-  @ApiOperation({
-    summary: "Registrar llegada de transferencia (solo campamento destino)",
-  })
-  async arriveRequest(
-    @Param("id", ParseIntPipe) id: number,
-    @CurrentUser() user: any,
-  ) {
-    return this.transfersService.arriveRequest(id, user.userId);
-  }
-
   @Get("statistics/:campId")
   @Roles(
     "admin",

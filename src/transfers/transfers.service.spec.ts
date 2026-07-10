@@ -60,7 +60,6 @@ describe("TransfersService", () => {
           provide: TransferExecutionService,
           useValue: {
             departTransfer: jest.fn(),
-            arriveTransfer: jest.fn(),
           },
         },
         { provide: DataSource, useValue: dataSourceMock },
@@ -177,20 +176,6 @@ describe("TransfersService", () => {
 
     expect(executionService.departTransfer).not.toHaveBeenCalled();
     expect(result.status).toBe("pending");
-  });
-
-  it("should arrive request and reload it", async () => {
-    requestsService.findRequestById
-      .mockResolvedValueOnce({ ...mockRequest, status: "in_transit" })
-      .mockResolvedValueOnce({ ...mockRequest, status: "completed" });
-
-    const result = await service.arriveRequest(1, 9);
-
-    expect(executionService.arriveTransfer).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 1, status: "in_transit" }),
-      9,
-    );
-    expect(result.status).toBe("completed");
   });
 
   it("should cancel a request using the current user camp", async () => {

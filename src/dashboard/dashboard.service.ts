@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject } from "@nestjs/common";
+import { Injectable, Inject } from "@nestjs/common";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Cache } from "cache-manager";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -199,13 +199,21 @@ export class DashboardService {
       return cachedMetrics;
     }
 
-    const campPopulation = await this.campPopulationView.findOne({
-      where: { camp_id: campId },
-    });
-
-    if (!campPopulation) {
-      throw new NotFoundException(`Camp with ID ${campId} was not found`);
-    }
+    // Un campamento recién creado / sin personas no tiene fila en la vista de
+    // población. Eso NO es un error: devolvemos métricas en cero para que el
+    // tablero cargue (antes esto devolvía 404 al entrar a la vista de admin).
+    const campPopulation =
+      (await this.campPopulationView.findOne({
+        where: { camp_id: campId },
+      })) ??
+      ({
+        camp_id: campId,
+        total_people: 0,
+        active_workers: 0,
+        unavailable_people: 0,
+        max_capacity: null,
+        occupancy_rate: null,
+      } as unknown as CampPopulationSummaryView);
 
     const campMetrics = await this.buildCampMetrics(campId, campPopulation);
     const warehouse = await this.buildWarehouseMetrics(campId);

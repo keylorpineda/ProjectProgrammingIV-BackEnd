@@ -18,6 +18,7 @@ import {
 import { Inject } from "@nestjs/common";
 import { REDIS_CLIENT } from "../../redis/redis.constants";
 import { Redis } from "ioredis";
+import { scanKeys } from "../../redis/redis.utils";
 
 @Injectable()
 export class TransferExecutionService {
@@ -44,11 +45,18 @@ export class TransferExecutionService {
 
   private async invalidateCampDashboardCache(campId: number): Promise<void> {
     try {
-      const keys = await this.redis.keys(`dashboard:metrics:${campId}:*`);
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
-      }
-    } catch (err) {
+      const keys = await scanKeys(this.redis, `dashboard:metrics:${campId}:*`);
+      if (keys.length > 0) await this.redis.del(...keys);
+    } catch {
+      // Ignore
+    }
+  }
+
+  private async invalidateTransfersCache(campId: number): Promise<void> {
+    try {
+      const keys = await scanKeys(this.redis, `transfers:camp:${campId}:*`);
+      if (keys.length > 0) await this.redis.del(...keys);
+    } catch {
       // Ignore
     }
   }
@@ -218,123 +226,15 @@ export class TransferExecutionService {
         await doWork(queryRunner.manager);
         await queryRunner.commitTransaction();
         await this.invalidateCampDashboardCache(request.camp_origin_id);
+        await this.invalidateCampDashboardCache(request.camp_destination_id);
+        await this.invalidateTransfersCache(request.camp_origin_id);
+        await this.invalidateTransfersCache(request.camp_destination_id);
       } catch (error) {
         await queryRunner.rollbackTransaction();
         throw error;
       } finally {
         await queryRunner.release();
       }
-    }
-  }
-
-  async arriveTransfer(
-    request: IntercampRequest,
-    userId: number,
-  ): Promise<void> {
-    if (request.status !== "in_transit") {
-      throw new BadRequestException(
-        "La solicitud debe estar en transito para poder recibirla",
-      );
-    }
-
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      if (request.resourceDetails?.length > 0) {
-        for (const rd of request.resourceDetails) {
-          const transferQty = Number(rd.requested_quantity);
-
-          let destInv = await queryRunner.manager.findOne(Inventory, {
-            where: {
-              camp_id: request.camp_destination_id,
-              resource_id: Number(rd.resource_id),
-            },
-            lock: { mode: "pessimistic_write" },
-          });
-
-          if (!destInv) {
-            destInv = queryRunner.manager.create(Inventory, {
-              camp_id: request.camp_destination_id,
-              resource_id: Number(rd.resource_id),
-              current_quantity: 0,
-              minimum_stock_required: 0,
-              alert_active: false,
-              last_update: new Date(),
-            });
-          }
-
-          destInv.current_quantity =
-            Number(destInv.current_quantity) + transferQty;
-          destInv.alert_active =
-            Number(destInv.current_quantity) <
-            Number(destInv.minimum_stock_required);
-          destInv.last_update = new Date();
-          await queryRunner.manager.save(Inventory, destInv);
-
-          await queryRunner.manager.save(InventoryMovement, {
-            camp_id: request.camp_destination_id,
-            resource_id: Number(rd.resource_id),
-            quantity: transferQty,
-            type: "transfer_in",
-            description: `Recepcion de transferencia desde origen (Solicitud #${request.id})`,
-            date: new Date(),
-            user_id: userId,
-          });
-
-          rd.approved_quantity = transferQty;
-          rd.received_quantity = transferQty;
-          await queryRunner.manager.save(RequestResourceDetail, rd);
-        }
-      }
-
-      if (request.personDetails?.length > 0) {
-        for (const pd of request.personDetails) {
-          const person = await queryRunner.manager.findOne(Person, {
-            where: { id: pd.person_id },
-            relations: ["userAccount"],
-          });
-
-          if (person) {
-            person.status = PersonStatus.ACTIVE;
-            const xpGained = (request.travel_days || 1) * 10;
-            person.experience_level = (person.experience_level || 0) + xpGained;
-            await queryRunner.manager.save(Person, person);
-
-            if (person.userAccount) {
-              person.userAccount.camp_id = request.camp_destination_id;
-              await queryRunner.manager.save(UserAccount, person.userAccount);
-            }
-          }
-
-          pd.transfer_status = "completed";
-          await queryRunner.manager.save(RequestPersonDetail, pd);
-        }
-      }
-
-      request.status = "completed";
-      request.arrival_date = new Date();
-      await queryRunner.manager.save(IntercampRequest, request);
-
-      await queryRunner.manager.save(AuditLog, {
-        user_id: userId,
-        camp_id: request.camp_destination_id,
-        action: "intercamp_transfer_arrived",
-        entity_type: "intercamp_request",
-        entity_id: Number(request.id),
-        date: new Date(),
-      });
-
-      await queryRunner.commitTransaction();
-
-      await this.invalidateCampDashboardCache(request.camp_origin_id);
-      await this.invalidateCampDashboardCache(request.camp_destination_id);
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
     }
   }
 }

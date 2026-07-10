@@ -2,9 +2,12 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Not, In } from "typeorm";
+import { Redis } from "ioredis";
+import { scanKeys } from "../../redis/redis.utils";
 import { Person } from "../entities/person.entity";
 import { Profession } from "../entities/profession.entity";
 import type { CreatePersonDto } from "../dto/create-person.dto";
@@ -14,6 +17,9 @@ import {
   PersonStatus,
   WORKING_STATUSES,
 } from "../constants/professions.constants";
+import { REDIS_CLIENT } from "../../redis/redis.constants";
+
+const PERSONS_CACHE_TTL = 30; // segundos
 
 @Injectable()
 export class PersonsService {
@@ -22,7 +28,27 @@ export class PersonsService {
     private readonly personRepo: Repository<Person>,
     @InjectRepository(Profession)
     private readonly professionRepo: Repository<Profession>,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
+
+  private personsCacheKey(
+    campId?: number,
+    page = 1,
+    limit = 20,
+    search?: string,
+  ) {
+    return `persons:camp:${campId ?? "all"}:p${page}:l${limit}:s${search ?? ""}`;
+  }
+
+  private async invalidatePersonsCache(campId?: number): Promise<void> {
+    try {
+      const pattern = `persons:camp:${campId ?? "*"}:*`;
+      const keys = await scanKeys(this.redis, pattern);
+      if (keys.length > 0) await this.redis.del(...keys);
+    } catch {
+      // Ignore
+    }
+  }
 
   async create(dto: CreatePersonDto): Promise<Person> {
     if (dto.profession_id) {
@@ -44,7 +70,9 @@ export class PersonsService {
       identification_code: this.generateIdentificationCode(),
     });
 
-    return this.personRepo.save(person);
+    const saved = await this.personRepo.save(person);
+    await this.invalidatePersonsCache(dto.camp_id);
+    return saved;
   }
 
   async findAll(
@@ -59,6 +87,20 @@ export class PersonsService {
     limit: number;
     totalPages: number;
   }> {
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.min(Math.max(1, limit), 100);
+
+    // Sólo cachear consultas sin búsqueda de texto libre
+    if (!search) {
+      try {
+        const cacheKey = this.personsCacheKey(campId, safePage, safeLimit);
+        const cached = await this.redis.get(cacheKey);
+        if (cached) return JSON.parse(cached);
+      } catch {
+        /* Redis indisponible — continuar sin caché */
+      }
+    }
+
     const query = this.personRepo
       .createQueryBuilder("person")
       .leftJoinAndSelect("person.profession", "profession")
@@ -80,22 +122,34 @@ export class PersonsService {
       );
     }
 
-    const safePage = Math.max(1, page);
-    const safeLimit = Math.min(Math.max(1, limit), 100);
     const skip = (safePage - 1) * safeLimit;
-
     const [data, total] = await query
       .skip(skip)
       .take(safeLimit)
       .getManyAndCount();
 
-    return {
+    const result = {
       data,
       total,
       page: safePage,
       limit: safeLimit,
       totalPages: Math.ceil(total / safeLimit),
     };
+
+    if (!search) {
+      try {
+        const cacheKey = this.personsCacheKey(campId, safePage, safeLimit);
+        await this.redis.setex(
+          cacheKey,
+          PERSONS_CACHE_TTL,
+          JSON.stringify(result),
+        );
+      } catch {
+        /* Ignore */
+      }
+    }
+
+    return result;
   }
 
   async findById(id: number): Promise<Person> {
@@ -126,7 +180,9 @@ export class PersonsService {
     }
 
     Object.assign(person, dto);
-    return this.personRepo.save(person);
+    const saved = await this.personRepo.save(person);
+    await this.invalidatePersonsCache();
+    return saved;
   }
 
   async updateStatus(id: number, dto: UpdatePersonStatusDto): Promise<Person> {
@@ -143,7 +199,9 @@ export class PersonsService {
         : `[${new Date().toISOString()}] Status changed from ${oldStatus} to ${dto.status}: ${dto.notes}`;
     }
 
-    return this.personRepo.save(person);
+    const saved = await this.personRepo.save(person);
+    await this.invalidatePersonsCache();
+    return saved;
   }
 
   async delete(id: number): Promise<void> {
@@ -156,6 +214,7 @@ export class PersonsService {
     }
 
     await this.personRepo.remove(person);
+    await this.invalidatePersonsCache();
   }
 
   async countActiveWorkers(

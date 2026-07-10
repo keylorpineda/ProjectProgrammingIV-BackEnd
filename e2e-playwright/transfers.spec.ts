@@ -1,7 +1,7 @@
 /**
  * E2E Tests — Traslados Inter-campamentos
  * Flujos criticos: Crear solicitud, doble aprobacion, despacho con deduccion
- * de bodega origen, llegada con acreditacion en destino, auditoria
+ * de bodega origen (el traslado queda en transito), auditoria
  */
 import { test, expect } from "@playwright/test";
 
@@ -166,39 +166,6 @@ test.describe("Traslados Inter-campamentos", () => {
       "approved",
       "in_transit",
     ]).toContain(body.status);
-  });
-
-  test("POST /transfers/requests/:id/arrive → registra llegada y acredita en destino", async ({
-    request,
-  }) => {
-    if (!requestId) return;
-
-    // Verificar estado actual
-    const statusRes = await request.get(
-      `${BASE}/transfers/requests/${requestId}`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-    const current = await statusRes.json();
-
-    // Solo podemos hacer arrive si esta "in_transit"
-    if (current.status !== "in_transit") {
-      console.log(
-        `Estado ${current.status}, no es in_transit, saltando arrive`,
-      );
-      return;
-    }
-
-    const response = await request.patch(
-      `${BASE}/transfers/requests/${requestId}/arrive`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-
-    console.log(await response.text());
-    expect([200, 201]).toContain(response.status());
-    const body = await response.json();
-    expect(body.status).toBe("completed");
   });
 
   test("GET /transfers/statistics/:campId → estadisticas de traslados por campamento", async ({
